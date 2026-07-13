@@ -1,0 +1,15 @@
+export type Status = 'ATIVO' | 'FUTURO' | 'ENCERRADO' | 'PENDENTE' | 'PAGO' | 'ENTREGUE' | 'CANCELADO' | 'CONFIRMADO' | 'INATIVO';
+export type EventType = 'BAILE' | 'CURSO' | 'EVENTO';
+export type Evento = { id: string; tipo?: EventType; nome: string; data: string; local: string; cidade?: string; status: Status; vendidos: number; capacidade: number; receita: number; imagem: string; };
+export type Curso = { id: string; nome: string; cidade: string; horario: string; professor: string; local: string; status: Status; inscritos: number; capacidade: number; };
+export type Inscricao = { id: string; nome: string; cpf: string; telefone: string; status: Status; cursoId: string; par?: string; padrinho?: string; madrinha?: string; };
+export type PedidoTipo = 'LOJA' | 'EVENTO';
+export type Pedido = { id: string; tipo?: PedidoTipo; cliente: string; cpf?: string; telefone: string; total: number; status: Status; statusPagamento?: string; formaPagamento?: string; entregaRetirada?: string; enderecoEntrega?: string; eventoId?: string; eventoNome?: string; eventoTipo?: EventType; cortesia?: boolean; motivoCortesia?: string; responsavelCortesia?: string; data: string; itens: { nome: string; tamanho?: string; valor: number; qtd: number; lote?: string }[] };
+export type CrudField = { key: string; label: string; placeholder?: string; multiline?: boolean; keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad' | 'decimal-pad' };
+export type CrudRecord = { id: string; titulo: string; subtitulo?: string; status?: Status | string; [key: string]: string | number | undefined };
+export type Cliente = CrudRecord & { nome?: string; telefone?: string; email?: string; cpf?: string };
+export type Colaborador = CrudRecord & { nome?: string; cargo?: string; telefone?: string; email?: string };
+export type Aluno = CrudRecord & { nome?: string; curso?: string; telefone?: string; responsavel?: string };
+export type Pagamento = CrudRecord & { cliente?: string; valor?: string; forma?: string; data?: string };
+export type Cortesia = CrudRecord & { beneficiario?: string; evento?: string; codigo?: string };
+export type Validacao = CrudRecord & { cliente?: string; evento?: string; codigo?: string; data?: string };
