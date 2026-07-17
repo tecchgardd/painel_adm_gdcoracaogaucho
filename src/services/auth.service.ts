@@ -6,7 +6,7 @@ import type { AuthSession, SessionUser } from '@/types/entities';
 export async function login(email: string, password: string) {
   const response = await api.post('/auth/sign-in/email', { email, password });
   const session = unwrapData<AuthSession>(response.data);
-  const token = session.token ?? (response.data as { token?: string })?.token;
+  const token = response.headers['set-auth-token'] ?? session.token ?? (response.data as { token?: string })?.token;
   await saveAuthToken(token);
   if (session.user) await AsyncStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(session.user));
   return session;

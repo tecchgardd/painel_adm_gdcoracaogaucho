@@ -48,7 +48,10 @@ api.interceptors.response.use(
     } else if (status === 401) {
       message = 'Sessão expirada. Faça login novamente.';
     } else if (status === 403) {
-      message = 'Você não tem permissão para acessar este recurso.';
+      const originRejected = /origin|origem|trusted/i.test(message);
+      message = originRejected
+        ? 'Esta origem local ainda não foi liberada no backend. Adicione http://localhost:8081 em AUTH_TRUSTED_ORIGINS e refaça o deploy.'
+        : 'Você não tem permissão para acessar este recurso.';
     } else if (status === 404) {
       message = message || 'Recurso não encontrado na API.';
     } else if (status && status >= 500) {

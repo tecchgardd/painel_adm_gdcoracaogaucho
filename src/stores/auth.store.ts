@@ -26,9 +26,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
   loading: false,
   login: async (email, password) => {
     set({ loading: true });
-    const session = await loginRequest(email, password);
-    const user = session.user ?? await getMe();
-    set({ user: user ?? null, session, isAuthenticated: !!user, role: getRole(user), loading: false });
+    try {
+      const session = await loginRequest(email, password);
+      const user = session.user ?? await getMe();
+      set({ user: user ?? null, session, isAuthenticated: !!user, role: getRole(user), loading: false });
+    } catch (error) {
+      set({ loading: false });
+      throw error;
+    }
   },
   logout: async () => {
     await logoutRequest();
@@ -36,9 +41,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
   loadSession: async () => {
     set({ loading: true });
-    const session: AuthSession | null = await getSession();
-    const user = session.user ?? null;
-    set({ user, session, isAuthenticated: !!user, role: getRole(user), loading: false });
-    return user;
+    try {
+      const session: AuthSession | null = await getSession();
+      const user = session.user ?? null;
+      set({ user, session, isAuthenticated: !!user, role: getRole(user), loading: false });
+      return user;
+    } catch (error) {
+      set({ user: null, session: null, isAuthenticated: false, role: null, loading: false });
+      throw error;
+    }
   }
 }));
