@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type React from 'react';
 
 export type MetricVariant = 'success' | 'danger' | 'warning' | 'neutral';
@@ -122,22 +122,47 @@ export type Inscricao = {
   semPar?: boolean;
   inscricaoMultipla?: boolean;
   quantidadeAdicionais?: number;
-  adicionais?: Array<{ nome: string; cpf: string; telefone?: string; nomePar?: string }>;
+  adicionais?: { nome: string; cpf: string; telefone?: string; nomePar?: string }[];
   quantidadeParticipantes?: number;
   quantidadePadrinhosEsperada?: number;
   quantidadePadrinhosCadastrada?: number;
   padrinhosStatus?: 'PENDENTE' | 'COMPLETO' | string;
-  padrinhos?: Array<{ nome?: string }>;
+  padrinhos?: { nome?: string }[];
 };
 
 export type Pagamento = {
   id: string;
   customerId?: string;
+  customer?: Customer;
+  cliente?: Customer;
+  pedido?: Record<string, unknown>;
+  evento?: Evento;
+  curso?: Evento;
   valor?: number;
   amount?: number;
+  valorReembolsado?: number;
+  refundedAmount?: number;
+  moeda?: string;
   status?: EntityStatus | string;
+  origem?: 'SITE' | 'WHATSAPP' | 'PAINEL_ADMIN' | string;
   metodo?: string;
   method?: string;
+  createdAt?: string;
+  checkoutCreatedAt?: string;
+  expiresAt?: string;
+  paidAt?: string;
+  refundedAt?: string;
+  stripeCheckoutSessionId?: string;
+  stripePaymentIntentId?: string;
+  stripeChargeId?: string;
+  stripeRefundId?: string;
+  stripeDisputeId?: string;
+  disputeStatus?: string;
+  disputedAmount?: number;
+  statusBeforeDispute?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  refundReason?: string;
 };
 
 export type Cortesia = {

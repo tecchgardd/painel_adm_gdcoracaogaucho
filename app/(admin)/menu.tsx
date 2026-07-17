@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppModal, Button, Header, Screen } from '@/components/ui';
 import { logout as logoutSession } from '@/services/auth.service';
 import { colors } from '@/theme/theme';

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { ReportSection } from '@/components/dashboard/ReportSection';
 import { Screen } from '@/components/ui';

@@ -4,15 +4,15 @@ export type FotoUploadResult = {
   totalRecebidos: number;
   totalEnviados: number;
   totalFalhas: number;
-  fotos: Array<{
+  fotos: {
     id: string;
     originalName: string;
     publicId: string;
     url: string;
     secureUrl: string;
     folder?: string;
-  }>;
-  erros: Array<{ arquivo: string; erro: string }>;
+  }[];
+  erros: { arquivo: string; erro: string }[];
 };
 
 export async function uploadFotos(files: File[], folder?: string) {

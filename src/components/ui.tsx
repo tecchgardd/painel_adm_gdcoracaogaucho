@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View, TouchableOpacity, StyleSheet, TextInput, Image, ImageSourcePropType, Modal, ScrollView, SafeAreaView, Platform, Pressable } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import { BottomTabs } from '@/components/navigation/BottomTabs';
@@ -237,7 +237,13 @@ export function AppModal({
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const tone = status === 'ATIVO' || status === 'PAGO' || status === 'CONFIRMADO' || status === 'ENTREGUE' ? colors.green : status === 'PENDENTE' || status === 'FUTURO' ? colors.yellow : colors.red;
+  const tones: Record<string, string> = {
+    ATIVO: colors.green, PAGO: colors.green, CONFIRMADO: colors.green, ENTREGUE: colors.green,
+    PENDENTE: '#C99700', FUTURO: colors.yellow, PROCESSANDO: '#2878C8', FALHOU: '#D32F2F',
+    CANCELADO: '#666666', EXPIRADO: '#D66A00', ESTORNADO: '#7137A8',
+    PARCIALMENTE_ESTORNADO: '#9B6BC0', CONTESTADO: '#D84B20', CONTESTACAO_PERDIDA: '#8B1010'
+  };
+  const tone = tones[String(status).toUpperCase()] ?? colors.red;
   return <View style={[styles.badge, { backgroundColor: tone }]}><Text style={styles.badgeText}>{status}</Text></View>;
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, Screen, SearchBar } from '@/components/ui';
 import { validarCodigoManual, validarQRCode } from '@/services/scanner.service';
 import type { ScannerResult } from '@/types/entities';

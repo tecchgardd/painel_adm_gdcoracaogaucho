@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { EventFormModal } from '@/components/events/EventFormModal';
 import { ActionMenu, AppModal, Button, Card, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
@@ -10,7 +10,7 @@ import { colors } from '@/theme/colors';
 import { formatCurrencyBRL, formatDateTime } from '@/utils/format';
 import type { EventType } from '@/types/entities';
 
-const tabs: Array<{ type: EventType; label: string; plural: string }> = [
+const tabs: { type: EventType; label: string; plural: string }[] = [
   { type: 'BAILE', label: 'Baile', plural: 'bailes' },
   { type: 'CURSO', label: 'Curso', plural: 'cursos' },
   { type: 'EVENTO', label: 'Evento', plural: 'eventos' }

@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { DashboardSection } from '@/components/dashboard/DashboardSection';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { Screen } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getDashboard } from '@/services/dashboard.service';
+import { getIntegrationHealth } from '@/services/health.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/colors';
 
@@ -20,6 +21,8 @@ export default function Dashboard() {
   const columns = responsive.isDesktop ? 4 : responsive.isTablet ? 3 : 2;
   const queryDashboard = useCallback(() => getDashboard(), []);
   const { data, loading, error, refetch } = useApiQuery(queryDashboard, { fallbackData: [] });
+  const queryHealth = useCallback(() => getIntegrationHealth(), []);
+  const { data: health, refetch: refetchHealth } = useApiQuery(queryHealth, { fallbackData: null });
   const user = useAuthStore((state) => state.user);
   const firstName = (user?.nome ?? user?.name ?? '').trim().split(' ')[0];
   const dashboardSections = data ?? [];
@@ -63,12 +66,21 @@ export default function Dashboard() {
               onPress={() => {
                 setRefreshKey((current) => current + 1);
                 refetch();
+                refetchHealth();
               }}
               style={styles.refreshButton}
             >
               <MaterialCommunityIcons name="refresh" color={colors.text} size={20} />
             </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={styles.health}>
+          <View style={[styles.healthDot, { backgroundColor: health?.status === 'ok' ? colors.green : colors.red }]} />
+          <Text style={styles.healthText}>API {health?.status === 'ok' ? 'operacional' : 'indisponível'}</Text>
+          <View style={[styles.healthDot, { backgroundColor: health?.stripeConfigured ? colors.green : colors.yellow }]} />
+          <Text style={styles.healthText}>Stripe {health?.stripeConfigured ? 'configurada' : 'não configurada'}</Text>
+          <Text style={styles.healthHint}>Configuração não garante habilitação da conta para cobranças.</Text>
         </View>
 
         {loading ? <Text style={styles.stateText}>Carregando dados do servidor...</Text> : null}
@@ -243,5 +255,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     rowGap: 12
-  }
+  },
+  health: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 10, padding: 10 },
+  healthDot: { width: 9, height: 9, borderRadius: 5 },
+  healthText: { color: colors.text, fontSize: 12, fontWeight: '800', marginRight: 8 },
+  healthHint: { color: colors.muted, fontSize: 11 }
 });

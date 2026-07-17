@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppModal, Button, FormField, Header, Screen } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { colors } from '@/theme/colors';
@@ -10,7 +10,7 @@ export default function Empresas() {
   const inputRef = useRef<HTMLInputElement | null>(null); const [editing, setEditing] = useState<Empresa | null | undefined>(undefined); const [nome, setNome] = useState(''); const [file, setFile] = useState<File>(); const [errorMessage, setError] = useState(''); const [saving, setSaving] = useState(false); const [deleting, setDeleting] = useState<Empresa | null>(null);
   const query = useCallback(() => listEmpresas(), []); const { data, loading, error, refetch } = useApiQuery(query, { fallbackData: [] }); const empresas = data ?? [];
   function open(item?: Empresa) { setEditing(item ?? null); setNome(item?.nome ?? ''); setFile(undefined); setError(''); }
-  async function save() { if (nome.trim().length < 2 || (!editing && !file)) return setError('Informe o nome e selecione uma imagem.'); setSaving(true); try { const payload = { nome: nome.trim(), imagem: file, ativo: editing?.ativo ?? true, publicado: editing?.publicado ?? true, ordem: editing?.ordem ?? 0 }; editing ? await updateEmpresa(editing.id, payload) : await createEmpresa(payload); setEditing(undefined); refetch(); } catch (e) { setError((e as { message?: string }).message ?? 'Não foi possível salvar.'); } finally { setSaving(false); } }
+  async function save() { if (nome.trim().length < 2 || (!editing && !file)) return setError('Informe o nome e selecione uma imagem.'); setSaving(true); try { const payload = { nome: nome.trim(), imagem: file, ativo: editing?.ativo ?? true, publicado: editing?.publicado ?? true, ordem: editing?.ordem ?? 0 }; if (editing) await updateEmpresa(editing.id, payload); else await createEmpresa(payload); setEditing(undefined); refetch(); } catch (e) { setError((e as { message?: string }).message ?? 'Não foi possível salvar.'); } finally { setSaving(false); } }
   async function remove() { if (!deleting) return; try { await deleteEmpresa(deleting.id); setDeleting(null); refetch(); } catch (e) { setError((e as { message?: string }).message ?? 'Não foi possível excluir.'); } }
   return <Screen variant="admin"><Header title="Empresas" right={<TouchableOpacity onPress={() => open()} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24}/></TouchableOpacity>}/>
     {loading && <Text style={styles.state}>Carregando empresas...</Text>}{error && <Text style={styles.error}>{error}</Text>}

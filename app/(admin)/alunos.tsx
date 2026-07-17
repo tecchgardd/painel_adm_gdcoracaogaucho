@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -29,7 +29,7 @@ export default function Alunos() {
   const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
   const queryAlunos = useCallback(() => listInscricoes(), []);
   const { data, loading, error, refetch } = useApiQuery(queryAlunos, { fallbackData: [] });
-  const alunos = data ?? [];
+  const alunos = useMemo(() => data ?? [], [data]);
   const filtered = useMemo(() => alunos.filter((aluno: any) =>
     `${aluno.nome} ${aluno.cpf} ${aluno.telefone} ${aluno.cursoId} ${aluno.status}`.toLowerCase().includes(query.toLowerCase())
   ), [alunos, query]);

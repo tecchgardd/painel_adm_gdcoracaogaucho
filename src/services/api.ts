@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { AxiosError, create, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
@@ -12,7 +12,7 @@ export function resolveApiUrl() {
   return API_URL;
 }
 
-export const api = axios.create({
+export const api = create({
   baseURL: resolveApiUrl(),
   timeout: DEFAULT_TIMEOUT,
   withCredentials: true,

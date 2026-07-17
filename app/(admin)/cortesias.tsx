@@ -10,7 +10,7 @@ export default function Cortesias() {
   const [query, setQuery] = useState('');
   const queryCortesias = useCallback(() => listCortesias(), []);
   const { data, loading, error, refetch } = useApiQuery(queryCortesias, { fallbackData: [] });
-  const cortesias = data ?? [];
+  const cortesias = useMemo(() => data ?? [], [data]);
   const filtered = useMemo(() => cortesias.filter((cortesia: any) =>
     `${cortesia.nome ?? ''} ${cortesia.cpf ?? ''} ${cortesia.telefone ?? ''}`.toLowerCase().includes(query.toLowerCase())
   ), [cortesias, query]);
@@ -52,4 +52,3 @@ const styles = StyleSheet.create({
   errorText: { color: colors.muted, lineHeight: 20 },
   retry: { color: colors.red, fontWeight: '900', marginTop: 8 }
 });
-

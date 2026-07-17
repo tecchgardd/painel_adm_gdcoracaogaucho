@@ -2,7 +2,9 @@ node_modules/
 .expo/
 dist/
 dist-test*/
-dist-validation/
+dist-validation*/
 .env
+.env.*
+!.env.example
 *.log
 *.tsbuildinfo

@@ -10,7 +10,7 @@ export default function HistoricoValidacoes() {
   const [query, setQuery] = useState('');
   const queryHistorico = useCallback(() => getHistoricoValidacoes(), []);
   const { data, loading, error, refetch } = useApiQuery(queryHistorico, { fallbackData: [] });
-  const historico = Array.isArray(data) ? data : [];
+  const historico = useMemo(() => Array.isArray(data) ? data : [], [data]);
   const filtered = useMemo(() => historico.filter((item: any) =>
     `${item.codigo ?? ''} ${item.cliente ?? ''} ${item.status ?? ''} ${item.evento?.nome ?? ''}`.toLowerCase().includes(query.toLowerCase())
   ), [historico, query]);
@@ -39,4 +39,3 @@ const styles = StyleSheet.create({
   errorText: { color: colors.muted, lineHeight: 20 },
   retry: { color: colors.red, fontWeight: '900', marginTop: 8 }
 });
-

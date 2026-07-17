@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Button, Header, Screen } from '@/components/ui';
 import { uploadFotos } from '@/services/fotos.service';
 import { colors } from '@/theme/colors';
@@ -38,7 +38,7 @@ export default function Fotos() {
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const [folderName, setFolderName] = useState('');
   const [selected, setSelected] = useState<SelectedPhoto[]>([]);
-  const [invalid, setInvalid] = useState<Array<{ name: string; reason: string }>>([]);
+  const [invalid, setInvalid] = useState<{ name: string; reason: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [sent, setSent] = useState(0);
   const [failed, setFailed] = useState(0);
@@ -57,7 +57,7 @@ export default function Fotos() {
     const allFiles = Array.from(fileList);
     const selectedFolder = getFolderName(allFiles[0]);
     const valid: SelectedPhoto[] = [];
-    const invalidFiles: Array<{ name: string; reason: string }> = [];
+    const invalidFiles: { name: string; reason: string }[] = [];
 
     allFiles.slice(0, MAX_FILES).forEach((file, index) => {
       const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;

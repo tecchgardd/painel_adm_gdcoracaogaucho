@@ -1,9 +1,16 @@
 import { api, unwrapData } from './api';
 import type { Pagamento } from '@/types/entities';
 
-export async function listPagamentos() {
-  const response = await api.get('/admin/pagamentos');
-  return unwrapData<Pagamento[]>(response.data);
+export type PagamentoStatus = 'PENDENTE' | 'PROCESSANDO' | 'PAGO' | 'FALHOU' | 'CANCELADO' | 'EXPIRADO' | 'ESTORNADO' | 'PARCIALMENTE_ESTORNADO' | 'CONTESTADO' | 'CONTESTACAO_PERDIDA';
+export type PagamentoFilters = { page?: number; limit?: number; status?: PagamentoStatus; customerId?: string };
+export type PagamentosPage = { data: Pagamento[]; total: number; page: number; limit: number; totalPages?: number };
+
+export async function listPagamentos(params: PagamentoFilters = {}) {
+  const response = await api.get('/admin/pagamentos', { params });
+  const value = unwrapData<Pagamento[] | PagamentosPage>(response.data);
+  return Array.isArray(value)
+    ? { data: value, total: value.length, page: params.page ?? 1, limit: params.limit ?? 20 }
+    : value;
 }
 
 export async function getPagamento(id: string) {
@@ -11,17 +18,13 @@ export async function getPagamento(id: string) {
   return unwrapData<Pagamento>(response.data);
 }
 
-export async function criarCobranca(data: Partial<Pagamento>) {
-  const response = await api.post('/admin/pagamentos/criar-cobranca', data);
-  return unwrapData(response.data);
+export async function cancelarPagamento(id: string, reason: string) {
+  const response = await api.patch(`/admin/pagamentos/${id}/cancelar`, { reason });
+  return unwrapData<Pagamento>(response.data);
 }
 
-export async function confirmarPagamento(id: string) {
-  const response = await api.patch(`/admin/pagamentos/${id}/confirmar`);
-  return unwrapData(response.data);
-}
-
-export async function cancelarPagamento(id: string) {
-  const response = await api.patch(`/admin/pagamentos/${id}/cancelar`);
-  return unwrapData(response.data);
+export type StripeRefundReason = 'duplicate' | 'fraudulent' | 'requested_by_customer';
+export async function reembolsarPagamento(id: string, payload: { amount?: number; reason: string; stripeReason: StripeRefundReason }) {
+  const response = await api.post(`/admin/pagamentos/${id}/reembolsar`, payload);
+  return unwrapData<Pagamento>(response.data);
 }

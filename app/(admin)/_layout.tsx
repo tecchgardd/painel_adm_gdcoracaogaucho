@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabs } from 'expo-router';
-import { router, usePathname } from 'expo-router';
+import { Tabs, router, usePathname } from 'expo-router';
 import { clearBusinessStorage } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 import type { SessionUser } from '@/types/entities';
@@ -43,7 +42,7 @@ export default function AdminTabs() {
     }
     guard();
     return () => { mounted = false; };
-  }, [pathname]);
+  }, [loadSession, pathname]);
 
   if (!ready) return null;
 

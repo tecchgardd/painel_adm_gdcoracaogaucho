@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -135,6 +135,10 @@ export default function Vendas() {
 
   async function sendPaymentLink(sale: any) {
     setMessage('');
+    if (sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoAtivo || sale.activePaymentAttempt) {
+      setMessage('Não é possível gerar link para cortesia, venda paga ou tentativa de pagamento ativa.');
+      return;
+    }
     try {
       const response = await generateSalePaymentLink(sale.id);
       setPaymentLink({
@@ -157,6 +161,12 @@ export default function Vendas() {
       return;
     }
     setMessage('Copie o link exibido antes de fechar.');
+  }
+
+  async function copyCheckoutUrl() {
+    if (!paymentLink) return;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) await navigator.clipboard.writeText(paymentLink.checkoutUrl);
+    setMessage('URL do checkout copiada.');
   }
 
   function openPaymentUrl() {
@@ -208,7 +218,7 @@ export default function Vendas() {
             </View>
             <ActionMenu actions={[
               { label: 'Marcar pago', icon: 'cash-check', onPress: () => changeStatus(sale.id, 'PAGO') },
-              { label: 'Enviar link AbacatePay', icon: 'link-variant', onPress: () => sendPaymentLink(sale) },
+              ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoAtivo || sale.activePaymentAttempt) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : []),
               { label: 'Marcar pendente', icon: 'clock-outline', onPress: () => changeStatus(sale.id, 'PENDENTE') },
               { label: 'Cortesia', icon: 'ticket-percent-outline', onPress: () => changeStatus(sale.id, 'CORTESIA') },
               { label: 'Cancelar', icon: 'close-circle-outline', tone: 'danger', onPress: () => cancelSale(sale.id) },
@@ -277,10 +287,11 @@ export default function Vendas() {
 
       <AppModal visible={!!paymentLink} onClose={() => setPaymentLink(null)} title="Link de pagamento">
         {paymentLink ? <>
-          <Text style={styles.message}>Link AbacatePay gerado para {paymentLink.nome ?? 'cliente'}.</Text>
+          <Text style={styles.message}>Checkout Stripe gerado pelo backend para {paymentLink.nome ?? 'cliente'} · origem PAINEL_ADMIN.</Text>
           <View style={styles.linkBox}><Text selectable style={styles.linkText}>{paymentLink.checkoutUrl}</Text></View>
           <View style={styles.footer}>
-            <View style={styles.footerItem}><Button title="Copiar" tone="dark" onPress={copyPaymentLink} /></View>
+            <View style={styles.footerItem}><Button title="Copiar URL" tone="dark" onPress={copyCheckoutUrl} /></View>
+            <View style={styles.footerItem}><Button title="Copiar texto" tone="dark" onPress={copyPaymentLink} /></View>
             <View style={styles.footerItem}><Button title="Abrir link" tone="green" onPress={openPaymentUrl} /></View>
             <View style={styles.footerItem}><Button title="WhatsApp" tone="green" onPress={openWhatsapp} /></View>
           </View>

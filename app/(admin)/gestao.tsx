@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Header, Screen } from '@/components/ui';
 import { filterNavigationByRole, navigationItems, NavItem } from '@/navigation.config';
 import { useAuthStore } from '@/stores/auth.store';

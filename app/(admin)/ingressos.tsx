@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -178,6 +178,10 @@ export default function Ingressos() {
 
   async function sendBatchPaymentLink(batch: TicketBatch) {
     setMessage('');
+    if (batch.status === 'PAGO' || batch.status === 'CORTESIA') {
+      setMessage('Não é possível gerar link para cortesia ou lote já pago.');
+      return;
+    }
     try {
       const response = await gerarLinkPagamentoLote(batch.loteId);
       setPaymentLink({
@@ -200,6 +204,12 @@ export default function Ingressos() {
       return;
     }
     setMessage('Copie o link exibido antes de fechar.');
+  }
+
+  async function copyCheckoutUrl() {
+    if (!paymentLink) return;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) await navigator.clipboard.writeText(paymentLink.checkoutUrl);
+    setMessage('URL do checkout copiada.');
   }
 
   function openPaymentUrl() {
@@ -236,7 +246,7 @@ export default function Ingressos() {
               </View>
               <ActionMenu actions={[
                 { label: 'Confirmar lote', icon: 'cash-check', onPress: () => markBatchPaid(batch.loteId) },
-                { label: 'Enviar link AbacatePay', icon: 'link-variant', onPress: () => sendBatchPaymentLink(batch) },
+                ...(!(batch.status === 'PAGO' || batch.status === 'CORTESIA') ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendBatchPaymentLink(batch) }] : []),
                 { label: 'Marcar 1 ingresso pago', icon: 'check-decagram-outline', onPress: () => updateTicket(String(firstTicket.id), 'PAGO') },
                 { label: 'Marcar 1 pendente', icon: 'clock-outline', onPress: () => updateTicket(String(firstTicket.id), 'PENDENTE') },
                 { label: 'Cortesia em 1 ingresso', icon: 'ticket-percent-outline', onPress: () => updateTicketAsCourtesy(String(firstTicket.id)) },
@@ -305,10 +315,11 @@ export default function Ingressos() {
 
       <AppModal visible={!!paymentLink} onClose={() => setPaymentLink(null)} title="Link de pagamento">
         {paymentLink ? <>
-          <Text style={styles.message}>Link AbacatePay gerado para {paymentLink.nome ?? 'aluno'}.</Text>
+          <Text style={styles.message}>Checkout Stripe gerado pelo backend para {paymentLink.nome ?? 'aluno'} · origem PAINEL_ADMIN.</Text>
           <View style={styles.linkBox}><Text selectable style={styles.linkText}>{paymentLink.checkoutUrl}</Text></View>
           <View style={styles.footer}>
-            <View style={styles.footerItem}><Button title="Copiar" tone="dark" onPress={copyPaymentLink} /></View>
+            <View style={styles.footerItem}><Button title="Copiar URL" tone="dark" onPress={copyCheckoutUrl} /></View>
+            <View style={styles.footerItem}><Button title="Copiar texto" tone="dark" onPress={copyPaymentLink} /></View>
             <View style={styles.footerItem}><Button title="Abrir link" tone="green" onPress={openPaymentUrl} /></View>
             <View style={styles.footerItem}><Button title="WhatsApp" tone="green" onPress={openWhatsapp} /></View>
           </View>

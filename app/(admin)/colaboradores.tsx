@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -123,7 +123,7 @@ export default function Colaboradores() {
   const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
   const queryColaboradores = useCallback(() => listColaboradores(), []);
   const { data, loading, error, refetch } = useApiQuery(queryColaboradores, { fallbackData: [] });
-  const colaboradores = data ?? [];
+  const colaboradores = useMemo(() => data ?? [], [data]);
   const filtered = useMemo(() => colaboradores.filter((colaborador: Colaborador) =>
     `${colaborador.nome ?? ''} ${colaborador.cpf ?? ''} ${colaborador.email ?? ''} ${colaborador.role ?? ''} ${colaborador.status ?? ''}`
       .toLowerCase()
