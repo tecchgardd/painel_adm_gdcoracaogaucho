@@ -23,6 +23,11 @@ export const api = create({
 });
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  // Axios/the browser must generate multipart Content-Type with its boundary.
+  // Otherwise the JSON default prevents the API from receiving the files.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   const token = Platform.OS === 'web'
     ? await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
     : await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
@@ -32,14 +37,13 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string; error?: string }>) => {
+  async (error: AxiosError<{ message?: string; error?: string }>) => {
     const status = error.response?.status;
     const isConnectionError = !error.response || error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK';
 
     if (status === 401) {
-      AsyncStorage.multiRemove([AUTH_TOKEN_STORAGE_KEY, AUTH_USER_STORAGE_KEY]).finally(() => {
-        router.replace('/login');
-      });
+      await clearAuthStorage();
+      router.replace('/login');
     }
 
     let message = error.response?.data?.message || error.response?.data?.error || error.message || 'Erro ao conectar com a API.';
@@ -74,6 +78,13 @@ export async function saveAuthToken(token?: string | null) {
   }
   if (Platform.OS === 'web') await AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
   else await SecureStore.setItemAsync(AUTH_TOKEN_STORAGE_KEY, token);
+}
+
+export async function clearAuthStorage() {
+  await Promise.all([
+    saveAuthToken(null),
+    AsyncStorage.removeItem(AUTH_USER_STORAGE_KEY)
+  ]);
 }
 
 export function unwrapData<T>(payload: unknown): T {

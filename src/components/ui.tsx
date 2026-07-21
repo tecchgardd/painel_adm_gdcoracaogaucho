@@ -40,7 +40,11 @@ export function AppScreen({ children, variant = 'mobile' }: { children: React.Re
           style={styles.appScroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.appScrollContent, { maxWidth, paddingHorizontal: horizontalPadding, paddingBottom: bottomPadding }]}
+          contentContainerStyle={[
+            styles.appScrollContent,
+            Platform.OS === 'web' && styles.appScrollContentWeb,
+            { maxWidth, paddingHorizontal: horizontalPadding, paddingBottom: bottomPadding }
+          ]}
         >
           {children}
         </ScrollView>
@@ -78,12 +82,12 @@ export function StatCard({ title, value, tone = 'red' }: { title: string; value:
   return <View style={[styles.stat, { width, backgroundColor: bg, borderColor: fg + '66' }]}><View style={[styles.dot, { backgroundColor: fg }]} /><Text style={styles.statTitle}>{title}</Text><Text style={styles.statValue}>{value}</Text><Text style={styles.small}>Ver detalhes</Text></View>;
 }
 
-export function AppButton({ title, onPress, tone = 'red' }: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark' }) {
+export function AppButton({ title, onPress, tone = 'red', disabled = false }: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark'; disabled?: boolean }) {
   const bg = tone === 'green' ? colors.green : tone === 'dark' ? colors.card : colors.red;
-  return <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={[styles.button, { backgroundColor: bg }]}><Text numberOfLines={1} adjustsFontSizeToFit style={styles.buttonText}>{title}</Text></TouchableOpacity>;
+  return <TouchableOpacity activeOpacity={0.85} disabled={disabled} onPress={onPress} style={[styles.button, { backgroundColor: bg }, disabled && styles.buttonDisabled]}><Text numberOfLines={1} adjustsFontSizeToFit style={styles.buttonText}>{title}</Text></TouchableOpacity>;
 }
 
-export function Button(props: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark' }) {
+export function Button(props: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark'; disabled?: boolean }) {
   return <AppButton {...props} />;
 }
 
@@ -252,12 +256,13 @@ export function ListCard({ title, subtitle, status, onPress, image }: { title: s
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.black },
-  appRoot: { flex: 1, flexDirection: 'row', backgroundColor: colors.black },
-  screen: { flex: 1, backgroundColor: colors.black, position: 'relative' },
+  safeArea: { flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden', backgroundColor: colors.black },
+  appRoot: { flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden', flexDirection: 'row', backgroundColor: colors.black },
+  screen: { flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden', backgroundColor: colors.black, position: 'relative' },
   responsiveContainer: { flex: 1, alignSelf: 'center' },
-  appScroll: { flex: 1, ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : null) },
-  appScrollContent: { flexGrow: 1, width: '100%', alignSelf: 'center', paddingTop: 10 },
+  appScroll: { flex: 1, width: '100%', maxWidth: '100%', ...(Platform.OS === 'web' ? { overflowX: 'hidden' as any, overflowY: 'auto' as any, overscrollBehaviorX: 'none' as any } : null) },
+  appScrollContent: { flexGrow: 1, width: '100%', minWidth: 0, alignSelf: 'center', paddingTop: 10 },
+  appScrollContentWeb: { paddingTop: 'max(10px, env(safe-area-inset-top, 0px))' as any },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingTop: 10 },
   headerTitle: { color: colors.text, fontSize: 22, fontWeight: '800' },
   card: { backgroundColor: colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border },
@@ -267,6 +272,7 @@ const styles = StyleSheet.create({
   statValue: { color: colors.text, fontSize: 22, fontWeight: '900', marginTop: 3 },
   small: { color: colors.muted, fontSize: 11, marginTop: 2 },
   button: { minHeight: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
+  buttonDisabled: { opacity: 0.45 },
   buttonText: { color: '#fff', fontSize: 14, fontWeight: '800', maxWidth: '100%' },
   input: { height: 46, borderRadius: 12, borderWidth: 1, borderColor: '#DDD', backgroundColor: '#FAFAFA', paddingHorizontal: 14, color: '#111', marginTop: 8 },
   fieldWrap: { marginTop: 12 },

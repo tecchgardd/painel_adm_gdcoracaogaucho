@@ -95,7 +95,7 @@ export default function Eventos() {
           <View style={styles.stats}>
             <Card style={styles.mini}><Text style={styles.miniLabel}>Capacidade</Text><Text style={styles.miniValue}>{selected.capacidade ?? 0}</Text></Card>
             <Card style={styles.mini}><Text style={styles.miniLabel}>{activeType === 'CURSO' ? 'Inscritos' : 'Vendidos'}</Text><Text style={styles.miniValue}>{selected.inscritos ?? selected.vendidos ?? selected._count?.ingresso ?? 0}</Text></Card>
-            <Card style={styles.mini}><Text style={styles.miniLabel}>Valor</Text><Text style={styles.miniValue}>{formatCurrencyBRL(selected.preco ?? selected.valor ?? 0)}</Text></Card>
+            <Card style={styles.mini}><Text style={styles.miniLabel}>{activeType === 'BAILE' ? 'Ingresso' : 'Inscrição'}</Text><Text style={styles.miniValue}>{formatCurrencyBRL(selected.preco ?? selected.valor ?? 0)}</Text></Card>
           </View>
           <Button title={`Editar ${activeTab.label.toLowerCase()}`} tone="green" onPress={() => { setEditing(selected); setSelected(null); }} />
         </> : null}

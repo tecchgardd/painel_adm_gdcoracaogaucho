@@ -1,12 +1,17 @@
 {
   "cli": {
-    "version": ">= 16.28.0",
+    "version": ">= 21.0.2",
     "appVersionSource": "remote"
   },
   "build": {
     "preview": {
       "distribution": "internal",
       "environment": "preview",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://backend-coracaogaucho.vercel.app/api",
+        "EXPO_PUBLIC_USE_MOCKS": "false"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -14,6 +19,11 @@
     "production": {
       "autoIncrement": true,
       "environment": "production",
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://backend-coracaogaucho.vercel.app/api",
+        "EXPO_PUBLIC_USE_MOCKS": "false"
+      },
       "android": {
         "buildType": "app-bundle"
       }

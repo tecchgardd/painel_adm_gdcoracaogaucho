@@ -4,6 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Button, Header, Screen } from '@/components/ui';
 import { uploadFotos } from '@/services/fotos.service';
 import { colors } from '@/theme/colors';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type SelectedPhoto = {
   file: File;
@@ -35,6 +36,7 @@ function slugFolder(value: string) {
 }
 
 export default function Fotos() {
+  const { isMobile } = useResponsive();
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const [folderName, setFolderName] = useState('');
   const [selected, setSelected] = useState<SelectedPhoto[]>([]);
@@ -149,21 +151,21 @@ export default function Fotos() {
     ) : null}
 
     <View style={styles.panel}>
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.primaryAction} onPress={openFolderPicker}>
+      <View style={[styles.actions, isMobile && styles.actionsMobile]}>
+        <TouchableOpacity style={[styles.primaryAction, isMobile && styles.fullWidth]} onPress={openFolderPicker}>
           <MaterialCommunityIcons name="folder-image" color="#fff" size={20} />
           <Text style={styles.primaryActionText}>Selecionar pasta</Text>
         </TouchableOpacity>
-        <View style={styles.sendButton}>
+        <View style={[styles.sendButton, isMobile && styles.fullWidth]}>
           <Button title={uploading ? 'Enviando...' : 'Enviar Fotos'} tone="green" onPress={uploading ? undefined : startUpload} />
         </View>
       </View>
 
       <View style={styles.summaryGrid}>
-        <Info label="Pasta" value={folderName || '-'} icon="folder-outline" />
-        <Info label="Imagens encontradas" value={String(totalFound)} icon="image-multiple-outline" />
-        <Info label="Válidas" value={String(selected.length)} icon="check-circle-outline" />
-        <Info label="Inválidas" value={String(invalid.length)} icon="alert-circle-outline" />
+        <Info mobile={isMobile} label="Pasta" value={folderName || '-'} icon="folder-outline" />
+        <Info mobile={isMobile} label="Imagens encontradas" value={String(totalFound)} icon="image-multiple-outline" />
+        <Info mobile={isMobile} label="Válidas" value={String(selected.length)} icon="check-circle-outline" />
+        <Info mobile={isMobile} label="Inválidas" value={String(invalid.length)} icon="alert-circle-outline" />
       </View>
 
       <View style={styles.progressTrack}>
@@ -181,8 +183,8 @@ export default function Fotos() {
   </Screen>;
 }
 
-function Info({ label, value, icon }: { label: string; value: string; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'] }) {
-  return <View style={styles.infoCard}>
+function Info({ label, value, icon, mobile }: { label: string; value: string; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; mobile: boolean }) {
+  return <View style={[styles.infoCard, mobile && styles.infoCardMobile]}>
     <MaterialCommunityIcons name={icon} color={colors.red} size={20} />
     <Text style={styles.infoLabel}>{label}</Text>
     <Text numberOfLines={1} style={styles.infoValue}>{value}</Text>
@@ -192,11 +194,14 @@ function Info({ label, value, icon }: { label: string; value: string; icon: Reac
 const styles = StyleSheet.create({
   panel: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 14, gap: 14 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
+  actionsMobile: { alignItems: 'stretch', flexDirection: 'column' },
+  fullWidth: { minWidth: 0, width: '100%', justifyContent: 'center' },
   primaryAction: { minHeight: 46, borderRadius: 12, backgroundColor: colors.red, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
   primaryActionText: { color: '#fff', fontWeight: '900' },
   sendButton: { minWidth: 180 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   infoCard: { minHeight: 86, width: '100%', maxWidth: 230, flexGrow: 1, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, padding: 12, justifyContent: 'space-between' },
+  infoCardMobile: { maxWidth: '100%' },
   infoLabel: { color: colors.muted, fontSize: 12, fontWeight: '800' },
   infoValue: { color: colors.text, fontSize: 16, fontWeight: '900' },
   progressTrack: { height: 12, borderRadius: 999, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },

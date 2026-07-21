@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tabs, router, usePathname } from 'expo-router';
-import { clearBusinessStorage } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
-import type { SessionUser } from '@/types/entities';
 
 const hidden = { href: null };
 const checkinAllowed = ['/scanner', '/historico-validacoes'];
@@ -12,25 +10,21 @@ export default function AdminTabs() {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const loadSession = useAuthStore((state) => state.loadSession);
+  const user = useAuthStore((state) => state.user);
+  const role = useAuthStore((state) => state.role);
 
   useEffect(() => {
     let mounted = true;
     async function guard() {
+      if (user) {
+        setReady(true);
+        return;
+      }
       try {
-        await clearBusinessStorage();
-        const user: SessionUser | null | undefined = await loadSession();
+        const sessionUser = await loadSession();
         if (!mounted) return;
-        if (!user) {
+        if (!sessionUser) {
           router.replace('/login');
-          return;
-        }
-        const normalized = pathname.replace('/(admin)', '');
-        if (user.role === 'CHECKIN' && !checkinAllowed.includes(normalized)) {
-          router.replace('/scanner');
-          return;
-        }
-        if (user.role === 'STAFF' && staffBlocked.includes(normalized)) {
-          router.replace('/dashboard');
           return;
         }
       } catch {
@@ -42,7 +36,14 @@ export default function AdminTabs() {
     }
     guard();
     return () => { mounted = false; };
-  }, [loadSession, pathname]);
+  }, [loadSession, user]);
+
+  useEffect(() => {
+    if (!ready || !role) return;
+    const normalized = pathname.replace('/(admin)', '');
+    if (role === 'CHECKIN' && !checkinAllowed.includes(normalized)) router.replace('/scanner');
+    else if (role === 'STAFF' && staffBlocked.includes(normalized)) router.replace('/dashboard');
+  }, [pathname, ready, role]);
 
   if (!ready) return null;
 

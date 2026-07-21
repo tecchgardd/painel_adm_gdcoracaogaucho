@@ -60,8 +60,6 @@ export async function gerarLinkPagamentoLote(id: string) {
 export async function anexarComprovante(loteId: string, file: File) {
   const formData = new FormData();
   formData.append('comprovante', file, file.name);
-  const response = await api.post(`/admin/ingressos/lotes/${loteId}/comprovante`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  const response = await api.post(`/admin/ingressos/lotes/${loteId}/comprovante`, formData);
   return unwrapData<any>(response.data);
 }

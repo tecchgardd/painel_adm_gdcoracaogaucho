@@ -67,7 +67,8 @@ export const mobileTabs: NavItem[] = [
 
 export function canAccessNavItem(item: NavItem, role?: UserRole | null) {
   if (!item.roles?.length) return true;
-  const normalizedRole = role ? String(role).toUpperCase() as UserRole : 'ADMIN';
+  if (!role) return false;
+  const normalizedRole = String(role).toUpperCase() as UserRole;
   return item.roles.includes(normalizedRole);
 }
 

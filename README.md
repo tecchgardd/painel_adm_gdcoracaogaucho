@@ -2,6 +2,11 @@
 
 Painel administrativo em Expo/React Native integrado ao backend do Coração Gaúcho.
 
+Produção web: https://gabriel.expo.app
+
+O roteiro completo de hospedagem web, builds Android/iOS e atualizações OTA
+está em [`docs/EXPO_DEPLOY.md`](docs/EXPO_DEPLOY.md).
+
 ## Requisitos
 
 - Node.js 22.13.0 ou superior

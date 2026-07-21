@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, saveAuthToken, unwrapData } from './api';
+import { api, clearAuthStorage, saveAuthToken, unwrapData } from './api';
 import { AUTH_USER_STORAGE_KEY } from '@/config/app.config';
 import type { AuthSession, SessionUser } from '@/types/entities';
 
@@ -16,8 +16,7 @@ export async function logout() {
   try {
     await api.post('/auth/sign-out');
   } finally {
-    await saveAuthToken(null);
-    await AsyncStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    await clearAuthStorage();
   }
 }
 

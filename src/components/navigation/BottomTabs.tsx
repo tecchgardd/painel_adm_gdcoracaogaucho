@@ -24,11 +24,11 @@ export function BottomTabs() {
   const insets = useSafeAreaInsets();
   const role = useAuthStore((state) => state.role);
   const visibleTabs = filterNavigationByRole(mobileTabs, role);
-  const bottom = Math.max(insets.bottom, Platform.OS === 'web' ? 10 : 8);
+  const safeBottom = Platform.OS === 'web' ? 0 : insets.bottom;
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: bottom }]}>
-      <View style={styles.bar}>
+    <View pointerEvents="box-none" style={styles.wrap}>
+      <View style={[styles.bar, { paddingBottom: safeBottom, minHeight: 70 + safeBottom }]}>
         {visibleTabs.map((item) => {
           const active = isActive(pathname, item.path);
           return (
@@ -53,18 +53,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
+    width: '100%',
+    maxWidth: '100%',
     bottom: 0,
     paddingHorizontal: 12,
-    backgroundColor: 'transparent',
+    paddingBottom: 0,
+    backgroundColor: colors.black,
     zIndex: 50,
     elevation: 50
   },
   bar: {
-    minHeight: 74,
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
+    minHeight: 70,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.black,
@@ -75,7 +81,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.35,
     shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 }
+    shadowOffset: { width: 0, height: -4 }
   },
   item: {
     flex: 1,

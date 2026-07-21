@@ -22,8 +22,6 @@ export async function uploadFotos(files: File[], folder?: string) {
     const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
     formData.append('photos', file, relativePath || file.name);
   });
-  const response = await api.post('/admin/fotos/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  const response = await api.post('/admin/fotos/upload', formData);
   return unwrapData<FotoUploadResult>(response.data);
 }

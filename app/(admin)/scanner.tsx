@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, Screen, SearchBar } from '@/components/ui';
 import { validarCodigoManual, validarQRCode } from '@/services/scanner.service';
@@ -12,16 +13,20 @@ export default function Scanner() {
   const [modal, setModal] = useState(false);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
   const [result, setResult] = useState<ScannerResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const scanLock = useRef(false);
 
   async function validate(codigo: string, manual = false) {
-    if (!codigo || loading) return;
+    const normalizedCode = codigo.trim();
+    if (!normalizedCode || scanLock.current) return;
+    scanLock.current = true;
     setLoading(true);
     setError(null);
     setModal(true);
     try {
-      const response = manual ? await validarCodigoManual(codigo) : await validarQRCode(codigo);
+      const response = manual ? await validarCodigoManual(normalizedCode) : await validarQRCode(normalizedCode);
       setResult(response);
     } catch (err) {
       setResult(null);
@@ -32,7 +37,13 @@ export default function Scanner() {
     }
   }
 
+  function closeResult() {
+    setModal(false);
+    scanLock.current = false;
+  }
+
   function openManual() {
+    scanLock.current = false;
     setResult(null);
     setError(null);
     setModal(true);
@@ -47,22 +58,22 @@ export default function Scanner() {
       <Text style={styles.headerText}>Scanner QR Code</Text>
       <ActionMenu actions={[
         { label: 'Digitar código', icon: 'keyboard-outline', onPress: openManual },
-        { label: 'Histórico', icon: 'history', onPress: () => {} },
-        { label: 'Alternar flash', icon: 'flash', onPress: () => {} }
+        { label: 'Histórico', icon: 'history', onPress: () => router.push('/historico-validacoes') },
+        { label: torchEnabled ? 'Desligar flash' : 'Ligar flash', icon: 'flash', onPress: () => setTorchEnabled((value) => !value) }
       ]} />
     </View>
-    <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar código, CPF ou cliente" />
-    <View style={styles.cameraWrap}><CameraView style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: ['qr'] }} onBarcodeScanned={({ data }) => validate(data)} /><View style={styles.corner} /><View style={styles.line} /></View>
+    <SearchBar value={query} onChangeText={setQuery} placeholder="Código do ingresso" />
+    <View style={styles.cameraWrap}><CameraView style={StyleSheet.absoluteFill} facing="back" enableTorch={torchEnabled} barcodeScannerSettings={{ barcodeTypes: ['qr'] }} onBarcodeScanned={modal || loading ? undefined : ({ data }) => validate(data)} /><View style={styles.corner} /><View style={styles.line} /></View>
     <Text style={styles.instruction}>Aponte a câmera para o QR Code para validar o ingresso</Text>
-    <View style={styles.row}><View style={styles.buttonHalf}><Button title="Histórico" tone="dark" /></View><View style={styles.buttonHalf}><Button title="Digitar código" tone="dark" onPress={openManual} /></View></View>
+    <View style={styles.row}><View style={styles.buttonHalf}><Button title="Histórico" tone="dark" onPress={() => router.push('/historico-validacoes')} /></View><View style={styles.buttonHalf}><Button title="Digitar código" tone="dark" onPress={openManual} /></View></View>
     <AppModal
       visible={modal}
-      onClose={() => setModal(false)}
+      onClose={closeResult}
       position="center"
       title="Validar ingresso"
       footer={<View style={styles.row}>
-        <View style={styles.buttonHalf}><Button title="Cancelar" tone="dark" onPress={() => setModal(false)} /></View>
-        <View style={styles.buttonHalf}><Button title={loading ? 'Validando...' : 'Validar código'} tone="green" onPress={() => validate(query || 'CG250523ABC123', true)} /></View>
+        <View style={styles.buttonHalf}><Button title="Fechar" tone="dark" onPress={closeResult} /></View>
+        <View style={styles.buttonHalf}><Button title={loading ? 'Validando...' : 'Validar código'} tone="green" disabled={!query.trim() || loading} onPress={() => validate(query, true)} /></View>
       </View>}
     >
         <View style={styles.modalBody}>

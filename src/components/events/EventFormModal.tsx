@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppModal, Button, FormField } from '@/components/ui';
 import { createEvento, updateEvento } from '@/services/eventos.service';
 import { uploadImage } from '@/services/uploads.service';
 import { colors } from '@/theme/colors';
+import { useResponsive } from '@/hooks/useResponsive';
 import { eventoSchema } from '@/validation/schemas';
 import type { EventType } from '@/types/entities';
 
@@ -32,6 +34,69 @@ type FormState = {
 };
 
 const emptyLot = (): LotForm => ({ nome: '', valor: '0', quantidade: '0', dataLimite: '', ativo: true });
+
+function dateValue(value: string) {
+  const parsed = value ? new Date(value) : new Date();
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function localInputValue(value: string) {
+  if (!value) return '';
+  const parsed = dateValue(value);
+  const offset = parsed.getTimezoneOffset() * 60000;
+  return new Date(parsed.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function DateTimeField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const { isMobile } = useResponsive();
+  const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
+
+  if (Platform.OS === 'web') {
+    return <View style={styles.dateField}>
+      <Text style={styles.label}>{label}</Text>
+      <input
+        aria-label={label}
+        type="datetime-local"
+        value={localInputValue(value)}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        style={webDateInput}
+      />
+    </View>;
+  }
+
+  const selected = dateValue(value);
+  function change(_event: DateTimePickerEvent, next?: Date) {
+    setPickerMode(null);
+    if (next) onChange(next.toISOString());
+  }
+
+  return <View style={styles.dateField}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={[styles.dateActions, isMobile && styles.stack]}>
+      <TouchableOpacity style={styles.dateButton} onPress={() => setPickerMode('date')}>
+        <MaterialCommunityIcons name="calendar-month-outline" color={colors.text} size={20} />
+        <Text style={styles.dateButtonText}>{value ? selected.toLocaleDateString('pt-BR') : 'Selecionar data'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.timeButton, isMobile && styles.timeButtonMobile]} onPress={() => setPickerMode('time')}>
+        <MaterialCommunityIcons name="clock-outline" color={colors.text} size={20} />
+        <Text style={styles.dateButtonText}>{value ? selected.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Hora'}</Text>
+      </TouchableOpacity>
+    </View>
+    {pickerMode ? <DateTimePicker value={selected} mode={pickerMode} display="default" onChange={change} /> : null}
+  </View>;
+}
+
+const webDateInput = {
+  boxSizing: 'border-box' as const,
+  width: '100%',
+  minHeight: 46,
+  borderRadius: 12,
+  border: `1px solid ${colors.border}`,
+  background: '#111111',
+  padding: '0 14px',
+  color: colors.text,
+  colorScheme: 'dark'
+};
 
 function normalizeInitial(initialType: EventType, initial?: any): FormState {
   return {
@@ -92,6 +157,7 @@ export function EventFormModal({
   initialType: EventType;
   initial?: any;
 }) {
+  const { isMobile } = useResponsive();
   const [form, setForm] = useState<FormState>(() => normalizeInitial(initialType, initial));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -147,7 +213,7 @@ export function EventFormModal({
     try {
       setUploading(true);
       const asset = result.assets[0];
-      const url = await uploadImage(asset.uri, asset.fileName ?? `banner-${Date.now()}.jpg`);
+      const url = await uploadImage(asset.uri, asset.fileName ?? `banner-${Date.now()}.jpg`, asset.file ?? undefined);
       patch('banner', url);
     } catch (uploadError) {
       setError((uploadError as { message?: string })?.message ?? 'Não foi possível enviar o banner.');
@@ -197,7 +263,7 @@ export function EventFormModal({
       onClose={onClose}
       position="center"
       title={title}
-      footer={<View style={styles.footer}>
+      footer={<View style={[styles.footer, isMobile && styles.stack]}>
         <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={onClose} /></View>
         <View style={styles.footerItem}><Button title={saving ? 'Salvando...' : 'Salvar'} tone="green" onPress={saving ? undefined : save} /></View>
       </View>}
@@ -206,19 +272,19 @@ export function EventFormModal({
 
       <FormField label={copy.nameLabel} value={form.nome} onChangeText={(value) => patch('nome', value)} placeholder={copy.namePlaceholder} />
       {fieldErrors.nome ? <Text style={styles.fieldError}>{fieldErrors.nome}</Text> : null}
-      <FormField label="Data e horario" value={form.data} onChangeText={(value) => patch('data', value)} placeholder="2026-05-30T21:00" />
+      <DateTimeField label="Data e horário" value={form.data} onChange={(value) => patch('data', value)} />
       {fieldErrors.data ? <Text style={styles.fieldError}>{fieldErrors.data}</Text> : null}
       <FormField label="Local" value={form.local} onChangeText={(value) => patch('local', value)} placeholder="CTG ou endereco" />
       {fieldErrors.local ? <Text style={styles.fieldError}>{fieldErrors.local}</Text> : null}
       <FormField label="Cidade" value={form.cidade} onChangeText={(value) => patch('cidade', value)} placeholder="Porto Alegre" />
 
-      <View style={styles.inline}>
+      <View style={[styles.inline, isMobile && styles.stack]}>
         <View style={styles.inlineItem}>
           <FormField label={copy.capacityLabel} value={form.capacidade} onChangeText={(value) => patch('capacidade', value)} keyboardType="numeric" placeholder="800" />
         </View>
         <View style={styles.inlineItem}>
           <FormField
-            label={initialType === 'BAILE' && !form.lotes.length ? 'Valor do ingresso unico' : 'Valor'}
+            label={initialType === 'BAILE' ? (form.lotes.length ? 'Ingresso base' : 'Ingresso único') : 'Inscrição'}
             value={form.preco}
             onChangeText={(value) => patch('preco', value)}
             keyboardType="decimal-pad"
@@ -236,7 +302,7 @@ export function EventFormModal({
         ))}
       </View>
 
-      <View style={styles.bannerRow}>
+      <View style={[styles.bannerRow, isMobile && styles.bannerRowMobile]}>
         <View style={styles.bannerCopy}>
           <Text style={styles.label}>Banner/imagem</Text>
           <Text style={styles.hint}>Envie uma imagem para o backend.</Text>
@@ -247,6 +313,10 @@ export function EventFormModal({
         </TouchableOpacity>
       </View>
       {form.banner ? <Image source={{ uri: form.banner }} style={styles.preview} resizeMode="cover" /> : null}
+      {form.banner ? <TouchableOpacity style={styles.removeBanner} onPress={() => patch('banner', '')}>
+        <MaterialCommunityIcons name="trash-can-outline" color={colors.red} size={18} />
+        <Text style={styles.removeBannerText}>Remover banner</Text>
+      </TouchableOpacity> : null}
       <FormField label="URL do banner" value={form.banner} onChangeText={(value) => patch('banner', value)} placeholder="https://..." />
 
       {initialType === 'BAILE' ? <>
@@ -264,7 +334,7 @@ export function EventFormModal({
               </TouchableOpacity>
             </View>
             <FormField label="Nome do lote" value={lot.nome} onChangeText={(value) => patchLot(index, 'nome', value)} placeholder="Antecipado" />
-            <View style={styles.inline}>
+            <View style={[styles.inline, isMobile && styles.stack]}>
               <View style={styles.inlineItem}>
                 <FormField label="Valor por lote" value={lot.valor} onChangeText={(value) => patchLot(index, 'valor', value)} keyboardType="decimal-pad" placeholder="50,00" />
               </View>
@@ -272,7 +342,7 @@ export function EventFormModal({
                 <FormField label="Quantidade" value={lot.quantidade} onChangeText={(value) => patchLot(index, 'quantidade', value)} keyboardType="numeric" placeholder="100" />
               </View>
             </View>
-            <FormField label="Data limite" value={lot.dataLimite} onChangeText={(value) => patchLot(index, 'dataLimite', value)} placeholder="2026-05-20T23:59" />
+            <DateTimeField label="Data limite" value={lot.dataLimite} onChange={(value) => patchLot(index, 'dataLimite', value)} />
           </View>
         ))}
         <TouchableOpacity style={styles.addLot} onPress={() => patch('lotes', [...form.lotes, emptyLot()])}>
@@ -284,7 +354,7 @@ export function EventFormModal({
       {initialType === 'CURSO' ? <>
         <FormField label="Professor/instrutor" value={form.professor} onChangeText={(value) => patch('professor', value)} placeholder="Nome do professor" />
         {fieldErrors.professor ? <Text style={styles.fieldError}>{fieldErrors.professor}</Text> : null}
-        <FormField label="Data limite de inscricao" value={form.dataLimiteInscricao} onChangeText={(value) => patch('dataLimiteInscricao', value)} placeholder="2026-05-20T23:59" />
+        <DateTimeField label="Data limite de inscrição" value={form.dataLimiteInscricao} onChange={(value) => patch('dataLimiteInscricao', value)} />
         <FormField label="Informacoes extras" value={form.informacoesExtras} onChangeText={(value) => patch('informacoesExtras', value)} placeholder="Requisitos, nivel, par opcional..." multiline />
       </> : null}
 
@@ -302,14 +372,24 @@ const styles = StyleSheet.create({
   error: { color: colors.red, fontWeight: '800', marginTop: 8 },
   fieldError: { color: colors.red, fontSize: 12, fontWeight: '700', marginTop: 5 },
   inline: { flexDirection: 'row', gap: 10 },
+  stack: { flexDirection: 'column' },
   inlineItem: { flex: 1 },
   label: { color: colors.text, fontSize: 13, fontWeight: '900', marginTop: 14, marginBottom: 8 },
   hint: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   bannerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 8 },
+  bannerRowMobile: { alignItems: 'stretch', flexDirection: 'column' },
   bannerCopy: { flex: 1 },
   uploadButton: { minHeight: 40, borderRadius: 12, backgroundColor: colors.red, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
   uploadText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   preview: { width: '100%', height: 160, borderRadius: 16, marginTop: 12, backgroundColor: colors.card },
+  removeBanner: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8 },
+  removeBannerText: { color: colors.red, fontSize: 12, fontWeight: '900' },
+  dateField: { marginTop: 12 },
+  dateActions: { flexDirection: 'row', gap: 8 },
+  dateButton: { flex: 1, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeButton: { minWidth: 116, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeButtonMobile: { minWidth: 0, width: '100%' },
+  dateButtonText: { color: colors.text, fontSize: 13, fontWeight: '800' },
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 18 },
   lotCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 12, marginTop: 10 },
   lotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

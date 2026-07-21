@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Platform, Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Input, Logo } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
@@ -14,11 +14,15 @@ export default function Login() {
   const login = useAuthStore((state) => state.login);
 
   async function entrar() {
+    if (!email.trim() || !password) {
+      setError('Informe o e-mail e a senha.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await login(email, password);
-      router.replace('/(admin)/dashboard');
+      await login(email.trim().toLowerCase(), password);
+      router.replace('/dashboard');
     } catch (err) {
       const message = err instanceof Error ? err.message : (err as { message?: string })?.message ?? 'Não foi possível entrar.';
       setError(message);
@@ -27,7 +31,7 @@ export default function Login() {
     }
   }
 
-  return <LinearGradient colors={['#fff', '#fff', '#f7f7f7']} style={styles.container}>
+  return <LinearGradient colors={['#fff', '#fff', '#f7f7f7']} style={[styles.container, Platform.OS === 'web' && styles.containerWeb]}>
     <View style={styles.top} />
     <Logo size={132} />
     <Text style={styles.title}>Bem-vindo(a) de volta!</Text>
@@ -43,4 +47,4 @@ export default function Login() {
     <View style={styles.bottom} />
   </LinearGradient>;
 }
-const styles = StyleSheet.create({ container:{flex:1,alignItems:'center',padding:26,justifyContent:'center'}, top:{position:'absolute',top:0,left:0,right:0,height:28,backgroundColor:colors.green,borderBottomLeftRadius:28,borderBottomRightRadius:28,borderBottomWidth:8,borderBottomColor:colors.red}, bottom:{position:'absolute',bottom:0,left:0,right:0,height:28,backgroundColor:colors.red,borderTopLeftRadius:28,borderTopRightRadius:28,borderTopWidth:8,borderTopColor:colors.green}, title:{fontSize:21,fontWeight:'900',marginTop:18,color:'#111'}, sub:{color:'#555',marginTop:4}, form:{width:'100%',marginTop:24}, label:{color:'#222',fontWeight:'700',marginTop:10}, row:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:14}, remember:{color:'#555'}, link:{color:colors.red,fontWeight:'800'}, help:{marginTop:20,color:'#555'}, error:{color:colors.red,fontWeight:'800',marginTop:10} });
+const styles = StyleSheet.create({ container:{flex:1,width:'100%',minHeight:'100%',alignItems:'center',padding:26,justifyContent:'center'}, containerWeb:{minHeight:'100dvh' as any,paddingTop:'max(46px, env(safe-area-inset-top, 0px))' as any,paddingBottom:'max(46px, env(safe-area-inset-bottom, 0px))' as any}, top:{position:'absolute',top:0,left:0,right:0,height:28,backgroundColor:colors.green,borderBottomLeftRadius:28,borderBottomRightRadius:28,borderBottomWidth:8,borderBottomColor:colors.red}, bottom:{position:'absolute',bottom:0,left:0,right:0,height:28,backgroundColor:colors.red,borderTopLeftRadius:28,borderTopRightRadius:28,borderTopWidth:8,borderTopColor:colors.green}, title:{fontSize:21,fontWeight:'900',marginTop:18,color:'#111'}, sub:{color:'#555',marginTop:4}, form:{width:'100%',maxWidth:430,marginTop:24}, label:{color:'#222',fontWeight:'700',marginTop:10}, row:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:14}, remember:{color:'#555'}, link:{color:colors.red,fontWeight:'800'}, help:{marginTop:20,color:'#555'}, error:{color:colors.red,fontWeight:'800',marginTop:10} });

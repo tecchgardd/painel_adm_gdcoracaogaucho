@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Coração Gaúcho Admin",
-    "slug": "coracao-gaucho-admin-mobile",
+    "slug": "gabriel",
     "scheme": "coracaogauchoadmin",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,14 +18,35 @@
     "android": {
       "package": "br.com.coracaogaucho.admin",
       "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "bundler": "metro",
+      "output": "static",
       "favicon": "./assets/favicon.png"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/c1cb189c-e22d-4fb9-99da-fbc8e95bd079"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c1cb189c-e22d-4fb9-99da-fbc8e95bd079"
+      }
     },
     "plugins": [
       "expo-router",
@@ -52,7 +73,9 @@
         }
       ],
       "expo-font",
-      "expo-status-bar"
-    ]
+      "expo-status-bar",
+      "@react-native-community/datetimepicker"
+    ],
+    "owner": "techgards-team"
   }
 }
