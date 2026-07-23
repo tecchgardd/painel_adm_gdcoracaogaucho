@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AppModal, StatusBadge } from '@/components/ui';
 import { useResponsive } from '@/hooks/useResponsive';
-import { downloadSaleDocument, sendDocumentByEmail, sendDocumentByWhatsApp, shareSaleDocument, viewSaleDocument } from '@/services/documents.service';
 import { getSaleHistory } from '@/services/sales.service';
 import { colors } from '@/theme/colors';
 import type { Pagamento, PaymentHistory, Sale } from '@/types/entities';
@@ -107,11 +106,11 @@ export function SaleDetailsModal({
         {doc === 'INGRESSO' && ticketCount > 1 ? <ScrollView horizontal contentContainerStyle={styles.ticketSelector}>{Array.from({ length: ticketCount }, (_, index) => <TouchableOpacity key={index} onPress={() => setTicketIndex(index)} style={[styles.ticketChip, ticketIndex === index && styles.ticketChipActive]}><Text style={styles.docTabText}>Ingresso {index + 1}</Text></TouchableOpacity>)}</ScrollView> : null}
         {doc === 'INGRESSO' ? <TicketPreview sale={sale} ticketIndex={ticketIndex} /> : <ReceiptPreview sale={sale} />}
         <View style={[styles.actionGrid, isMobile && styles.actionGridMobile]}>
-          <Action title={PlatformLabel('Visualizar PDF', 'Visualizar')} icon="eye-outline" onPress={() => viewSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex)} />
-          <Action title="Baixar PDF" icon="download-outline" onPress={() => downloadSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex)} />
-          <Action title="Compartilhar" icon="share-variant-outline" green onPress={() => shareSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex)} />
-          <Action title="Enviar por WhatsApp" icon="whatsapp" onPress={() => sendDocumentByWhatsApp(sale, doc === 'INGRESSO' ? 'Ingresso' : 'Cupom da compra')} />
-          <Action title="Enviar por e-mail" icon="email-outline" onPress={() => sendDocumentByEmail(sale, doc === 'INGRESSO' ? 'Ingresso' : 'Cupom da compra')} />
+          <Action title={PlatformLabel('Visualizar PDF', 'Visualizar')} icon="eye-outline" onPress={() => import('@/services/documents.service').then(({ viewSaleDocument }) => viewSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex))} />
+          <Action title="Baixar PDF" icon="download-outline" onPress={() => import('@/services/documents.service').then(({ downloadSaleDocument }) => downloadSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex))} />
+          <Action title="Compartilhar" icon="share-variant-outline" green onPress={() => import('@/services/documents.service').then(({ shareSaleDocument }) => shareSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex))} />
+          <Action title="Enviar por WhatsApp" icon="whatsapp" onPress={() => import('@/services/documents.service').then(({ sendDocumentByWhatsApp }) => sendDocumentByWhatsApp(sale, doc === 'INGRESSO' ? 'Ingresso' : 'Cupom da compra'))} />
+          <Action title="Enviar por e-mail" icon="email-outline" onPress={() => import('@/services/documents.service').then(({ sendDocumentByEmail }) => sendDocumentByEmail(sale, doc === 'INGRESSO' ? 'Ingresso' : 'Cupom da compra'))} />
         </View>
       </>}
     </View> : null}
