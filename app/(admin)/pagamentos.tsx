@@ -37,7 +37,7 @@ export default function Pagamentos() {
   const [stripeReason, setStripeReason] = useState<StripeRefundReason>('requested_by_customer');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const query = useCallback(() => listPagamentos({ page, limit: 20, status, customerId: customerId.trim() || undefined }), [page, status, customerId]);
+  const query = useCallback(() => listPagamentos({ page, limit: 20, status, search: customerId.trim() || undefined }), [page, status, customerId]);
   const { data, loading, error, refetch } = useApiQuery(query, { fallbackData: { data: [], total: 0, page: 1, limit: 20 } });
   const payments = data?.data ?? [];
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((data?.total ?? 0) / (data?.limit ?? 20)));
@@ -83,7 +83,7 @@ export default function Pagamentos() {
       <TouchableOpacity onPress={() => { setStatus(undefined); setPage(1); }} style={[styles.chip, !status && styles.chipActive]}><Text style={styles.chipText}>TODOS</Text></TouchableOpacity>
       {statuses.map((item) => <TouchableOpacity key={item} onPress={() => { setStatus(item); setPage(1); }} style={[styles.chip, status === item && styles.chipActive]}><Text style={styles.chipText}>{item.replaceAll('_', ' ')}</Text></TouchableOpacity>)}
     </View>
-    <FormField label="Filtrar por ID do cliente" value={customerId} onChangeText={(v) => { setCustomerId(v); setPage(1); }} placeholder="customerId" />
+    <FormField label="Pesquisar cobranças e movimentações" value={customerId} onChangeText={(v) => { setCustomerId(v); setPage(1); }} placeholder="CPF, nome, venda, curso, evento ou baile" />
     {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
     {loading ? <Text style={styles.state}>Carregando pagamentos...</Text> : null}
     {error ? <TouchableOpacity onPress={refetch} style={styles.error}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}

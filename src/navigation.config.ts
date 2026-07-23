@@ -48,8 +48,7 @@ export const navigationItems: NavItem[] = [
     roles: ['ADMIN', 'STAFF'],
     children: [
       { label: 'Vendas', icon: 'cash-register', path: '/vendas', roles: ['ADMIN', 'STAFF'] },
-      { label: 'Ingressos', icon: 'ticket-percent-outline', path: '/ingressos', roles: ['ADMIN', 'STAFF'] },
-      { label: 'Pedidos da loja', icon: 'shopping-outline', path: '/pedidos', roles: ['ADMIN', 'STAFF'] }
+      { label: 'Pagamentos', icon: 'cash-multiple', path: '/pagamentos', roles: ['ADMIN', 'STAFF'] }
     ]
   },
   { label: 'Relatórios', icon: 'chart-bar', path: '/relatorios', roles: ['ADMIN', 'STAFF'] },

@@ -1,22 +1,25 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { findPersonByCpf } from '@/services/people.service';
+import { gerarLinkPagamentoLote, gerarLoteIngressos } from '@/services/ingressos.service';
 import { createSale, generateSalePaymentLink, listSales, removeSale, updateSale } from '@/services/sales.service';
 import { colors } from '@/theme/colors';
 import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/format';
 
 type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
+type OperationType = SaleType | 'LOTE';
 type SaleStatus = 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'CORTESIA';
 type PaymentMethod = 'LINK_PAGAMENTO' | 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CORTESIA';
 
 const emptyForm = {
   cpf: '',
-  tipo: 'EVENTO' as SaleType,
+  tipo: 'EVENTO' as OperationType,
   eventoId: '',
   cursoId: '',
   inscricaoId: '',
@@ -28,6 +31,7 @@ const emptyForm = {
 };
 
 export default function Vendas() {
+  const params = useLocalSearchParams<{ tipo?: string }>();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'TODOS' | SaleType>('TODOS');
   const [statusFilter, setStatusFilter] = useState<'TODOS' | SaleStatus>('TODOS');
@@ -53,10 +57,24 @@ export default function Vendas() {
   const summary = data?.summary ?? {};
   const eventos = useMemo(() => (eventsData ?? []).filter((item: any) => item.tipo !== 'CURSO'), [eventsData]);
   const cursos = useMemo(() => (eventsData ?? []).filter((item: any) => item.tipo === 'CURSO'), [eventsData]);
-  const selectedOptions = form.tipo === 'CURSO' ? cursos : eventos;
+  const selectedOptions = form.tipo === 'CURSO'
+    ? cursos
+    : form.tipo === 'LOTE'
+      ? eventos.filter((item: any) => item.tipo === 'BAILE')
+      : eventos.filter((item: any) => item.tipo === form.tipo);
+
+  useEffect(() => {
+    if (params.tipo && ['EVENTO', 'BAILE', 'CURSO', 'LOTE'].includes(params.tipo)) {
+      setForm({ ...emptyForm, tipo: params.tipo as OperationType });
+      setPerson(null);
+      setMessage('');
+      setModalOpen(true);
+    }
+  }, [params.tipo]);
 
   function openNew() {
-    setForm(emptyForm);
+    const requested = ['EVENTO', 'BAILE', 'CURSO', 'LOTE'].includes(String(params.tipo)) ? params.tipo as OperationType : 'EVENTO';
+    setForm({ ...emptyForm, tipo: requested });
     setPerson(null);
     setMessage('');
     setModalOpen(true);
@@ -76,17 +94,6 @@ export default function Vendas() {
         return;
       }
       setPerson(result.data);
-      const inscricao = result.data.raw?.inscricao?.[0];
-      if (inscricao) {
-        setForm((current) => ({
-          ...current,
-          tipo: inscricao.evento?.tipo === 'CURSO' ? 'CURSO' : inscricao.evento?.tipo === 'BAILE' ? 'BAILE' : 'EVENTO',
-          eventoId: inscricao.evento?.tipo === 'CURSO' ? '' : String(inscricao.eventoId ?? ''),
-          cursoId: inscricao.evento?.tipo === 'CURSO' ? String(inscricao.eventoId ?? '') : '',
-          inscricaoId: String(inscricao.id ?? ''),
-          valorUnitario: String(inscricao.evento?.preco ?? current.valorUnitario)
-        }));
-      }
     } catch (err) {
       setMessage((err as { message?: string })?.message ?? 'Pessoa não encontrada pelo CPF informado.');
     }
@@ -97,9 +104,34 @@ export default function Vendas() {
     setSaving(true);
     setMessage('');
     try {
+      if (!person) throw new Error('Busque e confirme o aluno pelo CPF antes de continuar.');
+      if (form.tipo === 'LOTE') {
+        const external = form.formaPagamento !== 'LINK_PAGAMENTO';
+        const lote = await gerarLoteIngressos({
+          customerId: person.id,
+          cpf: form.cpf,
+          eventoId: form.eventoId,
+          quantidade: Number(form.quantidade || 1),
+          valorUnitario: parseCurrencyInput(form.valorUnitario),
+          origemFinanceira: external ? 'PAGAMENTO_EXTERNO' : 'NOVA_VENDA',
+          formaPagamentoExterno: external
+            ? form.formaPagamento === 'PIX_EXTERNO' ? 'PIX_EXTERNO'
+              : form.formaPagamento === 'DINHEIRO' ? 'DINHEIRO'
+                : 'CARTAO_EXTERNO'
+            : undefined,
+          observacoes: form.observacao || undefined
+        });
+        if (!external) {
+          const response = await gerarLinkPagamentoLote(String(lote.id));
+          setPaymentLink({ checkoutUrl: response.checkoutUrl, shareText: response.shareText, telefone: person.telefone, nome: person.nome });
+        }
+        setModalOpen(false);
+        await refetch();
+        return;
+      }
       const created = await createSale({
         cpf: form.cpf,
-        tipo: form.tipo,
+        tipo: form.tipo as SaleType,
         eventoId: form.tipo === 'CURSO' ? undefined : form.eventoId,
         cursoId: form.tipo === 'CURSO' ? form.cursoId : undefined,
         inscricaoId: form.inscricaoId || undefined,
@@ -239,30 +271,18 @@ export default function Vendas() {
         title="Nova venda"
         footer={<View style={styles.footer}>
           <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={() => setModalOpen(false)} /></View>
-          <View style={styles.footerItem}><Button title={saving ? 'Salvando...' : 'Salvar venda'} tone="green" onPress={!saving ? saveSale : undefined} /></View>
+          <View style={styles.footerItem}><Button title={saving ? 'Salvando...' : form.formaPagamento === 'LINK_PAGAMENTO' ? 'Gerar venda e link' : 'Confirmar recebimento'} tone="green" onPress={!saving && !!person && !!(form.tipo === 'CURSO' ? form.cursoId : form.eventoId) ? saveSale : undefined} /></View>
         </View>}
       >
-        <View style={styles.inline}>
-          <View style={styles.inlineItem}><FormField label="CPF" value={form.cpf} onChangeText={(value) => patch('cpf', value)} keyboardType="numeric" placeholder="000.000.000-00" /></View>
-          <TouchableOpacity style={styles.lookupButton} onPress={lookupCpf}>
-            <MaterialCommunityIcons name="account-search-outline" color="#fff" size={20} />
-            <Text style={styles.lookupText}>Buscar</Text>
-          </TouchableOpacity>
-        </View>
-        {message ? <Text style={styles.message}>{message}</Text> : null}
-        {person ? <View style={styles.personBox}>
-          <View style={styles.personHeader}><Text style={styles.personName}>{person.nome}</Text><StatusBadge status={person.tipo} /></View>
-          <Info label="CPF" value={person.cpf} />
-          <Info label="Telefone" value={person.telefone} />
-          <Info label="Cidade" value={person.cidade} />
-        </View> : null}
-
         <Text style={styles.sectionLabel}>1. O que você está vendendo?</Text>
         <View style={styles.filters}>
-          {(['EVENTO', 'BAILE', 'CURSO'] as const).map((item) => <FilterChip key={item} label={item} active={form.tipo === item} onPress={() => patch('tipo', item)} />)}
+          {(['CURSO', 'EVENTO', 'BAILE', 'LOTE'] as const).map((item) => <FilterChip key={item} label={item === 'LOTE' ? 'LOTE PARA BAILE' : item} active={form.tipo === item} onPress={() => {
+            setPerson(null);
+            setForm((current) => ({ ...current, tipo: item, eventoId: '', cursoId: '', valorUnitario: '0', cpf: '' }));
+          }} />)}
         </View>
 
-        <Text style={styles.sectionLabel}>2. {form.tipo === 'CURSO' ? 'Selecione o curso' : 'Selecione o evento ou baile'}</Text>
+        <Text style={styles.sectionLabel}>2. {form.tipo === 'CURSO' ? 'Selecione o curso' : form.tipo === 'LOTE' ? 'Selecione o baile do lote' : `Selecione o ${form.tipo.toLowerCase()}`}</Text>
         <View style={styles.optionList}>
           {selectedOptions.slice(0, 8).map((event: any) => {
             const selected = form.tipo === 'CURSO' ? form.cursoId === String(event.id) : form.eventoId === String(event.id);
@@ -277,23 +297,39 @@ export default function Vendas() {
           })}
         </View>
 
+        <Text style={styles.sectionLabel}>3. Identifique o aluno</Text>
+        <View style={styles.inline}>
+          <View style={styles.inlineItem}><FormField label="CPF obrigatório" value={form.cpf} onChangeText={(value) => { patch('cpf', value); setPerson(null); }} keyboardType="numeric" placeholder="000.000.000-00" /></View>
+          <TouchableOpacity style={styles.lookupButton} onPress={lookupCpf}>
+            <MaterialCommunityIcons name="account-search-outline" color="#fff" size={20} />
+            <Text style={styles.lookupText}>Buscar</Text>
+          </TouchableOpacity>
+        </View>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
+        {person ? <View style={styles.personBox}>
+          <View style={styles.personHeader}><Text style={styles.personName}>{person.nome}</Text><StatusBadge status="LOCALIZADO" /></View>
+          <Info label="CPF" value={person.cpf} />
+          <Info label="Telefone/WhatsApp" value={person.telefone} />
+          <Info label="Cidade" value={person.cidade} />
+        </View> : null}
+
         <View style={styles.inline}>
           <View style={styles.inlineItem}><FormField label="Quantidade" value={form.quantidade} onChangeText={(value) => patch('quantidade', value)} keyboardType="numeric" /></View>
           <View style={styles.inlineItem}><FormField label="Valor automático" value={form.valorUnitario} onChangeText={() => undefined} editable={false} /></View>
         </View>
         <FormField label="Desconto" value={form.desconto} onChangeText={(value) => patch('desconto', value)} keyboardType="decimal-pad" />
-        <Text style={styles.sectionLabel}>4. Como o cliente vai pagar?</Text>
+        <Text style={styles.sectionLabel}>4. Como o aluno vai pagar?</Text>
         <View style={styles.filters}>
           {([
             ['LINK_PAGAMENTO', 'Link Stripe'],
             ['PIX_EXTERNO', 'Pix'],
             ['DINHEIRO', 'Dinheiro'],
             ['CARTAO_CREDITO', 'Crédito'],
-            ['CARTAO_DEBITO', 'Débito'],
-            ['CORTESIA', 'Cortesia']
+            ['CARTAO_DEBITO', 'Débito']
           ] as [PaymentMethod, string][]).map(([value, label]) => <FilterChip key={value} label={label} active={form.formaPagamento === value} onPress={() => patch('formaPagamento', value)} />)}
         </View>
         <Text style={styles.message}>{form.formaPagamento === 'LINK_PAGAMENTO' ? 'O link será criado ao concluir e poderá ser enviado pelo WhatsApp.' : 'O recebimento será confirmado agora e registrado no histórico.'}</Text>
+        <View style={styles.totalBox}><Text style={styles.totalLabel}>TOTAL DA VENDA</Text><Text style={styles.totalValue}>{formatCurrencyBRL(Math.max(0, Number(form.quantidade || 0) * parseCurrencyInput(form.valorUnitario) - parseCurrencyInput(form.desconto)))}</Text></View>
         <FormField label="Observação" value={form.observacao} onChangeText={(value) => patch('observacao', value)} multiline />
       </AppModal>
 
@@ -363,4 +399,7 @@ const styles = StyleSheet.create({
   linkText: { color: colors.text, fontWeight: '800', lineHeight: 20 },
   footer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   footerItem: { flex: 1, minWidth: 130 }
+  ,totalBox: { marginTop: 12, borderRadius: 14, borderWidth: 1, borderColor: '#2E7D32', backgroundColor: '#152A18', padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  totalLabel: { color: colors.muted, fontSize: 12, fontWeight: '900' },
+  totalValue: { color: colors.green, fontSize: 22, fontWeight: '900' }
 });

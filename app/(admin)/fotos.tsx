@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as ImagePicker from 'expo-image-picker';
 import { Button, Header, Screen } from '@/components/ui';
-import { uploadFotos } from '@/services/fotos.service';
+import { uploadFotos, UploadablePhoto } from '@/services/fotos.service';
 import { colors } from '@/theme/colors';
 import { useResponsive } from '@/hooks/useResponsive';
 
 type SelectedPhoto = {
-  file: File;
+  file: UploadablePhoto;
   id: string;
   name: string;
   relativePath?: string;
@@ -50,8 +51,24 @@ export default function Fotos() {
   const remaining = Math.max(0, selected.length - sent);
   const progressPercent = selected.length ? Math.round((sent / selected.length) * 100) : 0;
 
-  function openFolderPicker() {
-    if (Platform.OS !== 'web') return;
+  async function openFolderPicker() {
+    if (Platform.OS !== 'web') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) return setMessage('Permita o acesso às fotos para continuar.');
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: 0, quality: 1 });
+      if (result.canceled) return;
+      const assets = result.assets.slice(0, MAX_FILES).map((asset, index) => ({
+        file: { uri: asset.uri, name: asset.fileName ?? `foto-${index + 1}.jpg`, type: asset.mimeType ?? 'image/jpeg' },
+        id: `${asset.assetId ?? asset.uri}-${index}`,
+        name: asset.fileName ?? `foto-${index + 1}.jpg`,
+        status: 'PENDENTE' as const
+      }));
+      setFolderName(`formatura-${new Date().toISOString().slice(0, 10)}`);
+      setSelected(assets);
+      setInvalid(result.assets.length > MAX_FILES ? [{ name: 'Seleção', reason: 'Limite de 1000 imagens por lote' }] : []);
+      setSent(0); setFailed(0); setMessage('');
+      return;
+    }
     folderInputRef.current?.click();
   }
 
@@ -154,7 +171,7 @@ export default function Fotos() {
       <View style={[styles.actions, isMobile && styles.actionsMobile]}>
         <TouchableOpacity style={[styles.primaryAction, isMobile && styles.fullWidth]} onPress={openFolderPicker}>
           <MaterialCommunityIcons name="folder-image" color="#fff" size={20} />
-          <Text style={styles.primaryActionText}>Selecionar pasta</Text>
+          <Text style={styles.primaryActionText}>{Platform.OS === 'web' ? 'Selecionar pasta' : 'Selecionar fotos'}</Text>
         </TouchableOpacity>
         <View style={[styles.sendButton, isMobile && styles.fullWidth]}>
           <Button title={uploading ? 'Enviando...' : 'Enviar Fotos'} tone="green" onPress={uploading ? undefined : startUpload} />

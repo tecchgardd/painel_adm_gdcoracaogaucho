@@ -15,12 +15,13 @@ export type FotoUploadResult = {
   erros: { arquivo: string; erro: string }[];
 };
 
-export async function uploadFotos(files: File[], folder?: string) {
+export type UploadablePhoto = File | { uri: string; name: string; type: string };
+export async function uploadFotos(files: UploadablePhoto[], folder?: string) {
   const formData = new FormData();
   if (folder) formData.append('folder', folder);
   files.forEach((file) => {
-    const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
-    formData.append('photos', file, relativePath || file.name);
+    const relativePath = 'webkitRelativePath' in file ? file.webkitRelativePath : undefined;
+    formData.append('photos', file as any, relativePath || file.name);
   });
   const response = await api.post('/admin/fotos/upload', formData);
   return unwrapData<FotoUploadResult>(response.data);
