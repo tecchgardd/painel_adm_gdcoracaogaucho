@@ -9,7 +9,7 @@ export type SalePayload = {
   quantidade: number;
   valorUnitario: number;
   desconto?: number;
-  formaPagamento?: 'PIX' | 'DINHEIRO' | 'CARTAO' | 'CORTESIA';
+  formaPagamento?: 'LINK_PAGAMENTO' | 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CORTESIA';
   observacao?: string;
 };
 

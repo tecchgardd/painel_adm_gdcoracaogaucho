@@ -12,7 +12,7 @@ import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/f
 
 type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
 type SaleStatus = 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'CORTESIA';
-type PaymentMethod = 'PIX' | 'DINHEIRO' | 'CARTAO' | 'CORTESIA';
+type PaymentMethod = 'LINK_PAGAMENTO' | 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CORTESIA';
 
 const emptyForm = {
   cpf: '',
@@ -23,7 +23,7 @@ const emptyForm = {
   quantidade: '1',
   valorUnitario: '0',
   desconto: '0',
-  formaPagamento: 'PIX' as PaymentMethod,
+  formaPagamento: 'LINK_PAGAMENTO' as PaymentMethod,
   observacao: ''
 };
 
@@ -97,7 +97,7 @@ export default function Vendas() {
     setSaving(true);
     setMessage('');
     try {
-      await createSale({
+      const created = await createSale({
         cpf: form.cpf,
         tipo: form.tipo,
         eventoId: form.tipo === 'CURSO' ? undefined : form.eventoId,
@@ -109,6 +109,10 @@ export default function Vendas() {
         formaPagamento: form.formaPagamento,
         observacao: form.observacao
       });
+      if (form.formaPagamento === 'LINK_PAGAMENTO') {
+        const response = await generateSalePaymentLink(created.id);
+        setPaymentLink({ checkoutUrl: response.checkoutUrl, shareText: response.shareText, telefone: person?.telefone, nome: person?.nome });
+      }
       setModalOpen(false);
       refetch();
     } catch (err) {
@@ -253,12 +257,12 @@ export default function Vendas() {
           <Info label="Cidade" value={person.cidade} />
         </View> : null}
 
-        <Text style={styles.sectionLabel}>Tipo</Text>
+        <Text style={styles.sectionLabel}>1. O que você está vendendo?</Text>
         <View style={styles.filters}>
           {(['EVENTO', 'BAILE', 'CURSO'] as const).map((item) => <FilterChip key={item} label={item} active={form.tipo === item} onPress={() => patch('tipo', item)} />)}
         </View>
 
-        <Text style={styles.sectionLabel}>{form.tipo === 'CURSO' ? 'Curso' : 'Evento/Baile'}</Text>
+        <Text style={styles.sectionLabel}>2. {form.tipo === 'CURSO' ? 'Selecione o curso' : 'Selecione o evento ou baile'}</Text>
         <View style={styles.optionList}>
           {selectedOptions.slice(0, 8).map((event: any) => {
             const selected = form.tipo === 'CURSO' ? form.cursoId === String(event.id) : form.eventoId === String(event.id);
@@ -275,13 +279,21 @@ export default function Vendas() {
 
         <View style={styles.inline}>
           <View style={styles.inlineItem}><FormField label="Quantidade" value={form.quantidade} onChangeText={(value) => patch('quantidade', value)} keyboardType="numeric" /></View>
-          <View style={styles.inlineItem}><FormField label="Valor unitário" value={form.valorUnitario} onChangeText={(value) => patch('valorUnitario', value)} keyboardType="decimal-pad" /></View>
+          <View style={styles.inlineItem}><FormField label="Valor automático" value={form.valorUnitario} onChangeText={() => undefined} editable={false} /></View>
         </View>
         <FormField label="Desconto" value={form.desconto} onChangeText={(value) => patch('desconto', value)} keyboardType="decimal-pad" />
-        <Text style={styles.sectionLabel}>Forma de pagamento</Text>
+        <Text style={styles.sectionLabel}>4. Como o cliente vai pagar?</Text>
         <View style={styles.filters}>
-          {(['PIX', 'DINHEIRO', 'CARTAO', 'CORTESIA'] as const).map((item) => <FilterChip key={item} label={item === 'CARTAO' ? 'CARTÃO' : item} active={form.formaPagamento === item} onPress={() => patch('formaPagamento', item)} />)}
+          {([
+            ['LINK_PAGAMENTO', 'Link Stripe'],
+            ['PIX_EXTERNO', 'Pix'],
+            ['DINHEIRO', 'Dinheiro'],
+            ['CARTAO_CREDITO', 'Crédito'],
+            ['CARTAO_DEBITO', 'Débito'],
+            ['CORTESIA', 'Cortesia']
+          ] as [PaymentMethod, string][]).map(([value, label]) => <FilterChip key={value} label={label} active={form.formaPagamento === value} onPress={() => patch('formaPagamento', value)} />)}
         </View>
+        <Text style={styles.message}>{form.formaPagamento === 'LINK_PAGAMENTO' ? 'O link será criado ao concluir e poderá ser enviado pelo WhatsApp.' : 'O recebimento será confirmado agora e registrado no histórico.'}</Text>
         <FormField label="Observação" value={form.observacao} onChangeText={(value) => patch('observacao', value)} multiline />
       </AppModal>
 
