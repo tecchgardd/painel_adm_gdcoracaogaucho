@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { ActionMenu, AppModal, Button, FormField, Header, Screen, StatusBadge } from '@/components/ui';
+import { PaymentOperationModal } from '@/components/payments/PaymentOperationModal';
 import { useApiQuery } from '@/hooks/useApiQuery';
-import { cancelarPagamento, darBaixaExterna, ExternalPaymentMethod, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/services/pagamentos.service';
+import { cancelarPagamento, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/services/pagamentos.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/colors';
 import type { Pagamento } from '@/types/entities';
@@ -24,13 +26,15 @@ const safeError = (error: unknown, fallback: string) => {
 };
 
 export default function Pagamentos() {
+  const params = useLocalSearchParams<{ pagamentoId?: string; acao?: string }>();
   const role = useAuthStore((state) => state.role);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<PagamentoStatus | undefined>();
   const [customerId, setCustomerId] = useState('');
   const [selected, setSelected] = useState<Pagamento | null>(null);
-  const [operation, setOperation] = useState<'cancel' | 'refund' | 'external' | null>(null);
-  const [externalMethod, setExternalMethod] = useState<ExternalPaymentMethod>('PIX_EXTERNO');
+  const [operation, setOperation] = useState<'cancel' | 'refund' | null>(null);
+  const [formPayment, setFormPayment] = useState<Pagamento | null>(null);
+  const [formMode, setFormMode] = useState<'edit' | 'external' | null>(null);
   const [reason, setReason] = useState('');
   const [refundType, setRefundType] = useState<'total' | 'partial'>('total');
   const [refundValue, setRefundValue] = useState('');
@@ -48,7 +52,16 @@ export default function Pagamentos() {
     try { setSelected(await getPagamento(payment.id)); }
     catch (e) { setNotice(safeError(e, 'Não foi possível carregar os detalhes.')); }
   }
-  function begin(kind: 'cancel' | 'refund' | 'external') { setOperation(kind); setReason(''); setRefundValue(''); setRefundType('total'); setStripeReason('requested_by_customer'); }
+  function begin(kind: 'cancel' | 'refund') { setOperation(kind); setReason(''); setRefundValue(''); setRefundType('total'); setStripeReason('requested_by_customer'); }
+  async function openForm(payment: Pagamento, mode: 'edit' | 'external') {
+    try {
+      setFormPayment(await getPagamento(payment.id));
+      setSelected(null);
+      setFormMode(mode);
+    } catch (e) {
+      setNotice(safeError(e, 'Não foi possível carregar o pagamento.'));
+    }
+  }
   async function refreshSelected() { if (selected) setSelected(await getPagamento(selected.id)); await refetch(); }
   async function submitCancel() {
     if (!selected || reason.trim().length < 3 || busy) return;
@@ -68,13 +81,13 @@ export default function Pagamentos() {
     } catch (e) { setNotice(safeError(e, 'Não foi possível solicitar o reembolso.')); }
     finally { setBusy(false); }
   }
-  async function submitExternal() {
-    if (!selected || busy || reason.trim().length < 3) return;
-    setBusy(true); setNotice('');
-    try { await darBaixaExterna(selected.id, { method: externalMethod, reason: reason.trim() }); await refetch(); setSelected(null); setOperation(null); setNotice('Cobrança Stripe encerrada e pagamento externo confirmado.'); }
-    catch (e) { setNotice(safeError(e, 'Não foi possível registrar o pagamento externo.')); }
-    finally { setBusy(false); }
-  }
+  useEffect(() => {
+    if (!params.pagamentoId) return;
+    getPagamento(params.pagamentoId).then((payment) => {
+      setSelected(payment);
+      if (params.acao === 'refund') begin('refund');
+    }).catch((e) => setNotice(safeError(e, 'Não foi possível carregar o pagamento solicitado.')));
+  }, [params.acao, params.pagamentoId]);
 
   return <Screen variant="admin">
     <Header title="Pagamentos" />
@@ -91,13 +104,14 @@ export default function Pagamentos() {
       const person = customer(payment);
       const actions: { label: string; icon: any; onPress: () => void }[] = [{ label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(payment) }];
       if (role !== 'CHECKIN' && !noCancel.has(String(payment.status))) actions.push({ label: 'Cancelar', icon: 'close-circle-outline' as const, onPress: async () => { await openDetails(payment); setOperation('cancel'); } });
-      if (role !== 'CHECKIN' && !noCancel.has(String(payment.status))) actions.unshift({ label: 'Dar baixa externa', icon: 'cash-check' as const, onPress: async () => { await openDetails(payment); setOperation('external'); } });
+      if (role !== 'CHECKIN' && payment.allowedActions?.edit) actions.push({ label: 'Editar pagamento', icon: 'pencil-outline' as const, onPress: () => openForm(payment, 'edit') });
+      if (role !== 'CHECKIN' && (payment.allowedActions?.manualSettlement || payment.allowedActions?.replaceWithExternal || !noCancel.has(String(payment.status)))) actions.unshift({ label: payment.provider === 'STRIPE' ? 'Substituir por pagamento externo' : 'Dar baixa manual', icon: 'cash-check' as const, onPress: () => openForm(payment, 'external') });
       if (role === 'ADMIN' && canRefund.has(String(payment.status))) actions.push({ label: 'Reembolsar', icon: 'cash-refund' as const, onPress: async () => { await openDetails(payment); setOperation('refund'); } });
       return <View key={payment.id} style={styles.row}>
         <TouchableOpacity style={styles.card} onPress={() => openDetails(payment)}>
           <View style={styles.cardHeader}><Text style={styles.title}>{person?.nome ?? person?.name ?? `Pagamento ${payment.id}`}</Text><StatusBadge status={String(payment.status ?? 'PENDENTE')} /></View>
-          <Text style={styles.meta}>ID: {payment.id} · CPF: {maskCpf(person?.cpf)}</Text>
-          <Text style={styles.meta}>{(payment.evento ?? payment.curso)?.nome ?? 'Evento/curso não informado'} · Pedido {String((payment.pedido as any)?.id ?? '-')}</Text>
+          <Text style={styles.meta}>Venda {String(payment.pedido?.code ?? payment.pedido?.id ?? '-')} · CPF: {maskCpf(person?.cpf ?? payment.cpfCustomer)}</Text>
+          <Text style={styles.meta}>{(payment.evento ?? payment.curso)?.nome ?? 'Evento/curso não informado'} · Pedido {String(payment.pedido?.id ?? '-')}</Text>
           <Text style={styles.value}>{formatCurrencyBRL(amount(payment) / 100)} <Text style={styles.meta}>· reembolsado {formatCurrencyBRL(refunded(payment) / 100)}</Text></Text>
           <Text style={styles.meta}>{payment.origem ?? '-'} · criado {formatDateTime(payment.createdAt)} · pago {formatDateTime(payment.paidAt)} · reembolso {formatDateTime(payment.refundedAt)}</Text>
           {payment.disputeStatus ? <Text style={styles.dispute}>Contestação: {payment.disputeStatus}</Text> : null}
@@ -110,23 +124,17 @@ export default function Pagamentos() {
     <AppModal visible={!!selected && !operation} onClose={() => setSelected(null)} position="center" title="Detalhes do pagamento">
       {selected ? <Details payment={selected} balance={balance} /> : null}
       <View style={styles.footer}>
-        {role !== 'CHECKIN' && !noCancel.has(String(selected?.status)) ? <Button title="Receber pagamento externo" tone="green" onPress={() => begin('external')} /> : null}
+        {role !== 'CHECKIN' && selected?.allowedActions?.edit ? <Button title="Editar pagamento" tone="dark" onPress={() => openForm(selected, 'edit')} /> : null}
+        {role !== 'CHECKIN' && (selected?.allowedActions?.manualSettlement || selected?.allowedActions?.replaceWithExternal) ? <Button title={selected.provider === 'STRIPE' ? 'Substituir por pagamento externo' : 'Dar baixa manual'} tone="green" onPress={() => openForm(selected, 'external')} /> : null}
         {role !== 'CHECKIN' && !noCancel.has(String(selected?.status)) ? <Button title="Cancelar pagamento" tone="red" onPress={() => begin('cancel')} /> : null}
         {role === 'ADMIN' && canRefund.has(String(selected?.status)) ? <Button title="Solicitar reembolso" tone="green" onPress={() => begin('refund')} /> : null}
       </View>
     </AppModal>
-    <AppModal visible={operation === 'external'} onClose={() => !busy && setOperation(null)} position="center" title="Dar baixa externa">
-      <Text style={styles.warning}>A cobrança Stripe pendente será encerrada e substituída por este recebimento, mantendo todo o histórico.</Text>
-      <Text style={styles.label}>Forma recebida</Text>
-      <View style={styles.filters}>{([
-        ['PIX_EXTERNO', 'Pix'],
-        ['DINHEIRO', 'Dinheiro'],
-        ['CARTAO_CREDITO', 'Crédito'],
-        ['CARTAO_DEBITO', 'Débito']
-      ] as [ExternalPaymentMethod, string][]).map(([value, label]) => <Choice key={value} label={label} active={externalMethod === value} onPress={() => setExternalMethod(value)} />)}</View>
-      <FormField label="Justificativa/observação" value={reason} onChangeText={setReason} multiline placeholder="Ex.: aluno pagou presencialmente na aula" />
-      <Button title={busy ? 'Confirmando...' : 'Confirmar recebimento'} tone="green" onPress={!busy && reason.trim().length >= 3 ? submitExternal : undefined} />
-    </AppModal>
+    <PaymentOperationModal payment={formPayment} mode={formMode} onClose={() => { setFormPayment(null); setFormMode(null); }} onSuccess={async (updated) => {
+      setSelected(updated);
+      await refetch();
+      setNotice('Pagamento e venda relacionada foram atualizados.');
+    }} />
     <AppModal visible={operation === 'cancel'} onClose={() => !busy && setOperation(null)} position="center" title="Confirmar cancelamento">
       <Text style={styles.warning}>Esta ação pode cancelar a Checkout Session ou o PaymentIntent. Use reembolso se o pagamento já foi confirmado.</Text>
       <FormField label="Motivo administrativo (mínimo 3 caracteres)" value={reason} onChangeText={setReason} multiline />
@@ -150,7 +158,7 @@ function Details({ payment, balance }: { payment: Pagamento; balance: number }) 
   const person = customer(payment); const disputed = ['CONTESTADO', 'CONTESTACAO_PERDIDA'].includes(String(payment.status));
   return <View style={styles.details}>
     {disputed ? <View style={[styles.alert, payment.status === 'CONTESTACAO_PERDIDA' && styles.alertLost]}><Text style={styles.alertTitle}>{payment.status === 'CONTESTACAO_PERDIDA' ? 'Contestação perdida' : 'Situação financeira sob análise'}</Text><Text style={styles.meta}>O ingresso não é excluído automaticamente. Status anterior: {payment.statusBeforeDispute ?? '-'}</Text></View> : null}
-    <Detail label="Pedido" value={(payment.pedido as any)?.id} /><Detail label="Cliente" value={`${person?.nome ?? person?.name ?? '-'} · ${maskCpf(person?.cpf)}`} /><Detail label="Evento/curso" value={(payment.evento ?? payment.curso)?.nome} />
+    <Detail label="Pedido" value={payment.pedido?.code ?? payment.pedido?.id} /><Detail label="Cliente" value={`${person?.nome ?? person?.name ?? payment.nomeCustomer ?? '-'} · ${maskCpf(person?.cpf ?? payment.cpfCustomer)}`} /><Detail label="Evento/curso" value={(payment.evento ?? payment.curso)?.nome} />
     <Detail label="Valor original" value={formatCurrencyBRL(amount(payment) / 100)} /><Detail label="Valor reembolsado" value={formatCurrencyBRL(refunded(payment) / 100)} /><Detail label="Saldo reembolsável" value={formatCurrencyBRL(balance / 100)} />
     <Detail label="Moeda" value={payment.moeda ?? 'BRL'} /><Detail label="Status" value={payment.status} /><Detail label="Origem" value={payment.origem} />
     <Detail label="Checkout criado em" value={formatDateTime(payment.checkoutCreatedAt ?? payment.createdAt)} /><Detail label="Expiração" value={formatDateTime(payment.expiresAt)} /><Detail label="Confirmado em" value={formatDateTime(payment.paidAt)} /><Detail label="Reembolso em" value={formatDateTime(payment.refundedAt)} />

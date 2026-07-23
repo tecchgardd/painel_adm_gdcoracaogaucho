@@ -24,8 +24,28 @@ export async function cancelarPagamento(id: string, reason: string) {
 }
 
 export type ExternalPaymentMethod = 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO';
-export async function darBaixaExterna(id: string, payload: { method: ExternalPaymentMethod; amount?: number; reason: string; paidAt?: string }) {
+export type ManualPaymentPayload = { method: ExternalPaymentMethod; amount?: number; reason: string; paidAt?: string; reference?: string; observation?: string };
+export async function darBaixaExterna(id: string, payload: ManualPaymentPayload) {
   const response = await api.post(`/admin/pagamentos/${id}/baixa-externa`, payload);
+  return unwrapData<Pagamento>(response.data);
+}
+
+export async function substituirPorPagamentoExterno(id: string, payload: ManualPaymentPayload) {
+  const response = await api.post(`/admin/pagamentos/${id}/substituir-por-externo`, payload);
+  return unwrapData<Pagamento>(response.data);
+}
+
+export type EditPaymentPayload = {
+  method: ExternalPaymentMethod | 'CORTESIA';
+  status: 'PENDENTE' | 'PROCESSANDO' | 'PAGO' | 'FALHOU' | 'CANCELADO' | 'EXPIRADO';
+  amount: number;
+  paidAt?: string | null;
+  reference?: string;
+  observation?: string;
+  reason: string;
+};
+export async function editarPagamento(id: string, payload: EditPaymentPayload) {
+  const response = await api.patch(`/admin/pagamentos/${id}`, payload);
   return unwrapData<Pagamento>(response.data);
 }
 

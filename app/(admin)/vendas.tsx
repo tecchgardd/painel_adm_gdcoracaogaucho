@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
+import { ActionMenu, AppModal, Button, FormField, Header, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
+import { PaymentOperationModal } from '@/components/payments/PaymentOperationModal';
+import { SaleDetailsModal } from '@/components/sales/SaleDetailsModal';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { findPersonByCpf } from '@/services/people.service';
 import { gerarLinkPagamentoLote, gerarLoteIngressos } from '@/services/ingressos.service';
+import { getPagamento } from '@/services/pagamentos.service';
 import { createSale, generateSalePaymentLink, getSale, listSales } from '@/services/sales.service';
-import type { Sale } from '@/types/entities';
+import type { Pagamento, Sale } from '@/types/entities';
 import { colors } from '@/theme/colors';
 import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyInput } from '@/utils/format';
 
 type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
 type OperationType = SaleType | 'LOTE';
-type SaleStatus = 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'CORTESIA';
+type SaleStatus = 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'CORTESIA' | 'ESTORNADO' | 'PARCIALMENTE_ESTORNADO';
 type PaymentMethod = 'LINK_PAGAMENTO' | 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CORTESIA';
 
 const emptyForm = {
@@ -45,7 +48,9 @@ export default function Vendas() {
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<Sale | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const { numColumns } = useResponsive();
+  const [selectedPayment, setSelectedPayment] = useState<Pagamento | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'edit' | 'external' | null>(null);
+  const { isDesktop, numColumns } = useResponsive();
   const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
 
   const querySales = useCallback(() => listSales({
@@ -174,6 +179,21 @@ export default function Vendas() {
     }
   }
 
+  async function openPaymentAction(kind: 'edit' | 'external' | 'refund', paymentId: string) {
+    if (kind === 'refund') {
+      setSelected(null);
+      router.push({ pathname: '/pagamentos', params: { pagamentoId: paymentId, acao: 'refund' } });
+      return;
+    }
+    try {
+      setSelectedPayment(await getPagamento(paymentId));
+      setSelected(null);
+      setPaymentMode(kind);
+    } catch (err) {
+      setMessage((err as { message?: string })?.message ?? 'Não foi possível carregar o pagamento.');
+    }
+  }
+
   async function sendPaymentLink(sale: any) {
     setMessage('');
     if (sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoAtivo || sale.activePaymentAttempt) {
@@ -223,13 +243,14 @@ export default function Vendas() {
 
   return (
     <Screen variant="admin">
-      <Header title="Vendas" right={<TouchableOpacity onPress={openNew} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
+      <Header title="Vendas" right={<TouchableOpacity onPress={openNew} style={[styles.plus, isDesktop && styles.newSaleButton]}><MaterialCommunityIcons name="plus" color="#fff" size={20} />{isDesktop ? <Text style={styles.newSaleText}>Nova venda</Text> : null}</TouchableOpacity>} />
+      <Text style={styles.lead}>Gerencie todas as vendas, inscrições e ingressos.</Text>
 
       <View style={styles.stats}>
-        <StatCard title="Total vendido" value={formatCurrencyBRL(summary.totalVendido ?? 0)} tone="green" />
-        <StatCard title="Vendas pagas" value={String(summary.vendasPagas ?? 0)} tone="green" />
-        <StatCard title="Pendentes" value={String(summary.vendasPendentes ?? 0)} tone="yellow" />
-        <StatCard title="Cortesias" value={String(summary.cortesias ?? 0)} tone="red" />
+        <StatCard title="Total vendido" value={formatCurrencyBRL(summary.totalVendido ?? 0)} tone="green" onPress={() => { setStatusFilter('TODOS'); setPage(1); }} />
+        <StatCard title="Vendas pagas" value={String(summary.vendasPagas ?? 0)} tone="green" onPress={() => { setStatusFilter('PAGO'); setPage(1); }} />
+        <StatCard title="Pendentes" value={String(summary.vendasPendentes ?? 0)} tone="yellow" onPress={() => { setStatusFilter('PENDENTE'); setPage(1); }} />
+        <StatCard title="Cortesias" value={String(summary.cortesias ?? 0)} tone="red" onPress={() => { setStatusFilter('CORTESIA'); setPage(1); }} />
       </View>
 
       <SearchBar value={search} onChangeText={setSearch} placeholder="Pesquisar por CPF, nome ou código" />
@@ -239,64 +260,62 @@ export default function Vendas() {
       </View>
       <View style={styles.filters}>
         <FilterChip label="Todos" active={statusFilter === 'TODOS'} onPress={() => { setStatusFilter('TODOS'); setPage(1); }} />
-        {(['PENDENTE', 'PAGO', 'CANCELADO', 'CORTESIA'] as const).map((item) => <FilterChip key={item} label={item} active={statusFilter === item} onPress={() => { setStatusFilter(item); setPage(1); }} />)}
+        {(['PENDENTE', 'PAGO', 'CANCELADO', 'CORTESIA', 'ESTORNADO', 'PARCIALMENTE_ESTORNADO'] as const).map((item) => <FilterChip key={item} label={item === 'ESTORNADO' || item === 'PARCIALMENTE_ESTORNADO' ? 'REEMBOLSADOS' : item} active={statusFilter === item} onPress={() => { setStatusFilter(item); setPage(1); }} />)}
       </View>
 
       {loading ? <Text style={styles.state}>Carregando vendas...</Text> : null}
       {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
       {!loading && !error && !sales.length ? <Text style={styles.state}>Não há vendas ainda</Text> : null}
 
-      <View style={styles.grid}>
-        {sales.map((sale) => (
-          <View key={sale.id} style={[styles.row, { width: itemWidth }]}>
-            <View style={styles.rowCard}>
-              <ListCard
-                title={`${sale.codigo} - ${sale.nome}`}
-                subtitle={`${sale.cpf}\n${sale.tipo} - ${sale.eventoNome ?? '-'} - ${formatCurrencyBRL(sale.valorTotal)}\n${formatDateTime(sale.createdAt)}`}
-                status={sale.status}
-                onPress={() => openDetails(sale)}
-              />
-            </View>
-            <ActionMenu actions={[
-              { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(sale) },
-              ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
-            ]} />
+      {isDesktop ? <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          {['Venda', 'Comprador', 'Evento/Curso', 'Qtd.', 'Valor', 'Pagamento', 'Status', 'Data da venda', 'Ações'].map((label, index) => <Text key={label} style={[styles.tableHeadText, index === 8 && styles.actionsCell]}>{label}</Text>)}
+        </View>
+        {sales.map((sale) => <TouchableOpacity key={sale.id} activeOpacity={0.88} onPress={() => openDetails(sale)} style={styles.tableRow}>
+          <Text style={styles.tableText}>{sale.codigo}</Text>
+          <View style={styles.tableCell}><Text numberOfLines={1} style={styles.tableStrong}>{sale.nome}</Text><Text style={styles.tableMuted}>{maskCpf(sale.cpf)}</Text></View>
+          <Text numberOfLines={2} style={styles.tableText}>{sale.eventoNome ?? '-'}</Text>
+          <Text style={styles.tableText}>{sale.quantidade}</Text>
+          <Text style={styles.tableStrong}>{formatCurrencyBRL(sale.valorTotal)}</Text>
+          <Text numberOfLines={2} style={styles.tableText}>{sale.formaPagamento ?? '-'}</Text>
+          <View style={styles.tableCell}><StatusBadge status={sale.status} /></View>
+          <Text style={styles.tableText}>{formatDateTime(sale.createdAt)}</Text>
+          <View style={[styles.tableCell, styles.actionsCell]}><ActionMenu actions={[
+            { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(sale) },
+            ...(sale.pagamentoId ? [{ label: 'Alterar pagamento', icon: 'credit-card-edit-outline' as const, onPress: () => openPaymentAction('edit', sale.pagamentoId!) }] : []),
+            ...(sale.pagamentoId && !['PAGO', 'CORTESIA', 'ESTORNADO'].includes(sale.status) ? [{ label: 'Substituir por pagamento externo', icon: 'swap-horizontal' as const, onPress: () => openPaymentAction('external', sale.pagamentoId!) }] : []),
+            ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
+          ]} /></View>
+        </TouchableOpacity>)}
+      </View> : <View style={styles.grid}>
+        {sales.map((sale) => <View key={sale.id} style={[styles.row, { width: itemWidth }]}>
+          <View style={styles.mobileSaleCard}>
+            <TouchableOpacity onPress={() => openDetails(sale)} activeOpacity={0.86}>
+              <View style={styles.mobileSaleHeader}><Text style={styles.tableMuted}>{sale.codigo}</Text><StatusBadge status={sale.status} /></View>
+              <Text style={styles.mobileSaleName}>{sale.nome}</Text>
+              <Text style={styles.tableMuted}>{sale.eventoNome ?? '-'}</Text>
+              <Text style={styles.tableText}>{sale.quantidade} item(ns) · {formatCurrencyBRL(sale.valorTotal)}</Text>
+              <Text style={styles.tableMuted}>{sale.formaPagamento ?? '-'} · {formatDateTime(sale.createdAt)}</Text>
+            </TouchableOpacity>
           </View>
-        ))}
-      </View>
+          <ActionMenu actions={[
+            { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(sale) },
+            ...(sale.pagamentoId ? [{ label: 'Pagamento', icon: 'credit-card-outline' as const, onPress: () => openDetails(sale) }] : []),
+            ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
+          ]} />
+        </View>)}
+      </View>}
       {!loading && !error && (data?.total ?? 0) > 0 ? <View style={styles.pagination}>
         <Button title="Anterior" tone="dark" onPress={page > 1 ? () => setPage(page - 1) : undefined} />
         <Text style={styles.state}>Página {page} de {totalPages} · {data?.total ?? 0} resultado(s)</Text>
         <Button title="Próxima" tone="dark" onPress={page < totalPages ? () => setPage(page + 1) : undefined} />
       </View> : null}
 
-      <AppModal visible={!!selected} onClose={() => setSelected(null)} position="center" title={selected ? `Venda ${selected.codigo}` : 'Detalhes da venda'}>
-        {selected ? <>
-          {detailsLoading ? <Text style={styles.state}>Atualizando detalhes...</Text> : null}
-          <View style={styles.detailGrid}>
-            <Info label="Status" value={selected.status} />
-            <Info label="Comprador" value={selected.nome} />
-            <Info label="CPF" value={maskCpf(selected.cpf)} />
-            <Info label="Telefone" value={selected.telefone} />
-            <Info label="E-mail" value={selected.email} />
-            <Info label="Evento/curso" value={selected.eventoNome} />
-            <Info label="Quantidade" value={selected.quantidade} />
-            <Info label="Valor total" value={formatCurrencyBRL(selected.valorTotal)} />
-            <Info label="Forma de pagamento" value={selected.formaPagamento} />
-            <Info label="Origem" value={selected.raw?.origin} />
-            <Info label="Data da venda" value={formatDateTime(selected.createdAt)} />
-            <Info label="Observações" value={selected.observacao} />
-          </View>
-          <Text style={styles.sectionLabel}>Itens</Text>
-          {(selected.raw?.items ?? []).map((item, index) => <View key={String(item.id ?? index)} style={styles.itemBox}>
-            <Text style={styles.optionTitle}>{item.description ?? item.nome ?? 'Item'}</Text>
-            <Text style={styles.optionSubtitle}>{item.quantity ?? item.quantidade ?? 1} × {formatCurrencyBRL(item.unitPrice ?? item.valorUnitario ?? 0)} · {formatCurrencyBRL(item.total ?? 0)}</Text>
-          </View>)}
-          {!selected.raw?.items?.length ? <Text style={styles.state}>O backend não retornou itens para esta venda.</Text> : null}
-          <Text style={styles.sectionLabel}>Documentos e histórico</Text>
-          <Text style={styles.message}>Ainda não disponibilizados pelo contrato atual da API. Nenhum documento é gerado ou simulado no aplicativo.</Text>
-        </> : null}
-      </AppModal>
+      {detailsLoading ? <Text style={styles.state}>Atualizando detalhes...</Text> : null}
+      <SaleDetailsModal sale={selected} onClose={() => setSelected(null)} onPaymentAction={openPaymentAction} />
+      <PaymentOperationModal payment={selectedPayment} mode={paymentMode} onClose={() => { setSelectedPayment(null); setPaymentMode(null); }} onSuccess={async () => {
+        await refetch();
+      }} />
 
       <AppModal
         visible={modalOpen}
@@ -398,6 +417,9 @@ function Info({ label, value }: { label: string; value?: string | number | null 
 
 const styles = StyleSheet.create({
   plus: { backgroundColor: colors.red, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  newSaleButton: { width: 'auto', paddingHorizontal: 14, flexDirection: 'row', gap: 7 },
+  newSaleText: { color: '#fff', fontWeight: '900', fontSize: 12 },
+  lead: { color: colors.muted, fontSize: 12, marginTop: -10, marginBottom: 16 },
   stats: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   chip: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 8, paddingHorizontal: 10, backgroundColor: colors.card },
@@ -405,6 +427,18 @@ const styles = StyleSheet.create({
   chipText: { color: colors.muted, fontWeight: '900', fontSize: 12 },
   chipTextActive: { color: colors.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  table: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, overflow: 'hidden' },
+  tableRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 10, gap: 8 },
+  tableHeader: { minHeight: 42, backgroundColor: '#1D1D1D' },
+  tableHeadText: { flex: 1, color: colors.muted, fontSize: 10, fontWeight: '900' },
+  tableCell: { flex: 1, minWidth: 0 },
+  tableText: { flex: 1, color: colors.text, fontSize: 11, lineHeight: 16 },
+  tableStrong: { color: colors.text, fontSize: 11, fontWeight: '900' },
+  tableMuted: { color: colors.muted, fontSize: 10, lineHeight: 15 },
+  actionsCell: { flex: 0.65, alignItems: 'flex-end' },
+  mobileSaleCard: { flex: 1, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, padding: 13 },
+  mobileSaleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  mobileSaleName: { color: colors.text, fontSize: 15, fontWeight: '900', marginBottom: 3 },
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12, marginVertical: 18 },
   detailGrid: { gap: 2 },
   itemBox: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 12, padding: 12, marginBottom: 8 },

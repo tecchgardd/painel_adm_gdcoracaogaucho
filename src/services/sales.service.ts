@@ -1,6 +1,6 @@
 import { api, unwrapData } from './api';
 import type { PaginatedResponse } from '@/types/api';
-import type { Sale, SaleStatus } from '@/types/entities';
+import type { PaymentHistory, Sale, SaleStatus } from '@/types/entities';
 
 export type SalePayload = {
   cpf: string;
@@ -24,6 +24,14 @@ export type SaleFilters = {
   codigo?: string;
   tipo?: string;
   status?: string;
+  formaPagamento?: string;
+  provider?: 'STRIPE' | 'EXTERNO' | 'CORTESIA';
+  origem?: 'SITE' | 'WHATSAPP' | 'PAINEL_ADMIN';
+  eventoId?: string;
+  cursoId?: string;
+  dataInicial?: string;
+  dataFinal?: string;
+  sort?: 'createdAt:desc' | 'createdAt:asc' | 'total:desc' | 'total:asc';
 };
 
 export async function listSales(params?: SaleFilters) {
@@ -43,6 +51,11 @@ export async function listSales(params?: SaleFilters) {
 export async function getSale(id: string) {
   const response = await api.get(`/admin/vendas/${id}`);
   return unwrapData<Sale>(response.data);
+}
+
+export async function getSaleHistory(id: string) {
+  const response = await api.get(`/admin/vendas/${id}/historico`);
+  return unwrapData<PaymentHistory[]>(response.data);
 }
 
 export async function createSale(data: SalePayload) {

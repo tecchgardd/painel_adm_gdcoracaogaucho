@@ -147,6 +147,23 @@ export type Pagamento = {
   origem?: 'SITE' | 'WHATSAPP' | 'PAINEL_ADMIN' | string;
   metodo?: string;
   method?: string;
+  provider?: 'STRIPE' | 'EXTERNO' | 'CORTESIA' | string;
+  externalReference?: string;
+  notes?: string;
+  checkoutUrl?: string;
+  nomeCustomer?: string;
+  cpfCustomer?: string;
+  pedidoId?: string | number;
+  currency?: string;
+  allowedActions?: {
+    view: boolean;
+    edit: boolean;
+    manualSettlement: boolean;
+    replaceWithExternal: boolean;
+    refund: boolean;
+    cancel: boolean;
+    resendLink: boolean;
+  };
   createdAt?: string;
   checkoutCreatedAt?: string;
   expiresAt?: string;
@@ -163,6 +180,7 @@ export type Pagamento = {
   cancellationReason?: string;
   cancelledAt?: string;
   refundReason?: string;
+  refunds?: { id: string; amount: number; status: string; reason?: string; createdAt: string }[];
 };
 
 export type SaleStatus = 'PENDENTE' | 'PROCESSANDO' | 'PAGO' | 'FALHOU' | 'CANCELADO' | 'EXPIRADO' | 'ESTORNADO' | 'PARCIALMENTE_ESTORNADO' | 'CONTESTADO' | 'CONTESTACAO_PERDIDA' | 'CORTESIA';
@@ -200,6 +218,16 @@ export type Sale = {
   desconto: number;
   formaPagamento?: string;
   pagamentoId?: string;
+  pagamentoPrincipal?: {
+    id: string;
+    provider?: string;
+    forma?: string;
+    status: string;
+    valor: number;
+    valorReembolsado: number;
+  } | null;
+  pagoEm?: string;
+  documentosDisponiveis?: DocumentFile[];
   checkoutUrl?: string;
   observacao?: string;
   origem?: string;
@@ -213,6 +241,32 @@ export type Sale = {
     paymentMethod?: string;
     origin?: string;
     items?: SaleItem[];
+    evento?: Evento;
+    customer?: Customer;
+    pagamentos?: Pagamento[];
+    ingressos?: {
+      id: string | number;
+      qrcode?: string;
+      status?: string;
+      paidAt?: string;
+      validadoEm?: string;
+    }[];
+    inscricoes?: {
+      id: string | number;
+      status?: string;
+      quantidadeParticipantes?: number;
+    }[];
+    loteIngresso?: {
+      id: string | number;
+      tickets?: {
+        id: string | number;
+        codigo?: string;
+        qrcode?: string;
+        status?: string;
+        alunoNome?: string;
+        cursoNome?: string;
+      }[];
+    };
   };
 };
 

@@ -74,12 +74,15 @@ export function Card(props: { children: React.ReactNode; style?: any }) {
   return <AppCard {...props} />;
 }
 
-export function StatCard({ title, value, tone = 'red' }: { title: string; value: string; tone?: 'red' | 'green' | 'yellow' }) {
+export function StatCard({ title, value, tone = 'red', onPress }: { title: string; value: string; tone?: 'red' | 'green' | 'yellow'; onPress?: () => void }) {
   const { numColumns } = useResponsive();
   const bg = tone === 'green' ? '#17351D' : tone === 'yellow' ? '#3A3115' : '#3A1717';
   const fg = tone === 'green' ? colors.green : tone === 'yellow' ? colors.yellow : colors.red;
   const width = numColumns >= 3 ? '32%' : '48.5%';
-  return <View style={[styles.stat, { width, backgroundColor: bg, borderColor: fg + '66' }]}><View style={[styles.dot, { backgroundColor: fg }]} /><Text style={styles.statTitle}>{title}</Text><Text style={styles.statValue}>{value}</Text><Text style={styles.small}>Ver detalhes</Text></View>;
+  const content = <><View style={[styles.dot, { backgroundColor: fg }]} /><Text style={styles.statTitle}>{title}</Text><Text style={styles.statValue}>{value}</Text><Text style={styles.small}>Ver detalhes</Text></>;
+  return onPress
+    ? <TouchableOpacity activeOpacity={0.82} onPress={onPress} style={[styles.stat, { width, backgroundColor: bg, borderColor: fg + '66' }]}>{content}</TouchableOpacity>
+    : <View style={[styles.stat, { width, backgroundColor: bg, borderColor: fg + '66' }]}>{content}</View>;
 }
 
 export function AppButton({ title, onPress, tone = 'red', disabled = false }: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark'; disabled?: boolean }) {
