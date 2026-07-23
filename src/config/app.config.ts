@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+export const PRODUCTION_API_URL = 'https://backend-coracaogaucho.vercel.app/api';
+
 function resolveApiUrl() {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (Platform.OS === 'web' && envUrl?.includes('10.0.2.2')) {
@@ -8,7 +10,7 @@ function resolveApiUrl() {
   if (Platform.OS === 'android' && envUrl?.includes('localhost')) {
     return envUrl.replace('localhost', '10.0.2.2');
   }
-  return envUrl ?? (Platform.OS === 'android' ? 'http://10.0.2.2:3333/api' : 'http://localhost:3333/api');
+  return envUrl ?? PRODUCTION_API_URL;
 }
 
 export const API_URL = resolveApiUrl();
