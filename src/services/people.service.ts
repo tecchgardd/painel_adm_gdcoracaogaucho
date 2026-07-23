@@ -1,4 +1,4 @@
-import { api, unwrapData } from './api';
+import { api } from './api';
 
 export type PersonLookup = {
   success: boolean;
@@ -16,7 +16,16 @@ export type PersonLookup = {
 };
 
 export async function findPersonByCpf(cpf: string) {
-  const response = await api.get(`/admin/pessoas/by-cpf/${cpf.replace(/\D/g, '')}`);
-  return unwrapData<PersonLookup>(response.data);
-}
+  const normalizedCpf = cpf.replace(/\D/g, '');
+  if (normalizedCpf.length !== 11) {
+    return { success: false, message: 'Informe um CPF com 11 dígitos.' } satisfies PersonLookup;
+  }
 
+  const response = await api.get(`/admin/pessoas/by-cpf/${normalizedCpf}`);
+  const payload = response.data as PersonLookup | { data?: PersonLookup };
+
+  if ('success' in payload && typeof payload.success === 'boolean') return payload;
+  if (payload.data && 'success' in payload.data) return payload.data;
+
+  return { success: false, message: 'Resposta inválida ao consultar o CPF.' };
+}
