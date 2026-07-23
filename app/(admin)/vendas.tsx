@@ -8,9 +8,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { findPersonByCpf } from '@/services/people.service';
 import { gerarLinkPagamentoLote, gerarLoteIngressos } from '@/services/ingressos.service';
-import { createSale, generateSalePaymentLink, listSales, removeSale, updateSale } from '@/services/sales.service';
+import { createSale, generateSalePaymentLink, getSale, listSales } from '@/services/sales.service';
+import type { Sale } from '@/types/entities';
 import { colors } from '@/theme/colors';
-import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/format';
+import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyInput } from '@/utils/format';
 
 type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
 type OperationType = SaleType | 'LOTE';
@@ -33,6 +34,7 @@ const emptyForm = {
 export default function Vendas() {
   const params = useLocalSearchParams<{ tipo?: string }>();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<'TODOS' | SaleType>('TODOS');
   const [statusFilter, setStatusFilter] = useState<'TODOS' | SaleStatus>('TODOS');
   const [form, setForm] = useState(emptyForm);
@@ -41,20 +43,25 @@ export default function Vendas() {
   const [message, setMessage] = useState('');
   const [paymentLink, setPaymentLink] = useState<{ checkoutUrl: string; shareText: string; telefone?: string; nome?: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<Sale | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const { numColumns } = useResponsive();
   const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
 
   const querySales = useCallback(() => listSales({
+    page,
+    limit: 20,
     search: search || undefined,
     tipo: typeFilter === 'TODOS' ? undefined : typeFilter,
     status: statusFilter === 'TODOS' ? undefined : statusFilter
-  }), [search, typeFilter, statusFilter]);
-  const { data, loading, error, refetch } = useApiQuery(querySales, { fallbackData: { data: [], total: 0, summary: {} } });
+  }), [page, search, typeFilter, statusFilter]);
+  const { data, loading, error, refetch } = useApiQuery(querySales, { fallbackData: { data: [], total: 0, page: 1, limit: 20, summary: { totalVendido: 0, vendasPagas: 0, vendasPendentes: 0, cortesias: 0 } } });
   const queryEvents = useCallback(() => listEventos({ status: 'ATIVO' }), []);
   const { data: eventsData } = useApiQuery(queryEvents, { fallbackData: [] });
 
   const sales = data?.data ?? [];
-  const summary = data?.summary ?? {};
+  const summary = data?.summary ?? { totalVendido: 0, vendasPagas: 0, vendasPendentes: 0, cortesias: 0 };
+  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.limit ?? 20)));
   const eventos = useMemo(() => (eventsData ?? []).filter((item: any) => item.tipo !== 'CURSO'), [eventsData]);
   const cursos = useMemo(() => (eventsData ?? []).filter((item: any) => item.tipo === 'CURSO'), [eventsData]);
   const selectedOptions = form.tipo === 'CURSO'
@@ -154,19 +161,17 @@ export default function Vendas() {
     }
   }
 
-  async function changeStatus(id: string, status: SaleStatus) {
-    await updateSale(id, { status });
-    refetch();
-  }
-
-  async function cancelSale(id: string) {
-    await updateSale(id, { status: 'CANCELADO', observacao: 'Cancelada no painel admin' });
-    refetch();
-  }
-
-  async function deleteSale(id: string) {
-    await removeSale(id);
-    refetch();
+  async function openDetails(sale: Sale) {
+    setDetailsLoading(true);
+    setMessage('');
+    setSelected(sale);
+    try {
+      setSelected(await getSale(sale.id));
+    } catch (err) {
+      setMessage((err as { message?: string })?.message ?? 'Não foi possível carregar os detalhes da venda.');
+    } finally {
+      setDetailsLoading(false);
+    }
   }
 
   async function sendPaymentLink(sale: any) {
@@ -229,12 +234,12 @@ export default function Vendas() {
 
       <SearchBar value={search} onChangeText={setSearch} placeholder="Pesquisar por CPF, nome ou código" />
       <View style={styles.filters}>
-        <FilterChip label="Todos" active={typeFilter === 'TODOS'} onPress={() => setTypeFilter('TODOS')} />
-        {(['EVENTO', 'BAILE', 'CURSO'] as const).map((item) => <FilterChip key={item} label={item} active={typeFilter === item} onPress={() => setTypeFilter(item)} />)}
+        <FilterChip label="Todos" active={typeFilter === 'TODOS'} onPress={() => { setTypeFilter('TODOS'); setPage(1); }} />
+        {(['EVENTO', 'BAILE', 'CURSO'] as const).map((item) => <FilterChip key={item} label={item} active={typeFilter === item} onPress={() => { setTypeFilter(item); setPage(1); }} />)}
       </View>
       <View style={styles.filters}>
-        <FilterChip label="Todos" active={statusFilter === 'TODOS'} onPress={() => setStatusFilter('TODOS')} />
-        {(['PENDENTE', 'PAGO', 'CANCELADO', 'CORTESIA'] as const).map((item) => <FilterChip key={item} label={item} active={statusFilter === item} onPress={() => setStatusFilter(item)} />)}
+        <FilterChip label="Todos" active={statusFilter === 'TODOS'} onPress={() => { setStatusFilter('TODOS'); setPage(1); }} />
+        {(['PENDENTE', 'PAGO', 'CANCELADO', 'CORTESIA'] as const).map((item) => <FilterChip key={item} label={item} active={statusFilter === item} onPress={() => { setStatusFilter(item); setPage(1); }} />)}
       </View>
 
       {loading ? <Text style={styles.state}>Carregando vendas...</Text> : null}
@@ -242,27 +247,56 @@ export default function Vendas() {
       {!loading && !error && !sales.length ? <Text style={styles.state}>Não há vendas ainda</Text> : null}
 
       <View style={styles.grid}>
-        {sales.map((sale: any) => (
+        {sales.map((sale) => (
           <View key={sale.id} style={[styles.row, { width: itemWidth }]}>
             <View style={styles.rowCard}>
               <ListCard
                 title={`${sale.codigo} - ${sale.nome}`}
                 subtitle={`${sale.cpf}\n${sale.tipo} - ${sale.eventoNome ?? '-'} - ${formatCurrencyBRL(sale.valorTotal)}\n${formatDateTime(sale.createdAt)}`}
                 status={sale.status}
-                onPress={() => setMessage('')}
+                onPress={() => openDetails(sale)}
               />
             </View>
             <ActionMenu actions={[
-              { label: 'Marcar pago', icon: 'cash-check', onPress: () => changeStatus(sale.id, 'PAGO') },
-              ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoAtivo || sale.activePaymentAttempt) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : []),
-              { label: 'Marcar pendente', icon: 'clock-outline', onPress: () => changeStatus(sale.id, 'PENDENTE') },
-              { label: 'Cortesia', icon: 'ticket-percent-outline', onPress: () => changeStatus(sale.id, 'CORTESIA') },
-              { label: 'Cancelar', icon: 'close-circle-outline', tone: 'danger', onPress: () => cancelSale(sale.id) },
-              { label: 'Excluir', icon: 'trash-can-outline', tone: 'danger', onPress: () => deleteSale(sale.id) }
+              { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(sale) },
+              ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
             ]} />
           </View>
         ))}
       </View>
+      {!loading && !error && (data?.total ?? 0) > 0 ? <View style={styles.pagination}>
+        <Button title="Anterior" tone="dark" onPress={page > 1 ? () => setPage(page - 1) : undefined} />
+        <Text style={styles.state}>Página {page} de {totalPages} · {data?.total ?? 0} resultado(s)</Text>
+        <Button title="Próxima" tone="dark" onPress={page < totalPages ? () => setPage(page + 1) : undefined} />
+      </View> : null}
+
+      <AppModal visible={!!selected} onClose={() => setSelected(null)} position="center" title={selected ? `Venda ${selected.codigo}` : 'Detalhes da venda'}>
+        {selected ? <>
+          {detailsLoading ? <Text style={styles.state}>Atualizando detalhes...</Text> : null}
+          <View style={styles.detailGrid}>
+            <Info label="Status" value={selected.status} />
+            <Info label="Comprador" value={selected.nome} />
+            <Info label="CPF" value={maskCpf(selected.cpf)} />
+            <Info label="Telefone" value={selected.telefone} />
+            <Info label="E-mail" value={selected.email} />
+            <Info label="Evento/curso" value={selected.eventoNome} />
+            <Info label="Quantidade" value={selected.quantidade} />
+            <Info label="Valor total" value={formatCurrencyBRL(selected.valorTotal)} />
+            <Info label="Forma de pagamento" value={selected.formaPagamento} />
+            <Info label="Origem" value={selected.raw?.origin} />
+            <Info label="Data da venda" value={formatDateTime(selected.createdAt)} />
+            <Info label="Observações" value={selected.observacao} />
+          </View>
+          <Text style={styles.sectionLabel}>Itens</Text>
+          {(selected.raw?.items ?? []).map((item, index) => <View key={String(item.id ?? index)} style={styles.itemBox}>
+            <Text style={styles.optionTitle}>{item.description ?? item.nome ?? 'Item'}</Text>
+            <Text style={styles.optionSubtitle}>{item.quantity ?? item.quantidade ?? 1} × {formatCurrencyBRL(item.unitPrice ?? item.valorUnitario ?? 0)} · {formatCurrencyBRL(item.total ?? 0)}</Text>
+          </View>)}
+          {!selected.raw?.items?.length ? <Text style={styles.state}>O backend não retornou itens para esta venda.</Text> : null}
+          <Text style={styles.sectionLabel}>Documentos e histórico</Text>
+          <Text style={styles.message}>Ainda não disponibilizados pelo contrato atual da API. Nenhum documento é gerado ou simulado no aplicativo.</Text>
+        </> : null}
+      </AppModal>
 
       <AppModal
         visible={modalOpen}
@@ -371,6 +405,9 @@ const styles = StyleSheet.create({
   chipText: { color: colors.muted, fontWeight: '900', fontSize: 12 },
   chipTextActive: { color: colors.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12, marginVertical: 18 },
+  detailGrid: { gap: 2 },
+  itemBox: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 12, padding: 12, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowCard: { flex: 1 },
   state: { color: colors.muted, fontWeight: '800', marginTop: 8 },

@@ -165,6 +165,80 @@ export type Pagamento = {
   refundReason?: string;
 };
 
+export type SaleStatus = 'PENDENTE' | 'PROCESSANDO' | 'PAGO' | 'FALHOU' | 'CANCELADO' | 'EXPIRADO' | 'ESTORNADO' | 'PARCIALMENTE_ESTORNADO' | 'CONTESTADO' | 'CONTESTACAO_PERDIDA' | 'CORTESIA';
+export type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
+export type SaleItem = {
+  id?: string | number;
+  description?: string;
+  nome?: string;
+  quantity?: number;
+  quantidade?: number;
+  unitPrice?: number;
+  valorUnitario?: number;
+  total?: number;
+  lote?: string;
+};
+export type Sale = {
+  id: string;
+  codigo: string;
+  tipo: SaleType;
+  status: SaleStatus;
+  pessoaId?: string;
+  pessoaTipo?: string;
+  nome: string;
+  cpf?: string;
+  email?: string;
+  telefone?: string;
+  cidade?: string;
+  eventoId?: string;
+  cursoId?: string;
+  inscricaoId?: string;
+  eventoNome?: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  desconto: number;
+  formaPagamento?: string;
+  pagamentoId?: string;
+  checkoutUrl?: string;
+  observacao?: string;
+  origem?: string;
+  createdAt: string;
+  updatedAt?: string;
+  raw?: {
+    id?: string | number;
+    code?: string;
+    status?: string;
+    paymentStatus?: string;
+    paymentMethod?: string;
+    origin?: string;
+    items?: SaleItem[];
+  };
+};
+
+export type PaymentHistory = {
+  id: string;
+  action: string;
+  fromStatus?: string;
+  toStatus?: string;
+  reason?: string;
+  createdAt: string;
+  userName?: string;
+};
+
+export type DocumentFile = {
+  id: string;
+  type: 'TICKET' | 'ENROLLMENT' | 'PURCHASE_RECEIPT' | 'PAYMENT_RECEIPT';
+  status: string;
+  viewUrl?: string;
+  downloadUrl?: string;
+  qrCodeUrl?: string;
+};
+
+export type Ticket = DocumentFile & { code?: string; participantName?: string };
+export type Enrollment = DocumentFile & { code?: string; participantName?: string };
+export type PurchaseReceipt = DocumentFile & { saleId: string };
+
 export type Cortesia = {
   id: string;
   beneficiario?: string;
