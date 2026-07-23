@@ -1,6 +1,10 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from 'pdf-lib';
+import type { PDFPage, PDFFont } from 'pdf-lib';
+// A entrada ESM empacotada evita a incompatibilidade do Metro Web com o tslib
+// usado pelos módulos internos do pdf-lib.
+// @ts-expect-error O pacote não publica declarações para a entrada dist.
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib/dist/pdf-lib.esm.js';
 import QRCode from 'qrcode';
 import { Linking, Platform } from 'react-native';
 import type { Sale } from '@/types/entities';
