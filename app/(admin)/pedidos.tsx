@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
@@ -17,7 +17,7 @@ const emptyLoja = { tipo: 'LOJA', status: 'PENDENTE', formaPagamento: 'Pix', ent
 const emptyEvento = { tipo: 'EVENTO', eventoTipo: 'BAILE', status: 'PENDENTE', statusPagamento: 'PENDENTE', quantidade: '1', valor: '0', cortesia: false };
 
 export default function Pedidos() {
-  const [activeTab, setActiveTab] = useState<PedidoTab>('LOJA');
+  const activeTab: PedidoTab = 'LOJA';
   const [selected, setSelected] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [quickCustomer, setQuickCustomer] = useState<any>(null);
@@ -27,7 +27,7 @@ export default function Pedidos() {
   const [saving, setSaving] = useState(false);
   const { numColumns } = useResponsive();
   const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
-  const queryPedidos = useCallback(() => listPedidos({ type: activeTab === 'LOJA' ? 'STORE' : 'EVENT' }), [activeTab]);
+  const queryPedidos = useCallback(() => listPedidos({ type: 'STORE' }), []);
   const { data: apiPedidos, loading, error, refetch } = useApiQuery(queryPedidos, { fallbackData: [] });
   const queryEventos = useCallback(() => listEventos(), []);
   const { data: eventos } = useApiQuery(queryEventos, { fallbackData: [] });
@@ -117,15 +117,10 @@ export default function Pedidos() {
     setCustomerMessage('Cliente cadastrado e vinculado.');
   }
 
-  const eventFilters = useMemo(() => activeTab === 'EVENTO' ? ['eventoId', 'status', 'cliente', 'cpf', 'data'] : ['status', 'cliente', 'cpf', 'data'], [activeTab]);
+  const eventFilters = ['status', 'cliente', 'cpf', 'data'];
 
   return <Screen variant="admin">
-    <Header title="Pedidos" right={<TouchableOpacity onPress={openNew} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
-    <View style={styles.tabs}>
-      {(['LOJA', 'EVENTO'] as PedidoTab[]).map((tab) => <TouchableOpacity key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => { setActiveTab(tab); setQuery(''); }}>
-        <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab === 'LOJA' ? 'Pedidos da loja' : 'Pedidos de eventos'}</Text>
-      </TouchableOpacity>)}
-    </View>
+    <Header title="Pedidos da loja" right={<TouchableOpacity onPress={openNew} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
     <SearchBar value={query} onChangeText={setQuery} placeholder={`Filtrar por ${eventFilters.join(', ')}`} />
     {loading ? <Text style={styles.state}>Carregando pedidos...</Text> : null}
     {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
@@ -141,7 +136,7 @@ export default function Pedidos() {
         ]} />
       </View>)}
     </View>}
-    {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
+    {!loading && !error && !filtered.length ? <Text style={styles.state}>Nenhum pedido da loja encontrado.</Text> : null}
 
     <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected ? `Pedido ${selected.id}` : 'Pedido'}>
       {selected ? <>

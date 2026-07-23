@@ -25,7 +25,8 @@ export default function Alunos() {
   const [saving, setSaving] = useState(false);
   const [errorForm, setErrorForm] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const { numColumns } = useResponsive();
+  const { numColumns, width } = useResponsive();
+  const compact = width < 420;
   const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
   const queryAlunos = useCallback(() => listInscricoes(), []);
   const { data, loading, error, refetch } = useApiQuery(queryAlunos, { fallbackData: [] });
@@ -149,12 +150,33 @@ export default function Alunos() {
     </View>}
     {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
 
-    <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? 'Aluno'}>
+    <AppModal
+      visible={!!selected}
+      onClose={() => setSelected(null)}
+      title="Detalhes do aluno"
+      footer={selected ? <Button title="Editar aluno" tone="green" onPress={() => { setEditing(selected); setSelected(null); }} /> : undefined}
+    >
       {selected ? <>
-        <View style={styles.sheetHeader}><Text style={styles.title}>{selected.nome}</Text>{selected.status ? <StatusBadge status={selected.status} /> : null}</View>
-        {['cpf', 'telefone', 'email', 'cursoId', 'nomePar', 'cidade'].map((key) => selected[key] ? <Text key={key} style={styles.detail}>{key}: {String(selected[key])}</Text> : null)}
-        {selected.adicionais?.length ? <Text style={styles.section}>Adicionais: {selected.adicionais.length}</Text> : null}
-        <Button title="Editar aluno" tone="green" onPress={() => { setEditing(selected); setSelected(null); }} />
+        <View style={styles.profileHeader}>
+          <View style={styles.avatar}><MaterialCommunityIcons name="account-outline" color={colors.text} size={28} /></View>
+          <View style={styles.profileCopy}>
+            <Text style={styles.title}>{selected.nome || 'Aluno sem nome'}</Text>
+            <Text style={styles.profileHint}>Dados da inscrição</Text>
+          </View>
+          {selected.status ? <StatusBadge status={selected.status} /> : null}
+        </View>
+        <View style={styles.detailsCard}>
+          <DetailRow icon="card-account-details-outline" label="CPF" value={selected.cpf} />
+          <DetailRow icon="phone-outline" label="Telefone" value={selected.telefone} />
+          <DetailRow icon="email-outline" label="E-mail" value={selected.email} />
+          <DetailRow icon="school-outline" label="Curso / turma" value={selected.cursoId ?? selected.courseId} />
+          <DetailRow icon="account-heart-outline" label="Par" value={selected.nomePar ?? selected.par} />
+          <DetailRow icon="map-marker-outline" label="Cidade" value={selected.cidade} last />
+        </View>
+        {selected.adicionais?.length ? <View style={styles.additionalSummary}>
+          <MaterialCommunityIcons name="account-multiple-plus-outline" color={colors.red} size={21} />
+          <View><Text style={styles.additionalTitle}>Pessoas adicionais</Text><Text style={styles.additionalText}>{selected.adicionais.length} participante(s) nesta inscrição</Text></View>
+        </View> : null}
       </> : null}
     </AppModal>
 
@@ -175,12 +197,12 @@ export default function Alunos() {
         {fieldErrors.cpf ? <Text style={styles.fieldError}>{fieldErrors.cpf}</Text> : null}
         <FormField label="Telefone" value={editing.telefone ?? ''} onChangeText={(value) => patch('telefone', value)} keyboardType="phone-pad" />
         <FormField label="E-mail" value={editing.email ?? ''} onChangeText={(value) => patch('email', value)} keyboardType="email-address" />
-        <View style={styles.inline}>
+        <View style={[styles.inline, compact && styles.stack]}>
           <View style={styles.inlineItem}><FormField label="CEP" value={editing.cep ?? ''} onChangeText={patchCep} keyboardType="numeric" /></View>
           <View style={styles.inlineItem}><FormField label="Estado" value={editing.estado ?? ''} onChangeText={(value) => patch('estado', value)} placeholder="RS" /></View>
         </View>
         <FormField label="Rua" value={editing.rua ?? ''} onChangeText={(value) => patch('rua', value)} />
-        <View style={styles.inline}>
+        <View style={[styles.inline, compact && styles.stack]}>
           <View style={styles.inlineItem}><FormField label="Numero" value={editing.numero ?? ''} onChangeText={(value) => patch('numero', value)} /></View>
           <View style={styles.inlineItem}><FormField label="Bairro" value={editing.bairro ?? ''} onChangeText={(value) => patch('bairro', value)} /></View>
         </View>
@@ -235,6 +257,16 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   </View>;
 }
 
+function DetailRow({ icon, label, value, last = false }: { icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; label: string; value?: unknown; last?: boolean }) {
+  return <View style={[styles.detailRow, last && styles.detailRowLast]}>
+    <View style={styles.detailIcon}><MaterialCommunityIcons name={icon} color={colors.red} size={20} /></View>
+    <View style={styles.detailCopy}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text selectable style={styles.detailValue}>{value === undefined || value === null || value === '' ? 'Não informado' : String(value)}</Text>
+    </View>
+  </View>;
+}
+
 function StatusPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return <View style={styles.toggleRow}>
     <Text style={styles.toggleLabel}>Status da inscricao</Text>
@@ -255,11 +287,24 @@ const styles = StyleSheet.create({
   errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
   errorText: { color: colors.muted, lineHeight: 20 },
   retry: { color: colors.red, fontWeight: '900', marginTop: 8 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  title: { color: '#fff', fontSize: 22, fontWeight: '900', flexShrink: 1 },
-  detail: { color: colors.text, marginTop: 9, fontWeight: '700' },
+  profileHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 18 },
+  avatar: { width: 52, height: 52, flexShrink: 0, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  profileCopy: { flex: 1, minWidth: 0 },
+  title: { color: '#fff', fontSize: 20, lineHeight: 25, fontWeight: '900' },
+  profileHint: { color: colors.muted, fontSize: 12, marginTop: 3 },
+  detailsCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, paddingHorizontal: 14 },
+  detailRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  detailRowLast: { borderBottomWidth: 0 },
+  detailIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A1717' },
+  detailCopy: { flex: 1, minWidth: 0, paddingVertical: 10 },
+  detailLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  detailValue: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 3 },
+  additionalSummary: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginTop: 12 },
+  additionalTitle: { color: colors.text, fontWeight: '900' },
+  additionalText: { color: colors.muted, fontSize: 12, marginTop: 2 },
   section: { color: colors.text, fontWeight: '900', marginTop: 12 },
   inline: { flexDirection: 'row', gap: 10 },
+  stack: { flexDirection: 'column' },
   inlineItem: { flex: 1 },
   footer: { flexDirection: 'row', gap: 10 },
   footerItem: { flex: 1 },

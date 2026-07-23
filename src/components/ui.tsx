@@ -181,9 +181,10 @@ export function ModalContent({
   footer?: React.ReactNode;
 }) {
   const { width, height, isMobile, isTablet } = useResponsive();
+  const insets = useSafeAreaInsets();
   const centered = !isMobile;
   const panelWidth = isMobile ? width : isTablet ? Math.min(width - 32, 720) : Math.min(width - 48, 800);
-  const panelMaxHeight = Math.max(320, isMobile ? height * 0.9 : height * 0.86);
+  const panelMaxHeight = Math.max(320, isMobile ? height - Math.max(insets.top, 16) - 8 : height * 0.86);
   return <View style={[styles.modalOverlay, isMobile && styles.modalOverlayMobile, { justifyContent: centered ? 'center' : 'flex-end', alignItems: 'center', paddingVertical: centered ? 20 : 0 }]}>
     <View style={[
       styles.modalPanel,
@@ -196,7 +197,7 @@ export function ModalContent({
           <Text style={styles.modalBackText}>Voltar</Text>
         </TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
         {title ? <Text numberOfLines={1} style={styles.modalTitle}>{title}</Text> : <View style={styles.modalHeaderSpacer} />}
-        <TouchableOpacity accessibilityLabel="Fechar modal" style={styles.modalClose} onPress={onClose}><MaterialCommunityIcons name="close" color="#fff" size={22} /></TouchableOpacity>
+        {!isMobile ? <TouchableOpacity accessibilityLabel="Fechar modal" style={styles.modalClose} onPress={onClose}><MaterialCommunityIcons name="close" color="#fff" size={22} /></TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
       </View>}
       <ScrollView
         style={styles.modalScroll}
@@ -206,7 +207,7 @@ export function ModalContent({
       >
         {children}
       </ScrollView>
-      {footer ? <View style={styles.modalFooter}>{footer}</View> : null}
+      {footer ? <View style={[styles.modalFooter, isMobile && { paddingBottom: Math.max(12, insets.bottom + 8) }]}>{footer}</View> : null}
     </View>
   </View>;
 }
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
   modalTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 15, fontWeight: '900' },
   modalClose: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   modalScroll: { flex: 1, ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : null) },
-  modalPanelContent: { padding: 18, paddingTop: 16, paddingBottom: 24 },
+  modalPanelContent: { padding: 18, paddingTop: 16, paddingBottom: 28 },
   modalPanelContentWithFooter: { paddingBottom: 16 },
   modalFooter: { flexShrink: 0, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.dark },
   badge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8 },

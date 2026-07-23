@@ -1,10 +1,16 @@
 import { api, unwrapData } from './api';
 
 export type GerarLotePayload = {
-  cpf: string;
+  customerId?: string | number;
+  cpf?: string;
+  eventoId: string | number;
+  quantidade: number;
+  origemFinanceira: 'SEM_COBRANCA' | 'CORTESIA' | 'NOVA_VENDA' | 'VENDA_EXISTENTE' | 'PAGAMENTO_EXTERNO';
+  pedidoId?: string | number;
   valorUnitario: number;
   dataLimite?: string;
   observacoes?: string;
+  formaPagamentoExterno?: 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_EXTERNO';
 };
 
 export async function listIngressos(params?: Record<string, string>) {

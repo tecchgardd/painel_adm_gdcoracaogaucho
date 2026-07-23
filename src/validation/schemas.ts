@@ -3,6 +3,7 @@ import { parseCurrencyInput } from '@/utils/format';
 
 const requiredString = z.preprocess((value) => value ?? '', z.string().trim().min(1, 'Campo obrigatorio'));
 const optionalString = z.preprocess((value) => value ?? '', z.string().trim().optional().or(z.literal('')));
+const optionalHttpsUrl = optionalString.refine((value) => !value || value.startsWith('https://'), 'A imagem deve usar uma URL HTTPS');
 const requiredEmail = z.preprocess((value) => value ?? '', z.string().trim().min(1, 'Campo obrigatorio').email('E-mail invalido'));
 const positiveOrZero = z.union([z.string(), z.number()])
   .transform(parseCurrencyInput)
@@ -41,7 +42,7 @@ export const eventoSchema = z.object({
   capacidade: z.coerce.number().int().nonnegative('Capacidade invalida').optional(),
   status: z.enum(['ATIVO', 'INATIVO', 'CANCELADO', 'ENCERRADO']),
   observacao: optionalString,
-  banner: optionalString,
+  banner: optionalHttpsUrl,
   atracao: optionalString,
   preco: positiveOrZero,
   professor: optionalString,

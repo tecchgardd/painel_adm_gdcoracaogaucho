@@ -75,8 +75,8 @@ export type Evento = {
   cidade?: string;
   descricao?: string;
   observacao?: string;
-  banner?: string;
-  imagemUrl?: string;
+  banner?: string | null;
+  imagemUrl?: string | null;
   atracao?: string;
   professor?: string;
   preco?: number;

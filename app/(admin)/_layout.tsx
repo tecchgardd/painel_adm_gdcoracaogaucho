@@ -52,7 +52,6 @@ export default function AdminTabs() {
     <Tabs.Screen name="scanner" options={{ href: '/scanner' }} />
     <Tabs.Screen name="eventos" options={{ href: '/eventos' }} />
     <Tabs.Screen name="gestao" options={{ href: '/gestao' }} />
-    <Tabs.Screen name="menu" options={{ href: '/menu' }} />
-    {['bailes','cursos','cadastros','clientes','pedidos','ingressos','vendas','colaboradores','alunos','pagamentos','cortesias','historico-validacoes','relatorios','fotos'].map((name) => <Tabs.Screen key={name} name={name} options={hidden} />)}
+    {['menu','bailes','cursos','cadastros','clientes','pedidos','ingressos','vendas','colaboradores','alunos','pagamentos','cortesias','historico-validacoes','relatorios','fotos','configuracoes','empresas'].map((name) => <Tabs.Screen key={name} name={name} options={hidden} />)}
   </Tabs>;
 }

@@ -5,7 +5,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppModal, Button, FormField } from '@/components/ui';
 import { createEvento, updateEvento } from '@/services/eventos.service';
-import { uploadImage } from '@/services/uploads.service';
+import { resolveImageUrlForPayload, uploadImage } from '@/services/uploads.service';
 import { colors } from '@/theme/colors';
 import { useResponsive } from '@/hooks/useResponsive';
 import { eventoSchema } from '@/validation/schemas';
@@ -88,15 +88,33 @@ function DateTimeField({ label, value, onChange }: { label: string; value: strin
 
 const webDateInput = {
   boxSizing: 'border-box' as const,
-  width: '100%',
+  display: 'block',
+  width: 'fit-content',
+  maxWidth: '100%',
+  minWidth: 230,
   minHeight: 46,
   borderRadius: 12,
   border: `1px solid ${colors.border}`,
-  background: '#111111',
-  padding: '0 14px',
+  background: colors.card,
+  padding: '0 12px',
   color: colors.text,
-  colorScheme: 'dark'
+  colorScheme: 'dark',
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 800
 };
+
+function SectionCard({ number, title, icon, children }: { number: number; title: string; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; children: React.ReactNode }) {
+  return <View style={styles.sectionCard}>
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} color="#D8C8FF" size={21} /></View>
+      <Text style={styles.sectionHeading}>{number}. {title}</Text>
+      <MaterialCommunityIcons name="chevron-up" color={colors.muted} size={22} />
+    </View>
+    <View style={styles.sectionDivider} />
+    {children}
+  </View>;
+}
 
 function normalizeInitial(initialType: EventType, initial?: any): FormState {
   return {
@@ -123,7 +141,7 @@ function currencyToNumber(value: string) {
   return Number(String(value || '0').replace(/\./g, '').replace(',', '.'));
 }
 
-function toApiPayload(form: FormState) {
+export function toApiPayload(form: FormState, bannerRemoved = false) {
   return {
     tipo: form.tipo,
     nome: form.nome.trim(),
@@ -134,7 +152,7 @@ function toApiPayload(form: FormState) {
     status: form.status,
     observacao: [form.observacao, form.informacoesExtras].filter(Boolean).join('\n\n') || undefined,
     descricao: form.observacao.trim() || undefined,
-    banner: form.banner.trim() || undefined,
+    banner: resolveImageUrlForPayload(form.banner, bannerRemoved),
     atracao: form.atracao.trim() || undefined,
     professor: form.professor.trim() || undefined,
     preco: currencyToNumber(form.preco),
@@ -161,12 +179,14 @@ export function EventFormModal({
   const [form, setForm] = useState<FormState>(() => normalizeInitial(initialType, initial));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [bannerRemoved, setBannerRemoved] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!visible) return;
     setForm(normalizeInitial(initialType, initial));
+    setBannerRemoved(false);
     setError('');
     setFieldErrors({});
   }, [visible, initialType, initial]);
@@ -213,8 +233,14 @@ export function EventFormModal({
     try {
       setUploading(true);
       const asset = result.assets[0];
-      const url = await uploadImage(asset.uri, asset.fileName ?? `banner-${Date.now()}.jpg`, asset.file ?? undefined);
+      const url = await uploadImage(
+        asset.uri,
+        asset.fileName ?? `banner-${Date.now()}.jpg`,
+        asset.file ?? undefined,
+        asset.mimeType
+      );
       patch('banner', url);
+      setBannerRemoved(false);
     } catch (uploadError) {
       setError((uploadError as { message?: string })?.message ?? 'Não foi possível enviar o banner.');
     } finally {
@@ -245,7 +271,7 @@ export function EventFormModal({
     }
 
     try {
-      const payload = toApiPayload(form);
+      const payload = toApiPayload(form, bannerRemoved);
       if (form.id) await updateEvento(String(form.id), payload as any);
       else await createEvento(payload as any);
       onSaved();
@@ -263,21 +289,49 @@ export function EventFormModal({
       onClose={onClose}
       position="center"
       title={title}
-      footer={<View style={[styles.footer, isMobile && styles.stack]}>
+      footer={<View style={styles.footer}>
         <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={onClose} /></View>
         <View style={styles.footerItem}><Button title={saving ? 'Salvando...' : 'Salvar'} tone="green" onPress={saving ? undefined : save} /></View>
       </View>}
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      <View style={styles.heroBanner}>
+        {form.banner ? <Image source={{ uri: form.banner }} style={styles.heroImage} resizeMode="cover" /> : <View style={styles.heroEmpty}>
+          <MaterialCommunityIcons name="image-outline" color={colors.muted} size={34} />
+          <Text style={styles.heroEmptyText}>Adicione o banner do evento</Text>
+        </View>}
+        <TouchableOpacity style={styles.heroAction} onPress={uploading ? undefined : pickBanner}>
+          <MaterialCommunityIcons name="camera-outline" color="#fff" size={19} />
+          <Text style={styles.heroActionText}>{uploading ? 'Enviando...' : form.banner ? 'Alterar banner' : 'Selecionar banner'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.eventSummary}>
+        <View style={styles.summaryStatus}><MaterialCommunityIcons name="check-circle" color="#63D77B" size={15} /><Text style={styles.summaryStatusText}>{form.status}</Text></View>
+        <Text style={styles.summaryTitle}>{form.nome || copy.namePlaceholder}</Text>
+        <View style={styles.summaryMeta}>
+          <View style={styles.metaItem}><MaterialCommunityIcons name="calendar-outline" color={colors.muted} size={16} /><Text style={styles.summaryMetaText}>{form.data ? dateValue(form.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Data não informada'}</Text></View>
+          <View style={styles.metaItem}><MaterialCommunityIcons name="map-marker-outline" color={colors.muted} size={16} /><Text numberOfLines={1} style={styles.summaryMetaText}>{form.local || 'Local não informado'}</Text></View>
+          <View style={styles.metaItem}><MaterialCommunityIcons name="account-group-outline" color={colors.muted} size={16} /><Text style={styles.summaryMetaText}>{form.capacidade || '0'} pessoas</Text></View>
+          <View style={styles.metaItem}><MaterialCommunityIcons name="city-variant-outline" color={colors.muted} size={16} /><Text style={styles.summaryMetaText}>{form.cidade || 'Cidade não informada'}</Text></View>
+        </View>
+      </View>
+
+      <SectionCard number={1} title="Informações gerais" icon="file-document-outline">
       <FormField label={copy.nameLabel} value={form.nome} onChangeText={(value) => patch('nome', value)} placeholder={copy.namePlaceholder} />
       {fieldErrors.nome ? <Text style={styles.fieldError}>{fieldErrors.nome}</Text> : null}
-      <DateTimeField label="Data e horário" value={form.data} onChange={(value) => patch('data', value)} />
-      {fieldErrors.data ? <Text style={styles.fieldError}>{fieldErrors.data}</Text> : null}
       <FormField label="Local" value={form.local} onChangeText={(value) => patch('local', value)} placeholder="CTG ou endereco" />
       {fieldErrors.local ? <Text style={styles.fieldError}>{fieldErrors.local}</Text> : null}
       <FormField label="Cidade" value={form.cidade} onChangeText={(value) => patch('cidade', value)} placeholder="Porto Alegre" />
+      </SectionCard>
 
+      <SectionCard number={2} title="Data e horário" icon="calendar-month-outline">
+        <DateTimeField label="Data e horário do evento" value={form.data} onChange={(value) => patch('data', value)} />
+        {fieldErrors.data ? <Text style={styles.fieldError}>{fieldErrors.data}</Text> : null}
+      </SectionCard>
+
+      <SectionCard number={3} title={initialType === 'CURSO' ? 'Inscrições' : 'Ingressos'} icon="ticket-confirmation-outline">
       <View style={[styles.inline, isMobile && styles.stack]}>
         <View style={styles.inlineItem}>
           <FormField label={copy.capacityLabel} value={form.capacidade} onChangeText={(value) => patch('capacidade', value)} keyboardType="numeric" placeholder="800" />
@@ -292,34 +346,50 @@ export function EventFormModal({
           />
         </View>
       </View>
+      </SectionCard>
 
-      <Text style={styles.label}>Status</Text>
+      <SectionCard number={4} title="Status do evento" icon="flag-outline">
       <View style={styles.segmented}>
         {(['ATIVO', 'INATIVO', 'CANCELADO', 'ENCERRADO'] as EventStatus[]).map((status) => (
-          <TouchableOpacity key={status} style={[styles.segment, form.status === status && styles.segmentActive]} onPress={() => patch('status', status)}>
+          <TouchableOpacity key={status} style={[styles.segment, isMobile && styles.segmentMobile, form.status === status && styles.segmentActive]} onPress={() => patch('status', status)}>
+            <MaterialCommunityIcons name={status === 'ATIVO' ? 'check-circle-outline' : status === 'CANCELADO' ? 'close-circle-outline' : status === 'ENCERRADO' ? 'flag-outline' : 'pause-circle-outline'} color={form.status === status ? '#fff' : colors.muted} size={17} />
             <Text style={[styles.segmentText, form.status === status && styles.segmentTextActive]}>{status}</Text>
           </TouchableOpacity>
         ))}
       </View>
+      </SectionCard>
 
+      <SectionCard number={5} title="Banner / imagem do evento" icon="image-outline">
       <View style={[styles.bannerRow, isMobile && styles.bannerRowMobile]}>
         <View style={styles.bannerCopy}>
           <Text style={styles.label}>Banner/imagem</Text>
           <Text style={styles.hint}>Envie uma imagem para o backend.</Text>
         </View>
-        <TouchableOpacity style={styles.uploadButton} onPress={uploading ? undefined : pickBanner}>
+        <TouchableOpacity style={[styles.uploadButton, isMobile && styles.uploadButtonMobile]} onPress={uploading ? undefined : pickBanner}>
           <MaterialCommunityIcons name="image-plus" color="#fff" size={18} />
           <Text style={styles.uploadText}>{uploading ? 'Enviando...' : 'Selecionar'}</Text>
         </TouchableOpacity>
       </View>
       {form.banner ? <Image source={{ uri: form.banner }} style={styles.preview} resizeMode="cover" /> : null}
-      {form.banner ? <TouchableOpacity style={styles.removeBanner} onPress={() => patch('banner', '')}>
+      {form.banner ? <TouchableOpacity style={styles.removeBanner} onPress={() => { patch('banner', ''); setBannerRemoved(true); }}>
         <MaterialCommunityIcons name="trash-can-outline" color={colors.red} size={18} />
         <Text style={styles.removeBannerText}>Remover banner</Text>
       </TouchableOpacity> : null}
-      <FormField label="URL do banner" value={form.banner} onChangeText={(value) => patch('banner', value)} placeholder="https://..." />
+      <FormField
+        label="URL do banner"
+        value={form.banner}
+        onChangeText={(value) => {
+          patch('banner', value);
+          if (value.trim()) setBannerRemoved(false);
+        }}
+        placeholder="https://..."
+        autoCapitalize="none"
+        keyboardType="url"
+      />
+      </SectionCard>
 
       {initialType === 'BAILE' ? <>
+        <SectionCard number={6} title="Lotes e configurações do baile" icon="layers-triple-outline">
         <FormField label="Atração" value={form.atracao} onChangeText={(value) => patch('atracao', value)} placeholder="Nome da atração" />
         {fieldErrors.atracao ? <Text style={styles.fieldError}>{fieldErrors.atracao}</Text> : null}
         <Text style={styles.sectionTitle}>Lotes de ingresso</Text>
@@ -349,6 +419,7 @@ export function EventFormModal({
           <MaterialCommunityIcons name="plus" color={colors.red} size={18} />
           <Text style={styles.addLotText}>Adicionar lote</Text>
         </TouchableOpacity>
+        </SectionCard>
       </> : null}
 
       {initialType === 'CURSO' ? <>
@@ -364,8 +435,27 @@ export function EventFormModal({
 }
 
 const styles = StyleSheet.create({
+  heroBanner: { width: '100%', aspectRatio: 2.35, minHeight: 138, maxHeight: 250, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: '#101010', position: 'relative' },
+  heroImage: { width: '100%', height: '100%' },
+  heroEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.cardAlt },
+  heroEmptyText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
+  heroAction: { position: 'absolute', right: 12, bottom: 12, minHeight: 42, borderRadius: 12, borderWidth: 1, borderColor: '#777', backgroundColor: 'rgba(12,12,16,.82)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroActionText: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  eventSummary: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111315', padding: 16, marginTop: 12 },
+  summaryStatus: { alignSelf: 'flex-start', minHeight: 25, borderRadius: 8, borderWidth: 1, borderColor: '#225B30', backgroundColor: '#13341C', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  summaryStatusText: { color: '#B9F4C5', fontSize: 11, fontWeight: '900' },
+  summaryTitle: { color: colors.text, fontSize: 20, lineHeight: 26, fontWeight: '900', marginTop: 12 },
+  summaryMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
+  metaItem: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  summaryMetaText: { color: '#D1D1D1', fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  sectionCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111315', padding: 14, marginTop: 12 },
+  sectionHeader: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#39246D' },
+  sectionHeading: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '900' },
+  sectionDivider: { height: 1, backgroundColor: colors.border, marginTop: 8, marginBottom: 2 },
   segmented: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  segment: { minHeight: 36, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
+  segment: { minHeight: 42, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
+  segmentMobile: { flexGrow: 1, flexBasis: '46%', minHeight: 44 },
   segmentActive: { backgroundColor: colors.red, borderColor: colors.red },
   segmentText: { color: colors.muted, fontSize: 12, fontWeight: '900' },
   segmentTextActive: { color: '#fff' },
@@ -380,16 +470,17 @@ const styles = StyleSheet.create({
   bannerRowMobile: { alignItems: 'stretch', flexDirection: 'column' },
   bannerCopy: { flex: 1 },
   uploadButton: { minHeight: 40, borderRadius: 12, backgroundColor: colors.red, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  uploadButtonMobile: { width: '100%', minHeight: 46, justifyContent: 'center' },
   uploadText: { color: '#fff', fontSize: 12, fontWeight: '900' },
-  preview: { width: '100%', height: 160, borderRadius: 16, marginTop: 12, backgroundColor: colors.card },
+  preview: { width: 150, height: 78, borderRadius: 12, marginTop: 12, backgroundColor: colors.card },
   removeBanner: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8 },
   removeBannerText: { color: colors.red, fontSize: 12, fontWeight: '900' },
-  dateField: { marginTop: 12 },
-  dateActions: { flexDirection: 'row', gap: 8 },
-  dateButton: { flex: 1, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dateField: { alignSelf: 'flex-start', maxWidth: '100%', minWidth: 0, marginTop: 12, overflow: 'hidden' },
+  dateActions: { width: '100%', maxWidth: '100%', minWidth: 0, flexDirection: 'row', gap: 8 },
+  dateButton: { flex: 1, minWidth: 0, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   timeButton: { minWidth: 116, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   timeButtonMobile: { minWidth: 0, width: '100%' },
-  dateButtonText: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  dateButtonText: { flexShrink: 1, color: colors.text, fontSize: 13, fontWeight: '800' },
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 18 },
   lotCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 12, marginTop: 10 },
   lotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

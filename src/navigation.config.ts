@@ -49,8 +49,7 @@ export const navigationItems: NavItem[] = [
     children: [
       { label: 'Vendas', icon: 'cash-register', path: '/vendas', roles: ['ADMIN', 'STAFF'] },
       { label: 'Ingressos', icon: 'ticket-percent-outline', path: '/ingressos', roles: ['ADMIN', 'STAFF'] },
-      { label: 'Pedidos da loja', icon: 'shopping-outline', path: '/pedidos', roles: ['ADMIN', 'STAFF'] },
-      { label: 'Pedidos de eventos', icon: 'ticket-confirmation-outline', path: '/pedidos', roles: ['ADMIN', 'STAFF'] }
+      { label: 'Pedidos da loja', icon: 'shopping-outline', path: '/pedidos', roles: ['ADMIN', 'STAFF'] }
     ]
   },
   { label: 'Relatórios', icon: 'chart-bar', path: '/relatorios', roles: ['ADMIN', 'STAFF'] },
@@ -61,8 +60,7 @@ export const mobileTabs: NavItem[] = [
   { label: 'Dashboard', icon: 'home-outline', path: '/dashboard', roles: ['ADMIN', 'STAFF'] },
   { label: 'Scanner', icon: 'qrcode-scan', path: '/scanner', roles: ['ADMIN', 'STAFF', 'CHECKIN'] },
   { label: 'Eventos', icon: 'calendar-month-outline', path: '/eventos', roles: ['ADMIN', 'STAFF'] },
-  { label: 'Gestao', icon: 'view-grid-plus-outline', path: '/gestao', roles: ['ADMIN', 'STAFF'] },
-  { label: 'Menu', icon: 'menu', path: '/menu', roles: ['ADMIN', 'STAFF'] }
+  { label: 'Gestão', icon: 'view-grid-plus-outline', path: '/gestao', roles: ['ADMIN', 'STAFF'] }
 ];
 
 export function canAccessNavItem(item: NavItem, role?: UserRole | null) {
