@@ -59,7 +59,6 @@ export const mobileTabs: NavItem[] = [
   { label: 'Dashboard', icon: 'home-outline', path: '/dashboard', roles: ['ADMIN', 'STAFF'] },
   { label: 'Vendas', icon: 'cart-outline', path: '/vendas', roles: ['ADMIN', 'STAFF'] },
   { label: 'Check-in', icon: 'qrcode-scan', path: '/scanner', roles: ['ADMIN', 'STAFF', 'CHECKIN'] },
-  { label: 'Pagamentos', icon: 'credit-card-outline', path: '/pagamentos', roles: ['ADMIN', 'STAFF'] },
   { label: 'Gestão', icon: 'view-grid-plus-outline', path: '/gestao', roles: ['ADMIN', 'STAFF'] }
 ];
 

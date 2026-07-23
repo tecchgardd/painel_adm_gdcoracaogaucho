@@ -1,9 +1,9 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AppModal, StatusBadge } from '@/components/ui';
 import { useResponsive } from '@/hooks/useResponsive';
-import { sendDocumentByEmail, sendDocumentByWhatsApp, shareDocument, receiptHtml, ticketHtml, viewOrPrintDocument } from '@/services/documents.service';
+import { downloadSaleDocument, sendDocumentByEmail, sendDocumentByWhatsApp, shareSaleDocument, viewSaleDocument } from '@/services/documents.service';
 import { getSaleHistory } from '@/services/sales.service';
 import { colors } from '@/theme/colors';
 import type { Pagamento, PaymentHistory, Sale } from '@/types/entities';
@@ -44,8 +44,6 @@ export function SaleDetailsModal({
     getSaleHistory(sale.id).then(setHistory).catch((error: { message?: string }) => setHistoryError(error.message ?? 'Não foi possível carregar o histórico.'));
   }, [history.length, sale, tab]);
 
-  const ticket = useMemo(() => sale ? ticketHtml(sale, ticketIndex) : '', [sale, ticketIndex]);
-  const receipt = useMemo(() => sale ? receiptHtml(sale) : '', [sale]);
   if (!sale) return null;
 
   return <AppModal visible={!!sale} onClose={onClose} position="center" title={`Venda ${sale.codigo}`}>
@@ -109,9 +107,9 @@ export function SaleDetailsModal({
         {doc === 'INGRESSO' && ticketCount > 1 ? <ScrollView horizontal contentContainerStyle={styles.ticketSelector}>{Array.from({ length: ticketCount }, (_, index) => <TouchableOpacity key={index} onPress={() => setTicketIndex(index)} style={[styles.ticketChip, ticketIndex === index && styles.ticketChipActive]}><Text style={styles.docTabText}>Ingresso {index + 1}</Text></TouchableOpacity>)}</ScrollView> : null}
         {doc === 'INGRESSO' ? <TicketPreview sale={sale} ticketIndex={ticketIndex} /> : <ReceiptPreview sale={sale} />}
         <View style={[styles.actionGrid, isMobile && styles.actionGridMobile]}>
-          <Action title={PlatformLabel('Visualizar / Imprimir', 'Visualizar')} icon="eye-outline" onPress={() => viewOrPrintDocument(doc === 'INGRESSO' ? ticket : receipt)} />
-          <Action title="Baixar PDF" icon="download-outline" onPress={() => shareDocument(doc === 'INGRESSO' ? ticket : receipt, `Baixar ${doc.toLowerCase()}`)} />
-          <Action title="Compartilhar" icon="share-variant-outline" green onPress={() => shareDocument(doc === 'INGRESSO' ? ticket : receipt, `Compartilhar ${doc.toLowerCase()}`)} />
+          <Action title={PlatformLabel('Visualizar PDF', 'Visualizar')} icon="eye-outline" onPress={() => viewSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex)} />
+          <Action title="Baixar PDF" icon="download-outline" onPress={() => downloadSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex)} />
+          <Action title="Compartilhar" icon="share-variant-outline" green onPress={() => shareSaleDocument(sale, doc === 'INGRESSO' ? 'ticket' : 'receipt', ticketIndex)} />
           <Action title="Enviar por WhatsApp" icon="whatsapp" onPress={() => sendDocumentByWhatsApp(sale, doc === 'INGRESSO' ? 'Ingresso' : 'Cupom da compra')} />
           <Action title="Enviar por e-mail" icon="email-outline" onPress={() => sendDocumentByEmail(sale, doc === 'INGRESSO' ? 'Ingresso' : 'Cupom da compra')} />
         </View>
