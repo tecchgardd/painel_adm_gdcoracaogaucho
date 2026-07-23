@@ -43,7 +43,6 @@ const sections: { title: string; items: ManagementItem[] }[] = [
     title: 'SISTEMA',
     items: [
       { label: 'Usuários e permissões', subtitle: 'Acessos administrativos', icon: 'account-key-outline', path: '/colaboradores', adminOnly: true },
-      { label: 'Configurações', subtitle: 'Preferências do painel', icon: 'cog-outline', path: '/configuracoes', adminOnly: true },
       { label: 'Histórico de ações', subtitle: 'Validações e auditoria', icon: 'history', path: '/historico-validacoes' },
       { label: 'Relatórios', subtitle: 'Indicadores operacionais', icon: 'chart-box-outline', path: '/relatorios' }
     ]
