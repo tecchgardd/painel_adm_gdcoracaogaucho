@@ -15,8 +15,8 @@ type ManagementItem = {
 
 const quickActions: ManagementItem[] = [
   { label: 'Nova venda', subtitle: 'Evento, baile ou curso', icon: 'cash-register', path: '/vendas' },
-  { label: 'Nova inscrição', subtitle: 'Somente curso ou turma', icon: 'account-school-outline', path: '/alunos' },
-  { label: 'Gerar lote', subtitle: 'Aluno + evento ou baile', icon: 'ticket-confirmation-outline', path: '/ingressos' },
+  { label: 'Nova inscrição', subtitle: 'Venda de curso para um aluno', icon: 'account-school-outline', path: '/vendas?tipo=CURSO' },
+  { label: 'Gerar lote', subtitle: 'Aluno + evento ou baile', icon: 'ticket-confirmation-outline', path: '/vendas?tipo=LOTE' },
   { label: 'Dar baixa', subtitle: 'Pagamentos pendentes', icon: 'cash-check', path: '/pagamentos' }
 ];
 
@@ -26,9 +26,6 @@ const sections: { title: string; items: ManagementItem[] }[] = [
     items: [
       { label: 'Vendas', subtitle: 'Eventos, bailes e cursos', icon: 'cart-outline', path: '/vendas' },
       { label: 'Pagamentos', subtitle: 'Cobranças e movimentações', icon: 'cash-multiple', path: '/pagamentos' },
-      { label: 'Inscrições', subtitle: 'Alunos vinculados a cursos', icon: 'account-school-outline', path: '/alunos' },
-      { label: 'Lotes de ingressos', subtitle: 'Lotes vinculados a alunos', icon: 'ticket-confirmation-outline', path: '/ingressos' },
-      { label: 'Pedidos da loja', subtitle: 'Produtos, retirada e entrega', icon: 'shopping-outline', path: '/pedidos' }
     ]
   },
   {
@@ -38,7 +35,8 @@ const sections: { title: string; items: ManagementItem[] }[] = [
       { label: 'Eventos e bailes', subtitle: 'Agenda e capacidade', icon: 'calendar-star', path: '/eventos' },
       { label: 'Cursos e turmas', subtitle: 'Cursos e inscrições', icon: 'school-outline', path: '/cursos' },
       { label: 'Empresas', subtitle: 'Parceiros e apoiadores', icon: 'office-building-outline', path: '/empresas' },
-      { label: 'Colaboradores', subtitle: 'Equipe operacional', icon: 'badge-account-outline', path: '/colaboradores', adminOnly: true }
+      { label: 'Colaboradores', subtitle: 'Equipe operacional', icon: 'badge-account-outline', path: '/colaboradores', adminOnly: true },
+      { label: 'Fotos de formaturas', subtitle: 'Envie pastas com até 1.000 fotos', icon: 'folder-multiple-image', path: '/fotos' }
     ]
   },
   {

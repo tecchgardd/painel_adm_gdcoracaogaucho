@@ -23,6 +23,12 @@ export async function cancelarPagamento(id: string, reason: string) {
   return unwrapData<Pagamento>(response.data);
 }
 
+export type ExternalPaymentMethod = 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO';
+export async function darBaixaExterna(id: string, payload: { method: ExternalPaymentMethod; amount?: number; reason: string; paidAt?: string }) {
+  const response = await api.post(`/admin/pagamentos/${id}/baixa-externa`, payload);
+  return unwrapData<Pagamento>(response.data);
+}
+
 export type StripeRefundReason = 'duplicate' | 'fraudulent' | 'requested_by_customer';
 export async function reembolsarPagamento(id: string, payload: { amount?: number; reason: string; stripeReason: StripeRefundReason }) {
   const response = await api.post(`/admin/pagamentos/${id}/reembolsar`, payload);

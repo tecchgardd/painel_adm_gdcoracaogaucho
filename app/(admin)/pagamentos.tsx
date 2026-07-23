@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ActionMenu, AppModal, Button, FormField, Header, Screen, StatusBadge } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
-import { cancelarPagamento, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/services/pagamentos.service';
+import { cancelarPagamento, darBaixaExterna, ExternalPaymentMethod, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/services/pagamentos.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/colors';
 import type { Pagamento } from '@/types/entities';
@@ -29,7 +29,8 @@ export default function Pagamentos() {
   const [status, setStatus] = useState<PagamentoStatus | undefined>();
   const [customerId, setCustomerId] = useState('');
   const [selected, setSelected] = useState<Pagamento | null>(null);
-  const [operation, setOperation] = useState<'cancel' | 'refund' | null>(null);
+  const [operation, setOperation] = useState<'cancel' | 'refund' | 'external' | null>(null);
+  const [externalMethod, setExternalMethod] = useState<ExternalPaymentMethod>('PIX_EXTERNO');
   const [reason, setReason] = useState('');
   const [refundType, setRefundType] = useState<'total' | 'partial'>('total');
   const [refundValue, setRefundValue] = useState('');
@@ -47,7 +48,7 @@ export default function Pagamentos() {
     try { setSelected(await getPagamento(payment.id)); }
     catch (e) { setNotice(safeError(e, 'Não foi possível carregar os detalhes.')); }
   }
-  function begin(kind: 'cancel' | 'refund') { setOperation(kind); setReason(''); setRefundValue(''); setRefundType('total'); setStripeReason('requested_by_customer'); }
+  function begin(kind: 'cancel' | 'refund' | 'external') { setOperation(kind); setReason(''); setRefundValue(''); setRefundType('total'); setStripeReason('requested_by_customer'); }
   async function refreshSelected() { if (selected) setSelected(await getPagamento(selected.id)); await refetch(); }
   async function submitCancel() {
     if (!selected || reason.trim().length < 3 || busy) return;
@@ -67,9 +68,17 @@ export default function Pagamentos() {
     } catch (e) { setNotice(safeError(e, 'Não foi possível solicitar o reembolso.')); }
     finally { setBusy(false); }
   }
+  async function submitExternal() {
+    if (!selected || busy || reason.trim().length < 3) return;
+    setBusy(true); setNotice('');
+    try { await darBaixaExterna(selected.id, { method: externalMethod, reason: reason.trim() }); await refetch(); setSelected(null); setOperation(null); setNotice('Cobrança Stripe encerrada e pagamento externo confirmado.'); }
+    catch (e) { setNotice(safeError(e, 'Não foi possível registrar o pagamento externo.')); }
+    finally { setBusy(false); }
+  }
 
   return <Screen variant="admin">
-    <Header title="Pagamentos Stripe" />
+    <Header title="Pagamentos" />
+    <Text style={styles.meta}>Cobranças de cursos, ingressos, lotes, painel e WhatsApp em um só lugar.</Text>
     <View style={styles.filters}>
       <TouchableOpacity onPress={() => { setStatus(undefined); setPage(1); }} style={[styles.chip, !status && styles.chipActive]}><Text style={styles.chipText}>TODOS</Text></TouchableOpacity>
       {statuses.map((item) => <TouchableOpacity key={item} onPress={() => { setStatus(item); setPage(1); }} style={[styles.chip, status === item && styles.chipActive]}><Text style={styles.chipText}>{item.replaceAll('_', ' ')}</Text></TouchableOpacity>)}
@@ -82,6 +91,7 @@ export default function Pagamentos() {
       const person = customer(payment);
       const actions: { label: string; icon: any; onPress: () => void }[] = [{ label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(payment) }];
       if (role !== 'CHECKIN' && !noCancel.has(String(payment.status))) actions.push({ label: 'Cancelar', icon: 'close-circle-outline' as const, onPress: async () => { await openDetails(payment); setOperation('cancel'); } });
+      if (role !== 'CHECKIN' && !noCancel.has(String(payment.status))) actions.unshift({ label: 'Dar baixa externa', icon: 'cash-check' as const, onPress: async () => { await openDetails(payment); setOperation('external'); } });
       if (role === 'ADMIN' && canRefund.has(String(payment.status))) actions.push({ label: 'Reembolsar', icon: 'cash-refund' as const, onPress: async () => { await openDetails(payment); setOperation('refund'); } });
       return <View key={payment.id} style={styles.row}>
         <TouchableOpacity style={styles.card} onPress={() => openDetails(payment)}>
@@ -100,9 +110,22 @@ export default function Pagamentos() {
     <AppModal visible={!!selected && !operation} onClose={() => setSelected(null)} position="center" title="Detalhes do pagamento">
       {selected ? <Details payment={selected} balance={balance} /> : null}
       <View style={styles.footer}>
+        {role !== 'CHECKIN' && !noCancel.has(String(selected?.status)) ? <Button title="Receber pagamento externo" tone="green" onPress={() => begin('external')} /> : null}
         {role !== 'CHECKIN' && !noCancel.has(String(selected?.status)) ? <Button title="Cancelar pagamento" tone="red" onPress={() => begin('cancel')} /> : null}
         {role === 'ADMIN' && canRefund.has(String(selected?.status)) ? <Button title="Solicitar reembolso" tone="green" onPress={() => begin('refund')} /> : null}
       </View>
+    </AppModal>
+    <AppModal visible={operation === 'external'} onClose={() => !busy && setOperation(null)} position="center" title="Dar baixa externa">
+      <Text style={styles.warning}>A cobrança Stripe pendente será encerrada e substituída por este recebimento, mantendo todo o histórico.</Text>
+      <Text style={styles.label}>Forma recebida</Text>
+      <View style={styles.filters}>{([
+        ['PIX_EXTERNO', 'Pix'],
+        ['DINHEIRO', 'Dinheiro'],
+        ['CARTAO_CREDITO', 'Crédito'],
+        ['CARTAO_DEBITO', 'Débito']
+      ] as [ExternalPaymentMethod, string][]).map(([value, label]) => <Choice key={value} label={label} active={externalMethod === value} onPress={() => setExternalMethod(value)} />)}</View>
+      <FormField label="Justificativa/observação" value={reason} onChangeText={setReason} multiline placeholder="Ex.: aluno pagou presencialmente na aula" />
+      <Button title={busy ? 'Confirmando...' : 'Confirmar recebimento'} tone="green" onPress={!busy && reason.trim().length >= 3 ? submitExternal : undefined} />
     </AppModal>
     <AppModal visible={operation === 'cancel'} onClose={() => !busy && setOperation(null)} position="center" title="Confirmar cancelamento">
       <Text style={styles.warning}>Esta ação pode cancelar a Checkout Session ou o PaymentIntent. Use reembolso se o pagamento já foi confirmado.</Text>
