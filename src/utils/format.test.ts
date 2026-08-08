@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { maskCpf, parseCurrencyToCents } from './format';
 
 describe('parseCurrencyToCents', () => {

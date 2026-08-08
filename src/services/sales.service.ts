@@ -1,6 +1,7 @@
-import { api, unwrapData } from './api';
 import type { PaginatedResponse } from '@/types/api';
 import type { PaymentHistory, Sale, SaleStatus } from '@/types/entities';
+
+import { api, unwrapData } from './api';
 
 export type SalePayload = {
   cpf: string;

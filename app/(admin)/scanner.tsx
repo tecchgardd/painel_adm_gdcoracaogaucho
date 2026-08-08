@@ -3,10 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { ActionMenu, AppModal, Button, Screen, SearchBar } from '@/components/ui';
 import { validarCodigoManual, validarQRCode } from '@/services/scanner.service';
 import type { ScannerResult } from '@/types/entities';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 
 export default function Scanner() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -77,7 +78,7 @@ export default function Scanner() {
       </View>}
     >
         <View style={styles.modalBody}>
-          <MaterialCommunityIcons name={result?.status === 'VALIDO' ? 'check-circle' : 'alert-circle'} color={result?.status === 'VALIDO' ? '#40C463' : colors.yellow} size={76} />
+          <MaterialCommunityIcons name={result?.status === 'VALIDO' ? 'check-circle' : 'alert-circle'} color={result?.status === 'VALIDO' ? colors.green : colors.yellow} size={76} />
           <Text style={[styles.valid, result?.status !== 'VALIDO' && styles.warning]}>{loading ? 'Validando...' : result?.status ?? 'Digite ou leia um código'}</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <SearchBar value={query} onChangeText={setQuery} placeholder="Código do ingresso" />
@@ -90,22 +91,20 @@ export default function Scanner() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  headerText: { color: '#fff', fontSize: 20, fontWeight: '900' },
-  cameraWrap: { height: 380, borderRadius: 22, overflow: 'hidden', marginTop: 14, borderWidth: 1, borderColor: '#444', backgroundColor: '#222' },
+  headerText: { color: colors.text, fontSize: 20, fontWeight: '900' },
+  cameraWrap: { height: 380, borderRadius: 22, overflow: 'hidden', marginTop: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt },
   corner: { position: 'absolute', inset: 38, borderWidth: 4, borderColor: colors.red, borderRadius: 18 },
   line: { position: 'absolute', left: 30, right: 30, top: '50%', height: 2, backgroundColor: colors.red },
-  instruction: { color: '#fff', textAlign: 'center', marginTop: 22, lineHeight: 22 },
+  instruction: { color: colors.text, textAlign: 'center', marginTop: 22, lineHeight: 22 },
   row: { flexDirection: 'row', gap: 12, marginTop: 20 },
   buttonHalf: { flex: 1 },
   center: { flex: 1, justifyContent: 'center' },
-  title: { color: '#fff', fontSize: 24, fontWeight: '900' },
-  text: { color: '#ccc', marginVertical: 12 },
+  title: { color: colors.text, fontSize: 24, fontWeight: '900' },
+  text: { color: colors.muted, marginVertical: 12 },
   modalBody: { alignItems: 'center' },
-  close: { position: 'absolute', right: 18, top: 18 },
-  valid: { color: '#40C463', fontSize: 25, fontWeight: '900', marginTop: 12 },
+  valid: { color: colors.green, fontSize: 25, fontWeight: '900', marginTop: 12 },
   warning: { color: colors.yellow, textAlign: 'center' },
   error: { color: colors.red, marginTop: 10, textAlign: 'center', lineHeight: 20 },
-  name: { color: '#fff', fontSize: 20, fontWeight: '800', marginTop: 16 },
-  info: { color: '#ddd', marginTop: 8 },
-  code: { color: '#aaa', marginTop: 18 }
+  info: { color: colors.muted, marginTop: 8 },
+  code: { color: colors.muted, marginTop: 18 }
 });

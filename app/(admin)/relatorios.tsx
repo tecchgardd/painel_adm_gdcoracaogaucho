@@ -1,13 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { ReportSection } from '@/components/dashboard/ReportSection';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { Screen } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { exportReport, getReports } from '@/services/relatorios.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 
 const periods = ['Hoje', 'Semana', 'Mês', 'Ano', 'Personalizado'] as const;
 type Period = typeof periods[number];
@@ -66,12 +70,8 @@ export default function Relatorios() {
           })}
         </View>
 
-        {loading ? <Text style={styles.stateText}>Carregando relatórios...</Text> : null}
-        {error ? <TouchableOpacity activeOpacity={0.85} onPress={refetch} style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Não foi possível conectar ao servidor.</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <Text style={styles.retryText}>Tentar novamente</Text>
-        </TouchableOpacity> : null}
+        {loading ? <LoadingState label="Carregando relatórios..." /> : null}
+        {error ? <ErrorState message={error} onRetry={refetch} title="Não foi possível conectar ao servidor." /> : null}
 
         {!error && <View style={styles.sections}>
           {categories.map((category) => {
@@ -90,7 +90,7 @@ export default function Relatorios() {
             );
           })}
         </View>}
-        {!loading && !error && !categories.length ? <Text style={styles.stateText}>Não há dados ainda</Text> : null}
+        {!loading && !error && !categories.length ? <EmptyState /> : null}
       </View>
     </Screen>
   );
@@ -198,34 +198,6 @@ const styles = StyleSheet.create({
   },
   sections: {
     gap: 12
-  },
-  stateText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '800'
-  },
-  errorBox: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#5A2A2A',
-    backgroundColor: '#241414',
-    padding: 12
-  },
-  errorTitle: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '900'
-  },
-  errorText: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 4
-  },
-  retryText: {
-    color: colors.red,
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: 8
   },
   metricGrid: {
     flexDirection: 'row',

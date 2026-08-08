@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { Platform, Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+
 import { Button, Input, Logo } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/colors';

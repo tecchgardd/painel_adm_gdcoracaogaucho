@@ -7,6 +7,7 @@ export function useResponsive() {
   const isDesktop = width >= 1024;
   const contentMaxWidth = isMobile ? width : isTablet ? 768 : 1180;
   const numColumns = isMobile ? 1 : isTablet ? 2 : 3;
+  const dashboardColumns = isDesktop ? 4 : isTablet ? 3 : 2;
 
   return {
     width,
@@ -15,6 +16,7 @@ export function useResponsive() {
     isTablet,
     isDesktop,
     contentMaxWidth,
-    numColumns
+    numColumns,
+    dashboardColumns
   };
 }

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { isLocalImageUri, resolveImageUrlForPayload, uploadImage } from './uploads.service';
 
 const { post } = vi.hoisted(() => ({ post: vi.fn() }));

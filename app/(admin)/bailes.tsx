@@ -1,12 +1,15 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { StyleSheet, Text, View } from 'react-native';
+
 import { EventFormModal } from '@/components/events/EventFormModal';
-import { ActionMenu, AppModal, Button, Card, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { ActionMenu, AppModal, Button, Card, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import { formatCurrencyBRL, formatDateTime } from '@/utils/format';
 
 export default function Eventos() {
@@ -29,10 +32,10 @@ export default function Eventos() {
 
   return (
     <Screen>
-      <Header title="Bailes" right={<TouchableOpacity onPress={() => setCreating(true)} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
+      <Header title="Bailes" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel="Novo baile" />} />
       <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar bailes" />
-      {loading ? <Text style={styles.state}>Carregando bailes...</Text> : null}
-      {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+      {loading ? <LoadingState label="Carregando bailes..." /> : null}
+      {error ? <ErrorState message={error} onRetry={refetch} /> : null}
 
       {!error && <View style={styles.grid}>
         {filtered.map((evento: any) => (
@@ -53,11 +56,11 @@ export default function Eventos() {
           </View>
         ))}
       </View>}
-      {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
+      {!loading && !error && !filtered.length ? <EmptyState /> : null}
 
       <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? 'Baile'}>
         {selected ? <>
-          <View style={styles.sheetHeader}><Text style={styles.title}>{selected.nome}</Text><StatusBadge status={selected.status} /></View>
+          <View style={styles.sheetHeader}><StatusBadge status={selected.status} /></View>
           <Text style={styles.sub}>{formatDateTime(selected.data)}</Text>
           <Text style={styles.sub}>{selected.local}</Text>
           <View style={styles.stats}>
@@ -76,19 +79,13 @@ export default function Eventos() {
 }
 
 const styles = StyleSheet.create({
-  plus: { backgroundColor: colors.red, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowCard: { flex: 1 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  title: { color: '#fff', fontSize: 24, fontWeight: '900', flexShrink: 1 },
-  sub: { color: '#ccc', marginTop: 8 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
+  sub: { color: colors.text, marginTop: 8 },
   stats: { flexDirection: 'row', gap: 8, marginVertical: 18 },
   mini: { flex: 1, padding: 12 },
-  miniLabel: { color: '#aaa', fontSize: 11 },
-  miniValue: { color: '#fff', fontSize: 16, fontWeight: '900', marginTop: 6 },
-  state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 }
+  miniLabel: { color: colors.muted, fontSize: 11 },
+  miniValue: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 6 }
 });

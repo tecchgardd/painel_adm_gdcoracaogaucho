@@ -1,10 +1,12 @@
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { filterNavigationByRole, navigationItems } from '@/navigation.config';
 import { logout } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/theme';
+
 import { SidebarAccordion } from './SidebarAccordion';
 
 export function Sidebar() {
@@ -26,7 +28,7 @@ export function Sidebar() {
         {visibleItems.map((item) => <SidebarAccordion key={item.label} item={item} />)}
       </ScrollView>
 
-      <TouchableOpacity style={styles.logout} onPress={signOut}>
+      <TouchableOpacity style={styles.logout} onPress={signOut} accessibilityRole="button" accessibilityLabel="Sair da conta">
         <MaterialCommunityIcons name="logout" color={colors.red} size={22} />
         <Text style={styles.logoutText}>Sair da conta</Text>
       </TouchableOpacity>

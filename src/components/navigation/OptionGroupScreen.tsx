@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { Header, Screen } from '@/components/ui';
 import { NavItem } from '@/navigation.config';
 import { colors } from '@/theme/theme';
@@ -9,7 +10,13 @@ export function OptionGroupScreen({ title, items }: { title: string; items: NavI
   return <Screen variant="admin">
     <Header title={title} />
     <View style={styles.grid}>
-      {items.map((item) => <TouchableOpacity key={item.label} style={styles.card} onPress={() => item.path && router.push(item.path as any)}>
+      {items.map((item) => <TouchableOpacity
+        key={item.label}
+        style={styles.card}
+        onPress={() => item.path && router.push(item.path as any)}
+        accessibilityRole="button"
+        accessibilityLabel={item.label}
+      >
         <MaterialCommunityIcons name={item.icon as any} color={colors.red} size={28} />
         <Text style={styles.title}>{item.label}</Text>
       </TouchableOpacity>)}

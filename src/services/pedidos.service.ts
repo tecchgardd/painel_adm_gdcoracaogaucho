@@ -1,5 +1,6 @@
-import { api, unwrapData } from './api';
 import type { Pedido } from '@/types';
+
+import { api, unwrapData } from './api';
 
 function toApiType(type?: 'LOJA' | 'EVENTO' | 'STORE' | 'EVENT') {
   if (type === 'LOJA') return 'STORE';

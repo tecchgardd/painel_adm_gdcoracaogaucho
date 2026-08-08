@@ -1,21 +1,28 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { PDFPage, PDFFont } from 'pdf-lib';
-// A entrada ESM empacotada evita a incompatibilidade do Metro Web com o tslib
-// usado pelos módulos internos do pdf-lib.
-// @ts-expect-error O pacote não publica declarações para a entrada dist.
+// @ts-expect-error entrada ESM usada para evitar problemas do Metro Web
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib/dist/pdf-lib.esm.js';
 import QRCode from 'qrcode';
 import { Linking, Platform } from 'react-native';
-import type { Sale } from '@/types/entities';
-import { formatCurrencyBRL, maskCpf } from '@/utils/format';
 
-export type SaleDocumentKind = 'ticket' | 'receipt';
-const burgundy = rgb(0.39, 0.08, 0.08);
+import type { Sale } from '@/types/entities';
+import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
+import { getDocumentCode, getEventInfo, getReceiptItems, getReceiptStatusLabel, getRegistrationFields } from '@/components/documents/documentUtils';
+
+export type SaleDocumentKind = 'ticket' | 'receipt' | 'registration';
+
+const burgundy = rgb(0.48, 0.12, 0.12);
 const gold = rgb(0.88, 0.63, 0.18);
-const ink = rgb(0.08, 0.08, 0.08);
-const muted = rgb(0.38, 0.38, 0.38);
-const paper = rgb(0.985, 0.975, 0.955);
+const ink = rgb(0.12, 0.12, 0.12);
+const muted = rgb(0.42, 0.42, 0.42);
+const white = rgb(1, 1, 1);
+const paper = rgb(0.985, 0.98, 0.97);
+const mist = rgb(0.92, 0.88, 0.86);
+
+function cleanFilePart(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+}
 
 function dateParts(value?: string) {
   const date = value ? new Date(value) : null;
@@ -23,24 +30,14 @@ function dateParts(value?: string) {
   return { date: date.toLocaleDateString('pt-BR'), time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) };
 }
 
-function cleanFilePart(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
-}
-
-function fitText(value: unknown, max = 44) {
+function fitText(value: unknown, max = 46) {
   const text = String(value ?? '-');
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 }
 
-function ticketData(sale: Sale, ticketIndex: number) {
-  const event = sale.raw?.evento;
-  const ticket = sale.raw?.ingressos?.[ticketIndex] ?? sale.raw?.loteIngresso?.tickets?.[ticketIndex];
-  const code = ('qrcode' in (ticket ?? {}) ? ticket?.qrcode : undefined) ?? sale.codigo;
-  return { event, ticket, code: String(code), when: dateParts(event?.data ?? event?.date) };
-}
-
-function drawLabel(page: PDFPage, font: PDFFont, value: string, x: number, y: number) {
-  page.drawText(value.toUpperCase(), { x, y, size: 7.5, font, color: muted });
+function hashOf(seed: string) {
+  const clean = seed.replace(/[^A-Z0-9]/gi, '').padEnd(16, '0').slice(0, 16).toUpperCase();
+  return `${clean.slice(0, 4)}-${clean.slice(4, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}`;
 }
 
 async function embedQr(pdf: PDFDocument, value: string) {
@@ -48,117 +45,195 @@ async function embedQr(pdf: PDFDocument, value: string) {
   return pdf.embedPng(dataUrl);
 }
 
+function header(page: PDFPage, bold: PDFFont, regular: PDFFont, title: string, subtitle: string, kicker: string) {
+  page.drawRectangle({ x: 32, y: 724, width: 531, height: 87, color: burgundy });
+  page.drawRectangle({ x: 32, y: 778, width: 531, height: 33, color: rgb(0.28, 0.07, 0.07) });
+  page.drawText('CORAÇÃO GAÚCHO', { x: 48, y: 789, size: 10, font: bold, color: gold });
+  page.drawText(kicker, { x: 48, y: 775, size: 8.2, font: regular, color: white });
+  page.drawText(title, { x: 48, y: 748, size: 18, font: bold, color: white });
+  page.drawText(subtitle, { x: 48, y: 731, size: 9.5, font: bold, color: white });
+  page.drawText('SISTEMA PROFISSIONAL DE EVENTOS', { x: 401, y: 789, size: 7.5, font: bold, color: gold });
+}
+
+function footer(page: PDFPage, regular: PDFFont, bold: PDFFont, docNumber: string, hash: string, date: string) {
+  page.drawRectangle({ x: 32, y: 34, width: 531, height: 58, color: burgundy });
+  page.drawText('Sistema Coração Gaúcho', { x: 48, y: 63, size: 9, font: bold, color: gold });
+  page.drawText(`Data de emissão: ${date}`, { x: 48, y: 48, size: 7.5, font: regular, color: white });
+  page.drawText(`Documento: ${docNumber}`, { x: 278, y: 63, size: 7.5, font: regular, color: white });
+  page.drawText(`Hash: ${hash}`, { x: 278, y: 48, size: 7.5, font: regular, color: white });
+}
+
 async function createTicketPdf(sale: Sale, ticketIndex: number) {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([595.28, 841.89]);
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const { event, ticket, code, when } = ticketData(sale, ticketIndex);
-  const qr = await embedQr(pdf, code);
+  const event = getEventInfo(sale);
+  const qr = await embedQr(pdf, getDocumentCode(sale, ticketIndex));
+  const emitted = dateParts(sale.createdAt);
+  const hash = hashOf(`${sale.codigo}${sale.id}${ticketIndex}`);
+  const status = sale.status === 'PAGO' || sale.status === 'CORTESIA' ? 'INGRESSO VÁLIDO' : 'INSCRIÇÃO CONFIRMADA';
+  const rows: [string, string][] = [
+    ['Nome', fitText(sale.nome, 34)],
+    ['CPF', maskCpf(sale.cpf)],
+    ['Evento', fitText(event.name, 34)],
+    ['Categoria', event.category],
+    ['Lote', event.lot],
+    ['Data', formatDateTime(event.date)],
+    ['Horário', dateParts(event.date).time],
+    ['Local', fitText(event.location, 32)],
+    ['Número do ingresso', `${sale.codigo}${ticketIndex ? `-${ticketIndex + 1}` : ''}`]
+  ];
 
-  page.drawRectangle({ x: 38, y: 72, width: 519, height: 698, color: paper, borderColor: burgundy, borderWidth: 1.5 });
-  page.drawRectangle({ x: 38, y: 605, width: 519, height: 165, color: burgundy });
-  page.drawRectangle({ x: 38, y: 72, width: 519, height: 55, color: burgundy });
-  page.drawText('CORAÇÃO GAÚCHO', { x: 205, y: 738, size: 12, font: bold, color: gold });
-  page.drawText(fitText(sale.eventoNome, 33), { x: 72, y: 687, size: 25, font: bold, color: rgb(1, 1, 1) });
-  page.drawText(sale.tipo === 'CURSO' ? 'INSCRIÇÃO CONFIRMADA' : 'INGRESSO CONFIRMADO', { x: 72, y: 651, size: 11, font: bold, color: rgb(1, 1, 1) });
-
-  drawLabel(page, bold, 'Participante', 72, 565);
-  page.drawText(fitText(sale.nome, 38), { x: 72, y: 544, size: 14, font: bold, color: ink });
-  drawLabel(page, bold, 'CPF', 335, 565);
-  page.drawText(maskCpf(sale.cpf), { x: 335, y: 544, size: 12, font: bold, color: ink });
-  drawLabel(page, bold, sale.tipo === 'CURSO' ? 'Curso' : 'Evento', 72, 500);
-  page.drawText(fitText(sale.eventoNome, 45), { x: 72, y: 479, size: 13, font: bold, color: ink });
-  drawLabel(page, bold, 'Data', 72, 432);
-  page.drawText(when.date, { x: 72, y: 411, size: 13, font: bold, color: ink });
-  drawLabel(page, bold, 'Horário', 210, 432);
-  page.drawText(when.time, { x: 210, y: 411, size: 13, font: bold, color: ink });
-  drawLabel(page, bold, 'Local', 72, 365);
-  page.drawText(fitText(event?.local ?? event?.location ?? '-', 38), { x: 72, y: 344, size: 12, font: bold, color: ink });
-  page.drawText(fitText(event?.cidade ?? sale.cidade ?? '-', 38), { x: 72, y: 327, size: 10, font: regular, color: muted });
-  drawLabel(page, bold, 'Ingresso', 72, 280);
-  page.drawText(`${sale.codigo}${ticketIndex ? `-${ticketIndex + 1}` : ''}`, { x: 72, y: 259, size: 12, font: bold, color: ink });
-  drawLabel(page, bold, 'Status', 72, 222);
-  page.drawText(String(ticket?.status ?? sale.status), { x: 72, y: 201, size: 11, font: bold, color: burgundy });
-  page.drawImage(qr, { x: 335, y: 267, width: 160, height: 160 });
-  page.drawText('Apresente este QR Code no check-in', { x: 342, y: 248, size: 8, font: regular, color: muted });
-  page.drawText('Apresente este ingresso na entrada. Documento pessoal, intransferível e de uso único.', { x: 79, y: 97, size: 8, font: regular, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 32, y: 120, width: 531, height: 590, color: paper, borderColor: burgundy, borderWidth: 1.2 });
+  header(page, bold, regular, event.name, status, 'INGRESSO PREMIUM');
+  page.drawRectangle({ x: 54, y: 420, width: 278, height: 292, color: white, borderColor: mist, borderWidth: 0.8 });
+  let y = 680;
+  rows.forEach(([label, value], index) => {
+    const gap = index === 0 ? 44 : 31;
+    page.drawText(label, { x: 66, y, size: 7.4, font: bold, color: muted });
+    page.drawText(value, { x: 66, y: y - 14, size: index === 0 ? 13.2 : 11.3, font: bold, color: ink });
+    y -= gap;
+  });
+  page.drawImage(qr, { x: 334, y: 344, width: 176, height: 176 });
+  page.drawText('QR Code de validação', { x: 364, y: 324, size: 8, font: regular, color: muted });
+  page.drawText(fitText(getDocumentCode(sale, ticketIndex), 34), { x: 346, y: 312, size: 8.5, font: bold, color: burgundy });
+  page.drawText(`Emissão: ${emitted.date} às ${emitted.time}`, { x: 54, y: 146, size: 7.5, font: regular, color: muted });
+  page.drawText('Documento pessoal e intransferível.', { x: 54, y: 133, size: 8.5, font: bold, color: ink });
+  page.drawText('Apresente este ingresso na entrada do evento.', { x: 54, y: 121, size: 8, font: regular, color: ink });
+  footer(page, regular, bold, `${sale.codigo}${ticketIndex ? `-${ticketIndex + 1}` : ''}`, hash, emitted.date);
   return pdf.saveAsBase64();
 }
 
 async function createReceiptPdf(sale: Sale) {
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([340, 720]);
-  const regular = await pdf.embedFont(StandardFonts.Courier);
-  const bold = await pdf.embedFont(StandardFonts.CourierBold);
+  const page = pdf.addPage([595.28, 841.89]);
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const items = getReceiptItems(sale);
   const payment = sale.raw?.pagamentos?.find((item) => item.status === 'PAGO') ?? sale.raw?.pagamentos?.[0];
-  const items = sale.raw?.items ?? [];
-  const qr = await embedQr(pdf, sale.codigo);
-  const created = new Date(sale.createdAt);
-  const createdAt = Number.isNaN(created.getTime()) ? '-' : created.toLocaleString('pt-BR');
+  const event = getEventInfo(sale);
+  const qr = await embedQr(pdf, `${sale.codigo}|${sale.id}`);
+  const emitted = dateParts(sale.createdAt);
+  const hash = hashOf(`${sale.codigo}${sale.id}receipt`);
+  const subtotal = items.reduce((acc, item) => acc + item.total, 0);
+  const top: [string, string][] = [
+    ['Código interno', sale.codigo],
+    ['Número do recibo', `#${sale.codigo}`],
+    ['Data', formatDateTime(sale.createdAt)],
+    ['Pedido', String(sale.raw?.id ?? sale.id)],
+    ['Cliente', fitText(sale.nome, 28)],
+    ['CPF', maskCpf(sale.cpf)]
+  ];
 
-  page.drawRectangle({ x: 18, y: 18, width: 304, height: 684, color: rgb(1, 1, 1), borderColor: muted, borderWidth: 0.8, borderDashArray: [4, 3] });
-  page.drawText('CORAÇÃO GAÚCHO', { x: 94, y: 669, size: 15, font: bold, color: burgundy });
-  page.drawText('CUPOM DA COMPRA', { x: 103, y: 641, size: 13, font: bold, color: ink });
-  page.drawText('NÃO É DOCUMENTO FISCAL', { x: 91, y: 622, size: 9, font: bold, color: ink });
-  page.drawLine({ start: { x: 32, y: 602 }, end: { x: 308, y: 602 }, thickness: 0.7, color: muted, dashArray: [3, 3] });
+  page.drawRectangle({ x: 32, y: 28, width: 531, height: 786, color: white, borderColor: burgundy, borderWidth: 1.1 });
+  header(page, bold, regular, 'RECIBO DE PAGAMENTO', 'Documento financeiro e comprovante de operação', 'RECIBO FINANCEIRO');
+  top.forEach(([label, value], index) => {
+    const x = index % 2 === 0 ? 54 : 282;
+    const row = Math.floor(index / 2);
+    const y = 676 - row * 40;
+    page.drawText(label, { x, y, size: 7.3, font: bold, color: muted });
+    page.drawText(value, { x, y: y - 14, size: 11.5, font: bold, color: ink });
+  });
 
-  let y = 580;
-  const line = (label: string, value: unknown, strong = false) => {
-    page.drawText(`${label}:`, { x: 32, y, size: 8, font: bold, color: ink });
-    page.drawText(fitText(value, 40), { x: 112, y, size: 8, font: strong ? bold : regular, color: ink });
-    y -= 18;
-  };
-  line('Venda', sale.codigo, true);
-  line('Data', createdAt);
-  line('Comprador', sale.nome, true);
-  line('CPF', maskCpf(sale.cpf));
-  y -= 3;
-  page.drawLine({ start: { x: 32, y }, end: { x: 308, y }, thickness: 0.7, color: muted, dashArray: [3, 3] });
-  y -= 21;
-  page.drawText('ITEM', { x: 32, y, size: 8, font: bold, color: ink });
-  page.drawText('QTD', { x: 205, y, size: 8, font: bold, color: ink });
-  page.drawText('TOTAL', { x: 262, y, size: 8, font: bold, color: ink });
-  y -= 18;
-  for (const item of items.slice(0, 8)) {
-    const quantity = Number(item.quantity ?? item.quantidade ?? 1);
-    const total = Number(item.total ?? (item.unitPrice ?? item.valorUnitario ?? 0) * quantity);
-    page.drawText(fitText(item.description ?? item.nome ?? 'Item', 25), { x: 32, y, size: 7.5, font: regular, color: ink });
-    page.drawText(String(quantity), { x: 211, y, size: 7.5, font: regular, color: ink });
-    page.drawText(formatCurrencyBRL(total), { x: 252, y, size: 7.5, font: regular, color: ink });
-    y -= 17;
+  page.drawText('Itens', { x: 54, y: 548, size: 9, font: bold, color: burgundy });
+  page.drawRectangle({ x: 54, y: 408, width: 487, height: 126, color: paper, borderColor: burgundy, borderWidth: 0.8 });
+  page.drawText('Descrição', { x: 66, y: 516, size: 8, font: bold, color: muted });
+  page.drawText('Qtd.', { x: 286, y: 516, size: 8, font: bold, color: muted });
+  page.drawText('Unit.', { x: 342, y: 516, size: 8, font: bold, color: muted });
+  page.drawText('Total', { x: 458, y: 516, size: 8, font: bold, color: muted });
+  let y = 494;
+  for (const item of items.slice(0, 4)) {
+    page.drawText(fitText(item.description, 30), { x: 66, y, size: 8.4, font: regular, color: ink });
+    page.drawText(String(item.quantity), { x: 292, y, size: 8.4, font: regular, color: ink });
+    page.drawText(formatCurrencyBRL(item.unitPrice), { x: 336, y, size: 8.4, font: regular, color: ink });
+    page.drawText(formatCurrencyBRL(item.total), { x: 448, y, size: 8.4, font: bold, color: ink });
+    y -= 24;
   }
-  if (!items.length) {
-    page.drawText(fitText(sale.eventoNome ?? 'Venda', 25), { x: 32, y, size: 7.5, font: regular, color: ink });
-    page.drawText(String(sale.quantidade), { x: 211, y, size: 7.5, font: regular, color: ink });
-    page.drawText(formatCurrencyBRL(sale.valorTotal), { x: 252, y, size: 7.5, font: regular, color: ink });
-    y -= 17;
-  }
-  y -= 4;
-  page.drawLine({ start: { x: 32, y }, end: { x: 308, y }, thickness: 0.7, color: muted, dashArray: [3, 3] });
-  y -= 22;
-  page.drawText('Desconto', { x: 32, y, size: 8, font: regular, color: ink });
-  page.drawText(formatCurrencyBRL(sale.desconto), { x: 252, y, size: 8, font: regular, color: ink });
-  y -= 23;
-  page.drawText('TOTAL', { x: 32, y, size: 14, font: bold, color: ink });
-  page.drawText(formatCurrencyBRL(sale.valorTotal), { x: 222, y, size: 13, font: bold, color: ink });
-  y -= 28;
-  line('Pagamento', payment?.method ?? sale.formaPagamento ?? '-');
-  line('Valor pago', formatCurrencyBRL(Number(payment?.amount ?? 0) / 100));
-  line('Referência', payment?.externalReference ?? '-');
-  const qrY = Math.max(72, y - 128);
-  page.drawImage(qr, { x: 118, y: qrY, width: 104, height: 104 });
-  page.drawText('Obrigado pela confiança!', { x: 99, y: qrY - 19, size: 9, font: bold, color: ink });
-  page.drawText('Volte sempre.', { x: 132, y: qrY - 34, size: 8, font: regular, color: ink });
+
+  page.drawText('Resumo financeiro', { x: 54, y: 388, size: 9, font: bold, color: burgundy });
+  page.drawRectangle({ x: 54, y: 214, width: 487, height: 156, color: paper, borderColor: burgundy, borderWidth: 0.8 });
+  page.drawText(`Subtotal: ${formatCurrencyBRL(subtotal)}`, { x: 66, y: 348, size: 9, font: regular, color: ink });
+  page.drawText(`Desconto: ${formatCurrencyBRL(sale.desconto)}`, { x: 66, y: 328, size: 9, font: regular, color: ink });
+  page.drawText(`Total: ${formatCurrencyBRL(sale.valorTotal)}`, { x: 66, y: 307, size: 14, font: bold, color: burgundy });
+  page.drawText(`Forma de pagamento: ${sale.formaPagamento ?? payment?.method ?? '-'}`, { x: 66, y: 284, size: 9, font: bold, color: ink });
+  page.drawText(`Status: ${getReceiptStatusLabel(sale.status)}`, { x: 66, y: 265, size: 9, font: bold, color: burgundy });
+  page.drawText(`ID da transação: ${payment?.id ?? sale.pagamentoId ?? '-'}`, { x: 66, y: 246, size: 8.5, font: regular, color: ink });
+  page.drawText(`Data do pagamento: ${formatDateTime(payment?.paidAt)}`, { x: 270, y: 246, size: 8.5, font: regular, color: ink });
+  page.drawText(`Gateway: ${payment?.provider ?? 'PAGAMENTO EXTERNO'}`, { x: 270, y: 266, size: 8.5, font: regular, color: ink });
+  page.drawText(`Responsável: ${payment?.notes ?? 'Sistema Coração Gaúcho'}`, { x: 270, y: 286, size: 8.5, font: regular, color: ink });
+  page.drawImage(qr, { x: 419, y: 94, width: 100, height: 100 });
+  page.drawText('Autenticidade digital', { x: 434, y: 80, size: 8, font: bold, color: burgundy });
+  page.drawText(hash, { x: 403, y: 68, size: 8.5, font: bold, color: ink });
+  page.drawText(`Emitido para ${event.name}`, { x: 54, y: 194, size: 8, font: regular, color: muted });
+  page.drawText('Emitido eletronicamente pelo sistema Coração Gaúcho.', { x: 54, y: 177, size: 8.4, font: bold, color: ink });
+  page.drawText('Documento válido mediante autenticação digital.', { x: 54, y: 163, size: 8.4, font: regular, color: ink });
+  page.drawText('Site: coracaogaucho.com | Instagram: @coracaogaucho | Facebook: Coração Gaúcho', { x: 54, y: 145, size: 7.3, font: regular, color: muted });
+  footer(page, regular, bold, sale.codigo, hash, emitted.date);
+  return pdf.saveAsBase64();
+}
+
+async function createRegistrationPdf(sale: Sale) {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([595.28, 841.89]);
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const fields = getRegistrationFields(sale);
+  const emitted = dateParts(sale.createdAt);
+  const hash = hashOf(`${sale.codigo}${sale.id}registration`);
+  const qr = await embedQr(pdf, `${sale.codigo}|registration`);
+  const left = [
+    ['Nome', fields.name],
+    ['CPF', fields.cpf],
+    ['Telefone', fields.phone],
+    ['Email', fields.email],
+    ['Nascimento', fields.birth],
+    ['Cidade', fields.city],
+    ['Estado', fields.state],
+    ['Curso', fields.course]
+  ] as [string, string][];
+  const right = [
+    ['Turma', fields.class],
+    ['Categoria', fields.category],
+    ['Professor', fields.professor],
+    ['Data de início', fields.startDate],
+    ['Horário', fields.time],
+    ['Local', fields.location],
+    ['Responsável', fields.responsible]
+  ] as [string, string][];
+
+  page.drawRectangle({ x: 32, y: 28, width: 531, height: 786, color: paper, borderColor: burgundy, borderWidth: 1.1 });
+  header(page, bold, regular, 'FICHA DE INSCRIÇÃO', 'Documento administrativo', 'REGISTRO DE INSCRIÇÃO');
+  page.drawRectangle({ x: 54, y: 480, width: 487, height: 192, color: white, borderColor: mist, borderWidth: 0.8 });
+  left.forEach(([label, value], index) => {
+    const y = 646 - index * 23;
+    page.drawText(label, { x: 66, y, size: 7.3, font: bold, color: muted });
+    page.drawText(fitText(value, 28), { x: 66, y: y - 12, size: 10.8, font: bold, color: ink });
+  });
+  right.forEach(([label, value], index) => {
+    const y = 646 - index * 26;
+    page.drawText(label, { x: 292, y, size: 7.3, font: bold, color: muted });
+    page.drawText(fitText(value, 28), { x: 292, y: y - 12, size: 10.8, font: bold, color: ink });
+  });
+
+  page.drawRectangle({ x: 54, y: 214, width: 332, height: 150, color: paper, borderColor: burgundy, borderWidth: 0.8 });
+  page.drawText('Termo de ciência', { x: 66, y: 344, size: 9, font: bold, color: burgundy });
+  page.drawText(fitText(fields.consent, 210), { x: 66, y: 327, size: 8.1, font: regular, color: ink, lineHeight: 10.5 });
+  page.drawText('Assinatura digital', { x: 404, y: 344, size: 9, font: bold, color: burgundy });
+  page.drawRectangle({ x: 404, y: 294, width: 123, height: 44, color: white, borderColor: burgundy, borderWidth: 0.8 });
+  page.drawText(fields.signature ?? 'Linha para assinatura', { x: 416, y: 311, size: 8.2, font: regular, color: muted });
+  page.drawImage(qr, { x: 420, y: 218, width: 90, height: 90 });
+  page.drawText(`Data de emissão: ${emitted.date} às ${emitted.time}`, { x: 54, y: 194, size: 8, font: regular, color: muted });
+  page.drawText(hash, { x: 398, y: 204, size: 8.5, font: bold, color: ink });
+  footer(page, regular, bold, sale.codigo, hash, emitted.date);
   return pdf.saveAsBase64();
 }
 
 async function buildDocument(sale: Sale, kind: SaleDocumentKind, ticketIndex = 0) {
   const base = cleanFilePart(sale.codigo || sale.id);
-  return {
-    base64: kind === 'ticket' ? await createTicketPdf(sale, ticketIndex) : await createReceiptPdf(sale),
-    filename: `${kind === 'ticket' ? 'ingresso' : 'cupom'}-${base}${kind === 'ticket' && ticketIndex ? `-${ticketIndex + 1}` : ''}.pdf`
-  };
+  const base64 = kind === 'ticket' ? await createTicketPdf(sale, ticketIndex) : kind === 'receipt' ? await createReceiptPdf(sale) : await createRegistrationPdf(sale);
+  const suffix = kind === 'ticket' && ticketIndex ? `-${ticketIndex + 1}` : '';
+  return { base64, filename: `${kind}-${base}${suffix}.pdf` };
 }
 
 function base64ToBlob(base64: string) {
@@ -222,10 +297,10 @@ export async function shareSaleDocument(sale: Sale, kind: SaleDocumentKind, tick
 export async function sendDocumentByWhatsApp(sale: Sale, label: string) {
   const phone = String(sale.telefone ?? '').replace(/\D/g, '');
   const target = phone ? `55${phone.replace(/^55/, '')}` : '';
-  const text = `${label} da venda ${sale.codigo} — ${sale.eventoNome ?? 'Coração Gaúcho'}.`;
+  const text = `${label} da venda ${sale.codigo} - ${sale.eventoNome ?? 'Coração Gaúcho'}.`;
   await Linking.openURL(`https://wa.me/${target}?text=${encodeURIComponent(text)}`);
 }
 
 export async function sendDocumentByEmail(sale: Sale, label: string) {
-  await Linking.openURL(`mailto:${sale.email ?? ''}?subject=${encodeURIComponent(`${label} — ${sale.codigo}`)}&body=${encodeURIComponent(`Segue ${label.toLowerCase()} da venda ${sale.codigo}.`)}`);
+  await Linking.openURL(`mailto:${sale.email ?? ''}?subject=${encodeURIComponent(`${label} - ${sale.codigo}`)}&body=${encodeURIComponent(`Segue ${label.toLowerCase()} da venda ${sale.codigo}.`)}`);
 }

@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type React from 'react';
+
 import { colors } from '@/theme/colors';
 import type { ReportCategory } from '@/types/entities';
 

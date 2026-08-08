@@ -1,13 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+
+import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buscarEnderecoPorCep } from '@/services/cep.service';
 import { createInscricao, listInscricoes, updateInscricao } from '@/services/inscricoes.service';
 import { alunoSchema } from '@/validation/schemas';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 
 const emptyAluno = {
   status: 'PENDENTE',
@@ -132,10 +136,10 @@ export default function Alunos() {
   }
 
   return <Screen variant="admin">
-    <Header title="Alunos" right={<TouchableOpacity onPress={() => setEditing(emptyAluno)} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
+    <Header title="Alunos" right={<FloatingActionButton onPress={() => setEditing(emptyAluno)} accessibilityLabel="Novo aluno" />} />
     <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar alunos" />
-    {loading ? <Text style={styles.state}>Carregando alunos...</Text> : null}
-    {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+    {loading ? <LoadingState label="Carregando alunos..." /> : null}
+    {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error && <View style={styles.grid}>
       {filtered.map((aluno: any) => <View key={aluno.id} style={[styles.row, { width: itemWidth }]}>
         <View style={styles.rowCard}>
@@ -148,7 +152,7 @@ export default function Alunos() {
         ]} />
       </View>)}
     </View>}
-    {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
+    {!loading && !error && !filtered.length ? <EmptyState /> : null}
 
     <AppModal
       visible={!!selected}
@@ -249,11 +253,11 @@ export default function Alunos() {
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
   return <View style={styles.toggleRow}>
     <Text style={styles.toggleLabel}>{label}</Text>
-    <View style={styles.options}>
-      {[true, false].map((option) => <TouchableOpacity key={String(option)} style={[styles.option, value === option && styles.optionActive]} onPress={() => onChange(option)}>
-        <Text style={[styles.optionText, value === option && styles.optionTextActive]}>{option ? 'Sim' : 'Não'}</Text>
-      </TouchableOpacity>)}
-    </View>
+    <ChoiceGroup
+      options={[{ value: 'SIM', label: 'Sim' }, { value: 'NAO', label: 'Não' }]}
+      value={value ? 'SIM' : 'NAO'}
+      onChange={(next) => onChange(next === 'SIM')}
+    />
   </View>;
 }
 
@@ -270,23 +274,18 @@ function DetailRow({ icon, label, value, last = false }: { icon: React.Component
 function StatusPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return <View style={styles.toggleRow}>
     <Text style={styles.toggleLabel}>Status da inscricao</Text>
-    <View style={styles.options}>
-      {['PENDENTE', 'CONFIRMADO', 'CANCELADO', 'ATIVO'].map((status) => <TouchableOpacity key={status} style={[styles.option, value === status && styles.optionActive]} onPress={() => onChange(status)}>
-        <Text style={[styles.optionText, value === status && styles.optionTextActive]}>{status}</Text>
-      </TouchableOpacity>)}
-    </View>
+    <ChoiceGroup
+      options={['PENDENTE', 'CONFIRMADO', 'CANCELADO', 'ATIVO'].map((status) => ({ value: status, label: status }))}
+      value={value}
+      onChange={onChange}
+    />
   </View>;
 }
 
 const styles = StyleSheet.create({
-  plus: { backgroundColor: colors.red, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowCard: { flex: 1 },
-  state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 },
   profileHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 18 },
   avatar: { width: 52, height: 52, flexShrink: 0, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   profileCopy: { flex: 1, minWidth: 0 },
@@ -312,13 +311,7 @@ const styles = StyleSheet.create({
   fieldError: { color: colors.red, fontSize: 12, fontWeight: '700', marginTop: 5 },
   toggleRow: { marginTop: 14 },
   toggleLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 8 },
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  option: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
-  optionActive: { backgroundColor: colors.red, borderColor: colors.red },
-  optionText: { color: colors.muted, fontSize: 12, fontWeight: '900' },
-  optionTextActive: { color: '#fff' },
-  additionalCard: { borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 12, marginTop: 12 }
-  ,
+  additionalCard: { borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 12, marginTop: 12 },
   sponsorHeader: { marginTop: 8 },
   sponsorHint: { color: colors.muted, fontSize: 12, fontWeight: '700', marginTop: 4 }
 });

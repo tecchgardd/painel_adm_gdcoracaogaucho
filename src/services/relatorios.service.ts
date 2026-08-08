@@ -1,5 +1,6 @@
 import type { ReportCategory } from '@/types/entities';
 import { formatCurrencyBRL } from '@/utils/format';
+
 import { api, unwrapData } from './api';
 
 export type ReportResult = ReportCategory & { error?: string };

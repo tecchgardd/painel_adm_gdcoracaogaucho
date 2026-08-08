@@ -1,5 +1,6 @@
-import { api, unwrapData } from './api';
 import type { ScannerResult } from '@/types/entities';
+
+import { api, unwrapData } from './api';
 
 export async function validarQRCode(codigo: string) {
   const response = await api.post('/admin/scanner/validar', { codigo });

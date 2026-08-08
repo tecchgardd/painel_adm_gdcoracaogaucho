@@ -1,12 +1,15 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { createPedido, listPedidos, updatePedido } from '@/services/pedidos.service';
 import { createCustomer, findCustomerByCpf } from '@/services/customers.service';
 import { listEventos } from '@/services/eventos.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/format';
 import { clienteSchema, pedidoEventoSchema, pedidoLojaSchema } from '@/validation/schemas';
@@ -120,10 +123,10 @@ export default function Pedidos() {
   const eventFilters = ['status', 'cliente', 'cpf', 'data'];
 
   return <Screen variant="admin">
-    <Header title="Pedidos da loja" right={<TouchableOpacity onPress={openNew} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
+    <Header title="Pedidos da loja" right={<FloatingActionButton onPress={openNew} accessibilityLabel="Novo pedido" />} />
     <SearchBar value={query} onChangeText={setQuery} placeholder={`Filtrar por ${eventFilters.join(', ')}`} />
-    {loading ? <Text style={styles.state}>Carregando pedidos...</Text> : null}
-    {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+    {loading ? <LoadingState label="Carregando pedidos..." /> : null}
+    {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error && <View style={styles.grid}>
       {filtered.map((pedido: any) => <View key={pedido.id} style={[styles.row, { width: itemWidth }]}>
         <View style={styles.rowCard}>
@@ -136,11 +139,11 @@ export default function Pedidos() {
         ]} />
       </View>)}
     </View>}
-    {!loading && !error && !filtered.length ? <Text style={styles.state}>Nenhum pedido da loja encontrado.</Text> : null}
+    {!loading && !error && !filtered.length ? <EmptyState title="Nenhum pedido da loja encontrado." /> : null}
 
     <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected ? `Pedido ${selected.id}` : 'Pedido'}>
       {selected ? <>
-        <View style={styles.sheetHeader}><Text style={styles.title}>Pedido {selected.id}</Text><StatusBadge status={selected.status} /></View>
+        <View style={styles.sheetHeader}><StatusBadge status={selected.status} /></View>
         <Text style={styles.detail}>Tipo: {(selected.tipo ?? 'LOJA') === 'EVENTO' ? 'Evento' : 'Loja'}</Text>
         <Text style={styles.detail}>Cliente: {selected.cliente}</Text>
         <Text style={styles.detail}>CPF: {selected.cpf ?? '-'}</Text>
@@ -178,13 +181,23 @@ export default function Pedidos() {
           <FormField label="Endereco, se entrega" value={editing.enderecoEntrega ?? ''} onChangeText={(value) => patch('enderecoEntrega', value)} multiline />
         </> : <>
           <FormField label="Evento selecionado (ID)" value={String(editing.eventoId ?? '')} onChangeText={(value) => patch('eventoId', value)} placeholder="ID do evento" />
-          <Segment label="Tipo do evento" value={editing.eventoTipo ?? 'BAILE'} options={['BAILE', 'CURSO', 'EVENTO']} onChange={(value) => patch('eventoTipo', value)} />
+          <Text style={styles.choiceLabel}>Tipo do evento</Text>
+          <ChoiceGroup
+            options={['BAILE', 'CURSO', 'EVENTO'].map((option) => ({ value: option, label: option }))}
+            value={editing.eventoTipo ?? 'BAILE'}
+            onChange={(value) => patch('eventoTipo', value)}
+          />
           <FormField label="Ingressos/lotes" value={editing.lote ?? ''} onChangeText={(value) => patch('lote', value)} />
           <View style={styles.inline}>
             <View style={styles.inlineItem}><FormField label="Quantidade" value={String(editing.quantidade ?? '')} onChangeText={(value) => patch('quantidade', value)} keyboardType="numeric" /></View>
             <View style={styles.inlineItem}><FormField label="Valor" value={String(editing.valor ?? '')} onChangeText={(value) => patch('valor', value)} keyboardType="decimal-pad" /></View>
           </View>
-          <Segment label="Cortesia" value={editing.cortesia ? 'SIM' : 'NAO'} options={['NAO', 'SIM']} onChange={(value) => patch('cortesia', value === 'SIM')} />
+          <Text style={styles.choiceLabel}>Cortesia</Text>
+          <ChoiceGroup
+            options={[{ value: 'NAO', label: 'NAO' }, { value: 'SIM', label: 'SIM' }]}
+            value={editing.cortesia ? 'SIM' : 'NAO'}
+            onChange={(value) => patch('cortesia', value === 'SIM')}
+          />
           {editing.cortesia ? <>
             <FormField label="Motivo da cortesia" value={editing.motivoCortesia ?? ''} onChangeText={(value) => patch('motivoCortesia', value)} multiline />
             <FormField label="Responsavel pela cortesia" value={editing.responsavelCortesia ?? ''} onChangeText={(value) => patch('responsavelCortesia', value)} />
@@ -214,31 +227,11 @@ export default function Pedidos() {
   </Screen>;
 }
 
-function Segment({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return <View style={styles.segmentBlock}>
-    <Text style={styles.segmentLabel}>{label}</Text>
-    <View style={styles.segmentRow}>{options.map((option) => <TouchableOpacity key={option} style={[styles.segment, value === option && styles.segmentActive]} onPress={() => onChange(option)}>
-      <Text style={[styles.segmentText, value === option && styles.segmentTextActive]}>{option}</Text>
-    </TouchableOpacity>)}</View>
-  </View>;
-}
-
 const styles = StyleSheet.create({
-  plus: { backgroundColor: colors.red, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  tab: { minHeight: 40, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
-  tabActive: { backgroundColor: colors.red, borderColor: colors.red },
-  tabText: { color: colors.muted, fontWeight: '900' },
-  tabTextActive: { color: '#fff' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowCard: { flex: 1 },
-  state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  title: { color: '#fff', fontSize: 22, fontWeight: '900', flexShrink: 1 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
   detail: { color: colors.text, marginTop: 8, lineHeight: 20 },
   total: { color: colors.text, fontSize: 18, fontWeight: '900', marginTop: 18 },
   footer: { flexDirection: 'row', gap: 10 },
@@ -247,11 +240,5 @@ const styles = StyleSheet.create({
   inlineItem: { flex: 1 },
   fieldError: { color: colors.red, fontSize: 12, fontWeight: '700', marginTop: 5 },
   hint: { color: colors.muted, fontWeight: '700', marginTop: 8 },
-  segmentBlock: { marginTop: 14 },
-  segmentLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 8 },
-  segmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  segment: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
-  segmentActive: { backgroundColor: colors.red, borderColor: colors.red },
-  segmentText: { color: colors.muted, fontSize: 12, fontWeight: '900' },
-  segmentTextActive: { color: '#fff' }
+  choiceLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginTop: 14, marginBottom: 8 }
 });

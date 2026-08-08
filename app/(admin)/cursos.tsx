@@ -1,12 +1,15 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { StyleSheet, Text, View } from 'react-native';
+
 import { EventFormModal } from '@/components/events/EventFormModal';
-import { ActionMenu, AppModal, Button, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { ActionMenu, AppModal, Button, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listCursos } from '@/services/cursos.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import { formatDateTime } from '@/utils/format';
 
 export default function Cursos() {
@@ -29,10 +32,10 @@ export default function Cursos() {
 
   return (
     <Screen>
-      <Header title="Cursos" right={<TouchableOpacity onPress={() => setCreating(true)} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
+      <Header title="Cursos" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel="Novo curso" />} />
       <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar cursos" />
-      {loading ? <Text style={styles.state}>Carregando cursos...</Text> : null}
-      {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+      {loading ? <LoadingState label="Carregando cursos..." /> : null}
+      {error ? <ErrorState message={error} onRetry={refetch} /> : null}
 
       {!error && <View style={styles.grid}>
         {filtered.map((curso: any) => (
@@ -53,15 +56,15 @@ export default function Cursos() {
           </View>
         ))}
       </View>}
-      {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
+      {!loading && !error && !filtered.length ? <EmptyState /> : null}
 
       <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? 'Curso'}>
         {selected ? <>
-          <View style={styles.sheetHeader}><Text style={styles.title}>{selected.nome}</Text><StatusBadge status={selected.status} /></View>
+          <View style={styles.sheetHeader}><StatusBadge status={selected.status} /></View>
           <Text style={styles.sub}>{selected.cidade || selected.local} - {formatDateTime(selected.horario || selected.data)}</Text>
           <Text style={styles.sub}>Professor: {selected.professor || 'Não informado'}</Text>
           <Text style={styles.section}>Inscritos</Text>
-          <Text style={styles.state}>Inscrições serão exibidas quando a API retornar participantes do curso.</Text>
+          <Text style={styles.hint}>Inscrições serão exibidas quando a API retornar participantes do curso.</Text>
           <Button title="Editar curso" tone="green" onPress={() => { setEditing(selected); setSelected(null); }} />
         </> : null}
       </AppModal>
@@ -73,19 +76,11 @@ export default function Cursos() {
 }
 
 const styles = StyleSheet.create({
-  plus: { backgroundColor: colors.red, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowCard: { flex: 1 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  title: { color: '#fff', fontSize: 24, fontWeight: '900', flexShrink: 1 },
-  sub: { color: '#ccc', marginTop: 8 },
-  section: { color: '#fff', fontSize: 18, fontWeight: '900', marginVertical: 18 },
-  state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 },
-  person: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#333', gap: 12 },
-  personName: { color: '#fff', fontWeight: '800' },
-  cpf: { color: '#aaa', marginTop: 4 }
+  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
+  sub: { color: colors.text, marginTop: 8 },
+  section: { color: colors.text, fontSize: 18, fontWeight: '900', marginVertical: 18 },
+  hint: { color: colors.muted, fontWeight: '800', marginTop: 8 }
 });

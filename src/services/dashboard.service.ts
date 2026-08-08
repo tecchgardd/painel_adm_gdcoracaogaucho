@@ -1,6 +1,7 @@
-import { api, unwrapData } from './api';
 import type { DashboardMetrics, DashboardSectionData } from '@/types/entities';
 import { formatCurrencyBRL } from '@/utils/format';
+
+import { api, unwrapData } from './api';
 
 export const dashboardZeroState: DashboardMetrics = [
   {

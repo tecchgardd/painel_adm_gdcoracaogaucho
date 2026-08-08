@@ -3,10 +3,11 @@ import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { AppModal, Button, FormField } from '@/components/ui';
+
+import { AppModal, Button, ChoiceGroup, FormField } from '@/components/ui';
 import { createEvento, updateEvento } from '@/services/eventos.service';
 import { resolveImageUrlForPayload, uploadImage } from '@/services/uploads.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { eventoSchema } from '@/validation/schemas';
 import type { EventType } from '@/types/entities';
@@ -34,6 +35,13 @@ type FormState = {
 };
 
 const emptyLot = (): LotForm => ({ nome: '', valor: '0', quantidade: '0', dataLimite: '', ativo: true });
+
+function statusVisual(status: EventStatus) {
+  if (status === 'ATIVO') return { icon: 'check-circle-outline' as const, color: colors.green };
+  if (status === 'CANCELADO') return { icon: 'close-circle-outline' as const, color: colors.red };
+  if (status === 'ENCERRADO') return { icon: 'flag-outline' as const, color: colors.muted };
+  return { icon: 'pause-circle-outline' as const, color: colors.yellow };
+}
 
 function dateValue(value: string) {
   const parsed = value ? new Date(value) : new Date();
@@ -107,7 +115,7 @@ const webDateInput = {
 function SectionCard({ number, title, icon, children }: { number: number; title: string; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; children: React.ReactNode }) {
   return <View style={styles.sectionCard}>
     <View style={styles.sectionHeader}>
-      <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} color="#D8C8FF" size={21} /></View>
+      <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} color={colors.text} size={21} /></View>
       <Text style={styles.sectionHeading}>{number}. {title}</Text>
       <MaterialCommunityIcons name="chevron-up" color={colors.muted} size={22} />
     </View>
@@ -308,7 +316,10 @@ export function EventFormModal({
       </View>
 
       <View style={styles.eventSummary}>
-        <View style={styles.summaryStatus}><MaterialCommunityIcons name="check-circle" color="#63D77B" size={15} /><Text style={styles.summaryStatusText}>{form.status}</Text></View>
+        <View style={[styles.summaryStatus, { borderColor: statusVisual(form.status).color, backgroundColor: statusVisual(form.status).color + '22' }]}>
+          <MaterialCommunityIcons name={statusVisual(form.status).icon} color={statusVisual(form.status).color} size={15} />
+          <Text style={[styles.summaryStatusText, { color: statusVisual(form.status).color }]}>{form.status}</Text>
+        </View>
         <Text style={styles.summaryTitle}>{form.nome || copy.namePlaceholder}</Text>
         <View style={styles.summaryMeta}>
           <View style={styles.metaItem}><MaterialCommunityIcons name="calendar-outline" color={colors.muted} size={16} /><Text style={styles.summaryMetaText}>{form.data ? dateValue(form.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Data não informada'}</Text></View>
@@ -349,14 +360,11 @@ export function EventFormModal({
       </SectionCard>
 
       <SectionCard number={4} title="Status do evento" icon="flag-outline">
-      <View style={styles.segmented}>
-        {(['ATIVO', 'INATIVO', 'CANCELADO', 'ENCERRADO'] as EventStatus[]).map((status) => (
-          <TouchableOpacity key={status} style={[styles.segment, isMobile && styles.segmentMobile, form.status === status && styles.segmentActive]} onPress={() => patch('status', status)}>
-            <MaterialCommunityIcons name={status === 'ATIVO' ? 'check-circle-outline' : status === 'CANCELADO' ? 'close-circle-outline' : status === 'ENCERRADO' ? 'flag-outline' : 'pause-circle-outline'} color={form.status === status ? '#fff' : colors.muted} size={17} />
-            <Text style={[styles.segmentText, form.status === status && styles.segmentTextActive]}>{status}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ChoiceGroup
+        options={(['ATIVO', 'INATIVO', 'CANCELADO', 'ENCERRADO'] as EventStatus[]).map((status) => ({ value: status, label: status, icon: statusVisual(status).icon }))}
+        value={form.status}
+        onChange={(value) => patch('status', value as EventStatus)}
+      />
       </SectionCard>
 
       <SectionCard number={5} title="Banner / imagem do evento" icon="image-outline">
@@ -435,30 +443,24 @@ export function EventFormModal({
 }
 
 const styles = StyleSheet.create({
-  heroBanner: { width: '100%', aspectRatio: 2.35, minHeight: 138, maxHeight: 250, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: '#101010', position: 'relative' },
+  heroBanner: { width: '100%', aspectRatio: 2.35, minHeight: 138, maxHeight: 250, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.black, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
   heroEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.cardAlt },
   heroEmptyText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
   heroAction: { position: 'absolute', right: 12, bottom: 12, minHeight: 42, borderRadius: 12, borderWidth: 1, borderColor: '#777', backgroundColor: 'rgba(12,12,16,.82)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroActionText: { color: '#fff', fontSize: 13, fontWeight: '900' },
-  eventSummary: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111315', padding: 16, marginTop: 12 },
-  summaryStatus: { alignSelf: 'flex-start', minHeight: 25, borderRadius: 8, borderWidth: 1, borderColor: '#225B30', backgroundColor: '#13341C', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  summaryStatusText: { color: '#B9F4C5', fontSize: 11, fontWeight: '900' },
+  eventSummary: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.dark, padding: 16, marginTop: 12 },
+  summaryStatus: { alignSelf: 'flex-start', minHeight: 25, borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  summaryStatusText: { fontSize: 11, fontWeight: '900' },
   summaryTitle: { color: colors.text, fontSize: 20, lineHeight: 26, fontWeight: '900', marginTop: 12 },
   summaryMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
   metaItem: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  summaryMetaText: { color: '#D1D1D1', fontSize: 12, fontWeight: '700', flexShrink: 1 },
-  sectionCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111315', padding: 14, marginTop: 12 },
+  summaryMetaText: { color: colors.text, fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  sectionCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.dark, padding: 14, marginTop: 12 },
   sectionHeader: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#39246D' },
+  sectionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
   sectionHeading: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '900' },
   sectionDivider: { height: 1, backgroundColor: colors.border, marginTop: 8, marginBottom: 2 },
-  segmented: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  segment: { minHeight: 42, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
-  segmentMobile: { flexGrow: 1, flexBasis: '46%', minHeight: 44 },
-  segmentActive: { backgroundColor: colors.red, borderColor: colors.red },
-  segmentText: { color: colors.muted, fontSize: 12, fontWeight: '900' },
-  segmentTextActive: { color: '#fff' },
   error: { color: colors.red, fontWeight: '800', marginTop: 8 },
   fieldError: { color: colors.red, fontSize: 12, fontWeight: '700', marginTop: 5 },
   inline: { flexDirection: 'row', gap: 10 },
@@ -477,8 +479,8 @@ const styles = StyleSheet.create({
   removeBannerText: { color: colors.red, fontSize: 12, fontWeight: '900' },
   dateField: { alignSelf: 'flex-start', maxWidth: '100%', minWidth: 0, marginTop: 12, overflow: 'hidden' },
   dateActions: { width: '100%', maxWidth: '100%', minWidth: 0, flexDirection: 'row', gap: 8 },
-  dateButton: { flex: 1, minWidth: 0, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  timeButton: { minWidth: 116, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dateButton: { flex: 1, minWidth: 0, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeButton: { minWidth: 116, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   timeButtonMobile: { minWidth: 0, width: '100%' },
   dateButtonText: { flexShrink: 1, color: colors.text, fontSize: 13, fontWeight: '800' },
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 18 },

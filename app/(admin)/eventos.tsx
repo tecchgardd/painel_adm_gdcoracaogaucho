@@ -1,12 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { StyleSheet, Text, View } from 'react-native';
+
 import { EventFormModal } from '@/components/events/EventFormModal';
-import { ActionMenu, AppModal, Button, Card, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { ActionMenu, AppModal, Button, Card, ChoiceGroup, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import { formatCurrencyBRL, formatDateTime } from '@/utils/format';
 import type { EventType } from '@/types/entities';
 
@@ -51,17 +54,13 @@ export default function Eventos() {
 
   return (
     <Screen variant="admin">
-      <Header title="Eventos" right={<TouchableOpacity onPress={() => setCreating(true)} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
+      <Header title="Eventos" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel={`Novo ${activeTab.label.toLowerCase()}`} />} />
       <View style={styles.tabs}>
-        {tabs.map((tab) => (
-          <TouchableOpacity key={tab.type} style={[styles.tab, activeType === tab.type && styles.tabActive]} onPress={() => changeType(tab.type)}>
-            <Text style={[styles.tabText, activeType === tab.type && styles.tabTextActive]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
+        <ChoiceGroup options={tabs.map((tab) => ({ value: tab.type, label: tab.label }))} value={activeType} onChange={(value) => changeType(value as EventType)} />
       </View>
       <SearchBar value={query} onChangeText={setQuery} placeholder={`Pesquisar ${activeTab.plural}`} />
-      {loading ? <Text style={styles.state}>Carregando {activeTab.plural}...</Text> : null}
-      {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+      {loading ? <LoadingState label={`Carregando ${activeTab.plural}...`} /> : null}
+      {error ? <ErrorState message={error} onRetry={refetch} /> : null}
 
       {!error && <View style={styles.grid}>
         {filtered.map((evento: any) => (
@@ -82,11 +81,11 @@ export default function Eventos() {
           </View>
         ))}
       </View>}
-      {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
+      {!loading && !error && !filtered.length ? <EmptyState /> : null}
 
       <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? activeTab.label}>
         {selected ? <>
-          <View style={styles.sheetHeader}><Text style={styles.title}>{selected.nome}</Text><StatusBadge status={selected.status} /></View>
+          <View style={styles.sheetHeader}><StatusBadge status={selected.status} /></View>
           <Text style={styles.sub}>{formatDateTime(selected.data ?? selected.horario)}</Text>
           <Text style={styles.sub}>{[selected.local, selected.cidade].filter(Boolean).join(' - ')}</Text>
           {activeType === 'CURSO' ? <Text style={styles.sub}>Professor: {selected.professor || 'Não informado'}</Text> : null}
@@ -108,24 +107,14 @@ export default function Eventos() {
 }
 
 const styles = StyleSheet.create({
-  plus: { backgroundColor: colors.red, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  tab: { minHeight: 40, minWidth: 96, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
-  tabActive: { backgroundColor: colors.red, borderColor: colors.red },
-  tabText: { color: colors.muted, fontWeight: '900' },
-  tabTextActive: { color: '#fff' },
+  tabs: { marginBottom: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowCard: { flex: 1 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  title: { color: '#fff', fontSize: 24, fontWeight: '900', flexShrink: 1 },
-  sub: { color: '#ccc', marginTop: 8, lineHeight: 20 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
+  sub: { color: colors.text, marginTop: 8, lineHeight: 20 },
   stats: { flexDirection: 'row', gap: 8, marginVertical: 18 },
   mini: { flex: 1, padding: 12 },
-  miniLabel: { color: '#aaa', fontSize: 11 },
-  miniValue: { color: '#fff', fontSize: 16, fontWeight: '900', marginTop: 6 },
-  state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 }
+  miniLabel: { color: colors.muted, fontSize: 11 },
+  miniValue: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 6 }
 });

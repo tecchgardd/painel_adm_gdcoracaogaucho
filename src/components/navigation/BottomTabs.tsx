@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, usePathname } from 'expo-router';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { filterNavigationByRole, mobileTabs } from '@/navigation.config';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/theme';
@@ -36,6 +37,9 @@ export function BottomTabs() {
               activeOpacity={0.82}
               onPress={() => item.path && router.push(item.path as any)}
               style={styles.item}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              accessibilityState={{ selected: active }}
             >
               <MaterialCommunityIcons name={item.icon} size={22} color={active ? colors.red : colors.muted} />
               <Text numberOfLines={1} style={[styles.label, active && styles.labelActive]}>{item.label}</Text>

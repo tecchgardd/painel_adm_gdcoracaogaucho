@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { AppModal, Button, FormField } from '@/components/ui';
+
+import { AppModal, Button, ChoiceGroup, FormField } from '@/components/ui';
 import { editarPagamento, EditPaymentPayload, ExternalPaymentMethod, ManualPaymentPayload, substituirPorPagamentoExterno } from '@/services/pagamentos.service';
-import { colors } from '@/theme/colors';
+import { colors, theme } from '@/theme/theme';
 import type { Pagamento } from '@/types/entities';
 import { formatCurrencyBRL, parseCurrencyToCents } from '@/utils/format';
 
@@ -84,21 +85,43 @@ export function PaymentOperationModal({
     {mode === 'external' ? <View style={styles.warning}><Text style={styles.warningText}>Ao confirmar, a cobrança Stripe pendente será cancelada ou expirada e um novo pagamento externo será registrado como pago. O registro anterior será mantido no histórico.</Text></View> : null}
     <View style={styles.summary}><Text style={styles.summaryLabel}>PAGAMENTO</Text><Text style={styles.summaryValue}>#{payment?.id} · {payment?.nomeCustomer ?? payment?.customer?.nome ?? '-'}</Text><Text style={styles.summaryMeta}>{payment?.evento?.nome ?? '-'} · {formatCurrencyBRL(Number(payment?.amount ?? 0) / 100)}</Text></View>
     <Text style={styles.label}>Forma de pagamento</Text>
-    <View style={styles.choices}>{methods.map((item) => <Choice key={item.value} label={item.label} active={method === item.value} onPress={() => setMethod(item.value)} />)}</View>
-    {mode === 'edit' ? <><Text style={styles.label}>Status</Text><View style={styles.choices}>{statuses.map((item) => <Choice key={item} label={item.replaceAll('_', ' ')} active={status === item} onPress={() => setStatus(item)} />)}</View></> : null}
+    <ChoiceGroup options={methods.map((item) => ({ value: item.value, label: item.label }))} value={method} onChange={(value) => setMethod(value as ExternalPaymentMethod)} />
+    {mode === 'edit' ? <><Text style={styles.label}>Status</Text><ChoiceGroup options={statuses.map((item) => ({ value: item, label: item.replaceAll('_', ' ') }))} value={status} onChange={(value) => setStatus(value as EditPaymentPayload['status'])} /></> : null}
     <View style={styles.twoColumns}><View style={styles.column}><FormField label="Valor pago" value={value} onChangeText={setValue} keyboardType="decimal-pad" /></View><View style={styles.column}><FormField label="Data e hora do pagamento" value={paidAt} onChangeText={setPaidAt} placeholder="AAAA-MM-DDTHH:mm" /></View></View>
     <FormField label="Referência / Comprovante" value={reference} onChangeText={setReference} placeholder="Código, PIX ou comprovante" />
     <FormField label="Observação" value={observation} onChangeText={setObservation} multiline />
     <FormField label={mode === 'external' ? 'Motivo da substituição' : 'Motivo da alteração'} value={reason} onChangeText={setReason} multiline />
-    {mode === 'external' ? <TouchableOpacity style={[styles.confirm, confirmed && styles.confirmActive]} onPress={() => setConfirmed(!confirmed)}><View style={[styles.checkbox, confirmed && styles.checkboxActive]}>{confirmed ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.confirmText}>Confirmo que o valor informado foi recebido.</Text></TouchableOpacity> : null}
+    {mode === 'external' ? <TouchableOpacity
+      style={[styles.confirm, confirmed && styles.confirmActive]}
+      onPress={() => setConfirmed(!confirmed)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: confirmed }}
+      accessibilityLabel="Confirmo que o valor informado foi recebido."
+    >
+      <View style={[styles.checkbox, confirmed && styles.checkboxActive]}>{confirmed ? <Text style={styles.check}>✓</Text> : null}</View>
+      <Text style={styles.confirmText}>Confirmo que o valor informado foi recebido.</Text>
+    </TouchableOpacity> : null}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
   </AppModal>;
 }
 
-function Choice({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return <TouchableOpacity onPress={onPress} style={[styles.choice, active && styles.choiceActive]}><Text style={[styles.choiceText, active && styles.choiceTextActive]}>{label}</Text></TouchableOpacity>;
-}
-
 const styles = StyleSheet.create({
-  warning:{borderWidth:1,borderColor:'#16738A',backgroundColor:'#102D34',borderRadius:12,padding:14,marginBottom:14},warningText:{color:'#C6F4FF',fontSize:13,lineHeight:20,textAlign:'center'},summary:{borderRadius:12,backgroundColor:colors.card,borderWidth:1,borderColor:colors.border,padding:14,marginBottom:14},summaryLabel:{color:colors.red,fontSize:10,fontWeight:'900',letterSpacing:1.5},summaryValue:{color:colors.text,fontSize:15,fontWeight:'900',marginTop:5},summaryMeta:{color:colors.muted,fontSize:12,marginTop:4},label:{color:colors.text,fontSize:12,fontWeight:'900',marginTop:12,marginBottom:8},choices:{flexDirection:'row',flexWrap:'wrap',gap:7},choice:{minHeight:38,borderWidth:1,borderColor:colors.border,borderRadius:10,paddingHorizontal:11,alignItems:'center',justifyContent:'center',backgroundColor:colors.card},choiceActive:{borderColor:colors.red,backgroundColor:'#451818'},choiceText:{color:colors.muted,fontSize:11,fontWeight:'800'},choiceTextActive:{color:'#fff'},twoColumns:{flexDirection:'row',flexWrap:'wrap',gap:12},column:{flex:1,minWidth:210},confirm:{minHeight:54,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.card,marginTop:16,padding:12,flexDirection:'row',alignItems:'center',gap:10},confirmActive:{borderColor:'#2E7D32',backgroundColor:'#15331B'},checkbox:{width:22,height:22,borderRadius:6,borderWidth:1,borderColor:colors.muted,alignItems:'center',justifyContent:'center'},checkboxActive:{backgroundColor:'#2E7D32',borderColor:'#55C467'},check:{color:'#fff',fontWeight:'900'},confirmText:{color:colors.text,fontWeight:'700',flex:1},error:{color:'#FF7B7B',fontWeight:'800',marginTop:12},footer:{flexDirection:'row',gap:10},footerButton:{flex:1,minWidth:130}
+  warning: { borderWidth: 1, borderColor: colors.info, backgroundColor: colors.infoBg, borderRadius: theme.radius.md, padding: 14, marginBottom: 14 },
+  warningText: { color: colors.infoText, fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  summary: { borderRadius: theme.radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14 },
+  summaryLabel: { color: colors.red, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
+  summaryValue: { color: colors.text, fontSize: 15, fontWeight: '900', marginTop: 5 },
+  summaryMeta: { color: colors.muted, fontSize: 12, marginTop: 4 },
+  label: { color: colors.text, fontSize: 12, fontWeight: '900', marginTop: 12, marginBottom: 8 },
+  twoColumns: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  column: { flex: 1, minWidth: 210 },
+  confirm: { minHeight: 54, borderRadius: theme.radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, marginTop: 16, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  confirmActive: { borderColor: colors.green, backgroundColor: colors.green + '22' },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: colors.green, borderColor: colors.green },
+  check: { color: '#fff', fontWeight: '900' },
+  confirmText: { color: colors.text, fontWeight: '700', flex: 1 },
+  error: { color: colors.red, fontWeight: '800', marginTop: 12 },
+  footer: { flexDirection: 'row', gap: 10 },
+  footerButton: { flex: 1, minWidth: 130 }
 });

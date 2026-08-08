@@ -1,13 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
 import { ActionMenu, Header, ListCard, Screen, SearchBar } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
+import { useResponsive } from '@/hooks/useResponsive';
 import { cancelarCortesia, listCortesias } from '@/services/cortesias.service';
-import { colors } from '@/theme/colors';
 import { formatDateTime } from '@/utils/format';
 
 export default function Cortesias() {
   const [query, setQuery] = useState('');
+  const { numColumns } = useResponsive();
+  const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
   const queryCortesias = useCallback(() => listCortesias(), []);
   const { data, loading, error, refetch } = useApiQuery(queryCortesias, { fallbackData: [] });
   const cortesias = useMemo(() => data ?? [], [data]);
@@ -23,10 +29,10 @@ export default function Cortesias() {
   return <Screen variant="admin">
     <Header title="Cortesias" />
     <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar cortesias" />
-    {loading ? <Text style={styles.state}>Carregando cortesias...</Text> : null}
-    {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
-    {!error ? <View style={styles.list}>
-      {filtered.map((cortesia: any) => <View key={String(cortesia.id)} style={styles.row}>
+    {loading ? <LoadingState label="Carregando cortesias..." /> : null}
+    {error ? <ErrorState message={error} onRetry={refetch} /> : null}
+    {!error ? <View style={styles.grid}>
+      {filtered.map((cortesia: any) => <View key={String(cortesia.id)} style={[styles.row, { width: itemWidth }]}>
         <View style={styles.rowCard}>
           <ListCard
             title={cortesia.nome ?? 'Cortesia sem nome'}
@@ -39,16 +45,12 @@ export default function Cortesias() {
         ]} />
       </View>)}
     </View> : null}
-    {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
+    {!loading && !error && !filtered.length ? <EmptyState title="Nenhuma cortesia encontrada." /> : null}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  list: { gap: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  rowCard: { flex: 1 },
-  state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 }
+  rowCard: { flex: 1 }
 });

@@ -2,9 +2,10 @@ import { useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
+
 import { Button, Header, Screen } from '@/components/ui';
 import { uploadFotos, UploadablePhoto } from '@/services/fotos.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import { useResponsive } from '@/hooks/useResponsive';
 
 type SelectedPhoto = {

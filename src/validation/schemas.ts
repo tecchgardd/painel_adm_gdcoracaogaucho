@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { parseCurrencyInput } from '@/utils/format';
 
 const requiredString = z.preprocess((value) => value ?? '', z.string().trim().min(1, 'Campo obrigatorio'));

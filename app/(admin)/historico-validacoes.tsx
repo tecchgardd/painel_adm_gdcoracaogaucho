@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
 import { Header, ListCard, Screen, SearchBar } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { getHistoricoValidacoes } from '@/services/scanner.service';
-import { colors } from '@/theme/colors';
 import { formatDateTime } from '@/utils/format';
 
 export default function HistoricoValidacoes() {
@@ -18,8 +21,8 @@ export default function HistoricoValidacoes() {
   return <Screen variant="admin">
     <Header title="Histórico de validações" />
     <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar validações" />
-    {loading ? <Text style={styles.state}>Carregando validações...</Text> : null}
-    {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+    {loading ? <LoadingState label="Carregando validações..." /> : null}
+    {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error ? <View style={styles.list}>
       {filtered.map((item: any, index: number) => <ListCard
         key={String(item.id ?? item.codigo ?? index)}
@@ -28,14 +31,10 @@ export default function HistoricoValidacoes() {
         status={item.status}
       />)}
     </View> : null}
-    {!loading && !error && !filtered.length ? <Text style={styles.state}>Não há dados ainda</Text> : null}
+    {!loading && !error && !filtered.length ? <EmptyState /> : null}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  list: { gap: 10 },
-  state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 }
+  list: { gap: 10 }
 });

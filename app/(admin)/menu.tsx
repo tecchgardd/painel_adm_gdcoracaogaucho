@@ -3,6 +3,7 @@ import type React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { AppModal, Button, Header, Screen } from '@/components/ui';
 import { logout as logoutSession } from '@/services/auth.service';
 import { colors } from '@/theme/theme';
@@ -46,7 +47,14 @@ export default function Menu() {
         {menuItems.map((item) => {
           const tone = item.danger ? colors.red : colors.text;
           return (
-            <TouchableOpacity key={item.title} activeOpacity={0.86} style={styles.card} onPress={() => handlePress(item)}>
+            <TouchableOpacity
+              key={item.title}
+              activeOpacity={0.86}
+              style={styles.card}
+              onPress={() => handlePress(item)}
+              accessibilityRole="button"
+              accessibilityLabel={item.title}
+            >
               <View style={[styles.iconBox, item.danger && styles.iconBoxDanger]}>
                 <MaterialCommunityIcons name={item.icon} color={item.danger ? colors.red : colors.yellow} size={25} />
               </View>

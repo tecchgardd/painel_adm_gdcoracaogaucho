@@ -1,4 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import type { UserRole } from '@/types/entities';
 
 export type NavItem = {

@@ -1,5 +1,6 @@
-import { api, unwrapData } from './api';
 import type { Inscricao } from '@/types/entities';
+
+import { api, unwrapData } from './api';
 
 function normalizeInscricao(inscricao: any): Inscricao {
   const customer = inscricao.customer ?? {};

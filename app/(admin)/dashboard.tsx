@@ -1,15 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { DashboardSection } from '@/components/dashboard/DashboardSection';
 import { MetricCard } from '@/components/dashboard/MetricCard';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { Screen } from '@/components/ui';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getDashboard } from '@/services/dashboard.service';
 import { getIntegrationHealth } from '@/services/health.service';
 import { useAuthStore } from '@/stores/auth.store';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 
 const periods = ['Hoje', 'Semana', 'Mês', 'Ano'] as const;
 type Period = typeof periods[number];
@@ -18,7 +22,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<Period>('Mês');
   const [refreshKey, setRefreshKey] = useState(0);
   const responsive = useResponsive();
-  const columns = responsive.isDesktop ? 4 : responsive.isTablet ? 3 : 2;
+  const columns = responsive.dashboardColumns;
   const queryDashboard = useCallback(() => getDashboard(), []);
   const { data, loading, error, refetch } = useApiQuery(queryDashboard, { fallbackData: [] });
   const queryHealth = useCallback(() => getIntegrationHealth(), []);
@@ -83,12 +87,8 @@ export default function Dashboard() {
           <Text style={styles.healthHint}>Configuração não garante habilitação da conta para cobranças.</Text>
         </View>
 
-        {loading ? <Text style={styles.stateText}>Carregando dados do servidor...</Text> : null}
-        {error ? <TouchableOpacity activeOpacity={0.85} onPress={refetch} style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Não foi possível conectar ao servidor.</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <Text style={styles.retryText}>Tentar novamente</Text>
-        </TouchableOpacity> : null}
+        {loading ? <LoadingState label="Carregando dados do servidor..." /> : null}
+        {error ? <ErrorState message={error} onRetry={refetch} title="Não foi possível conectar ao servidor." /> : null}
 
         {!error && <View key={refreshKey} style={styles.sections}>
           {dashboardSections.map((section) => (
@@ -102,7 +102,7 @@ export default function Dashboard() {
               </View>
             </DashboardSection>
           ))}
-          {!loading && !dashboardSections.length ? <Text style={styles.stateText}>Não há dados ainda</Text> : null}
+          {!loading && !dashboardSections.length ? <EmptyState title="Não há dados ainda." /> : null}
         </View>}
       </View>
     </Screen>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#151516',
+    backgroundColor: colors.dark,
     paddingHorizontal: 24,
     paddingVertical: 18,
     flexDirection: 'row',
@@ -221,34 +221,6 @@ const styles = StyleSheet.create({
   },
   sections: {
     gap: 18
-  },
-  stateText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '800'
-  },
-  errorBox: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#5A2A2A',
-    backgroundColor: '#241414',
-    padding: 12
-  },
-  errorTitle: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '900'
-  },
-  errorText: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 4
-  },
-  retryText: {
-    color: colors.red,
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: 8
   },
   metricGrid: {
     flexDirection: 'row',

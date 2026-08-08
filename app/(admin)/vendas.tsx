@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ActionMenu, AppModal, Button, FormField, Header, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
+
+import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { PaymentOperationModal } from '@/components/payments/PaymentOperationModal';
 import { SaleDetailsModal } from '@/components/sales/SaleDetailsModal';
 import { useApiQuery } from '@/hooks/useApiQuery';
@@ -13,7 +17,7 @@ import { gerarLinkPagamentoLote, gerarLoteIngressos } from '@/services/ingressos
 import { getPagamento } from '@/services/pagamentos.service';
 import { createSale, generateSalePaymentLink, getSale, listSales } from '@/services/sales.service';
 import type { Pagamento, Sale } from '@/types/entities';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyInput } from '@/utils/format';
 
 type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
@@ -243,7 +247,7 @@ export default function Vendas() {
 
   return (
     <Screen variant="admin">
-      <Header title="Vendas" right={<TouchableOpacity onPress={openNew} style={[styles.plus, isDesktop && styles.newSaleButton]}><MaterialCommunityIcons name="plus" color="#fff" size={20} />{isDesktop ? <Text style={styles.newSaleText}>Nova venda</Text> : null}</TouchableOpacity>} />
+      <Header title="Vendas" right={<TouchableOpacity onPress={openNew} style={[styles.plus, isDesktop && styles.newSaleButton]} accessibilityRole="button" accessibilityLabel="Nova venda"><MaterialCommunityIcons name="plus" color="#fff" size={20} />{isDesktop ? <Text style={styles.newSaleText}>Nova venda</Text> : null}</TouchableOpacity>} />
       <Text style={styles.lead}>Gerencie todas as vendas, inscrições e ingressos.</Text>
 
       <View style={styles.stats}>
@@ -255,17 +259,26 @@ export default function Vendas() {
 
       <SearchBar value={search} onChangeText={setSearch} placeholder="Pesquisar por CPF, nome ou código" />
       <View style={styles.filters}>
-        <FilterChip label="Todos" active={typeFilter === 'TODOS'} onPress={() => { setTypeFilter('TODOS'); setPage(1); }} />
-        {(['EVENTO', 'BAILE', 'CURSO'] as const).map((item) => <FilterChip key={item} label={item} active={typeFilter === item} onPress={() => { setTypeFilter(item); setPage(1); }} />)}
+        <ChoiceGroup
+          options={['TODOS', 'EVENTO', 'BAILE', 'CURSO'].map((item) => ({ value: item, label: item === 'TODOS' ? 'Todos' : item }))}
+          value={typeFilter}
+          onChange={(value) => { setTypeFilter(value as typeof typeFilter); setPage(1); }}
+        />
       </View>
       <View style={styles.filters}>
-        <FilterChip label="Todos" active={statusFilter === 'TODOS'} onPress={() => { setStatusFilter('TODOS'); setPage(1); }} />
-        {(['PENDENTE', 'PAGO', 'CANCELADO', 'CORTESIA', 'ESTORNADO', 'PARCIALMENTE_ESTORNADO'] as const).map((item) => <FilterChip key={item} label={item === 'ESTORNADO' || item === 'PARCIALMENTE_ESTORNADO' ? 'REEMBOLSADOS' : item} active={statusFilter === item} onPress={() => { setStatusFilter(item); setPage(1); }} />)}
+        <ChoiceGroup
+          options={['TODOS', 'PENDENTE', 'PAGO', 'CANCELADO', 'CORTESIA', 'ESTORNADO', 'PARCIALMENTE_ESTORNADO'].map((item) => ({
+            value: item,
+            label: item === 'TODOS' ? 'Todos' : item === 'ESTORNADO' || item === 'PARCIALMENTE_ESTORNADO' ? 'REEMBOLSADOS' : item
+          }))}
+          value={statusFilter}
+          onChange={(value) => { setStatusFilter(value as typeof statusFilter); setPage(1); }}
+        />
       </View>
 
-      {loading ? <Text style={styles.state}>Carregando vendas...</Text> : null}
-      {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
-      {!loading && !error && !sales.length ? <Text style={styles.state}>Não há vendas ainda</Text> : null}
+      {loading ? <LoadingState label="Carregando vendas..." /> : null}
+      {error ? <ErrorState message={error} onRetry={refetch} /> : null}
+      {!loading && !error && !sales.length ? <EmptyState title="Não há vendas ainda" /> : null}
 
       {isDesktop ? <View style={styles.table}>
         <View style={[styles.tableRow, styles.tableHeader]}>
@@ -329,10 +342,14 @@ export default function Vendas() {
       >
         <Text style={styles.sectionLabel}>1. O que você está vendendo?</Text>
         <View style={styles.filters}>
-          {(['CURSO', 'EVENTO', 'BAILE', 'LOTE'] as const).map((item) => <FilterChip key={item} label={item === 'LOTE' ? 'LOTE PARA BAILE' : item} active={form.tipo === item} onPress={() => {
-            setPerson(null);
-            setForm((current) => ({ ...current, tipo: item, eventoId: '', cursoId: '', valorUnitario: '0', cpf: '' }));
-          }} />)}
+          <ChoiceGroup
+            options={(['CURSO', 'EVENTO', 'BAILE', 'LOTE'] as const).map((item) => ({ value: item, label: item === 'LOTE' ? 'LOTE PARA BAILE' : item }))}
+            value={form.tipo}
+            onChange={(item) => {
+              setPerson(null);
+              setForm((current) => ({ ...current, tipo: item as OperationType, eventoId: '', cursoId: '', valorUnitario: '0', cpf: '' }));
+            }}
+          />
         </View>
 
         <Text style={styles.sectionLabel}>2. {form.tipo === 'CURSO' ? 'Selecione o curso' : form.tipo === 'LOTE' ? 'Selecione o baile do lote' : `Selecione o ${form.tipo.toLowerCase()}`}</Text>
@@ -373,13 +390,17 @@ export default function Vendas() {
         <FormField label="Desconto" value={form.desconto} onChangeText={(value) => patch('desconto', value)} keyboardType="decimal-pad" />
         <Text style={styles.sectionLabel}>4. Como o aluno vai pagar?</Text>
         <View style={styles.filters}>
-          {([
-            ['LINK_PAGAMENTO', 'Link Stripe'],
-            ['PIX_EXTERNO', 'Pix'],
-            ['DINHEIRO', 'Dinheiro'],
-            ['CARTAO_CREDITO', 'Crédito'],
-            ['CARTAO_DEBITO', 'Débito']
-          ] as [PaymentMethod, string][]).map(([value, label]) => <FilterChip key={value} label={label} active={form.formaPagamento === value} onPress={() => patch('formaPagamento', value)} />)}
+          <ChoiceGroup
+            options={([
+              ['LINK_PAGAMENTO', 'Link Stripe'],
+              ['PIX_EXTERNO', 'Pix'],
+              ['DINHEIRO', 'Dinheiro'],
+              ['CARTAO_CREDITO', 'Crédito'],
+              ['CARTAO_DEBITO', 'Débito']
+            ] as [PaymentMethod, string][]).map(([value, label]) => ({ value, label }))}
+            value={form.formaPagamento}
+            onChange={(value) => patch('formaPagamento', value as PaymentMethod)}
+          />
         </View>
         <Text style={styles.message}>{form.formaPagamento === 'LINK_PAGAMENTO' ? 'O link será criado ao concluir e poderá ser enviado pelo WhatsApp.' : 'O recebimento será confirmado agora e registrado no histórico.'}</Text>
         <View style={styles.totalBox}><Text style={styles.totalLabel}>TOTAL DA VENDA</Text><Text style={styles.totalValue}>{formatCurrencyBRL(Math.max(0, Number(form.quantidade || 0) * parseCurrencyInput(form.valorUnitario) - parseCurrencyInput(form.desconto)))}</Text></View>
@@ -402,12 +423,6 @@ export default function Vendas() {
   );
 }
 
-function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return <TouchableOpacity onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-  </TouchableOpacity>;
-}
-
 function Info({ label, value }: { label: string; value?: string | number | null }) {
   return <View style={styles.infoRow}>
     <Text style={styles.infoLabel}>{label}</Text>
@@ -422,14 +437,10 @@ const styles = StyleSheet.create({
   lead: { color: colors.muted, fontSize: 12, marginTop: -10, marginBottom: 16 },
   stats: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  chip: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 8, paddingHorizontal: 10, backgroundColor: colors.card },
-  chipActive: { borderColor: colors.red, backgroundColor: '#351616' },
-  chipText: { color: colors.muted, fontWeight: '900', fontSize: 12 },
-  chipTextActive: { color: colors.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   table: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, overflow: 'hidden' },
   tableRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 10, gap: 8 },
-  tableHeader: { minHeight: 42, backgroundColor: '#1D1D1D' },
+  tableHeader: { minHeight: 42, backgroundColor: colors.dark },
   tableHeadText: { flex: 1, color: colors.muted, fontSize: 10, fontWeight: '900' },
   tableCell: { flex: 1, minWidth: 0 },
   tableText: { flex: 1, color: colors.text, fontSize: 11, lineHeight: 16 },
@@ -445,9 +456,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   rowCard: { flex: 1 },
   state: { color: colors.muted, fontWeight: '800', marginTop: 8 },
-  errorBox: { borderRadius: 14, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 12, marginBottom: 12 },
-  errorText: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 8 },
   inline: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
   inlineItem: { flex: 1 },
   lookupButton: { height: 46, borderRadius: 12, backgroundColor: colors.red, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 },
@@ -462,7 +470,7 @@ const styles = StyleSheet.create({
   sectionLabel: { color: colors.text, fontSize: 13, fontWeight: '900', marginTop: 16, marginBottom: 8 },
   optionList: { gap: 8 },
   option: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12, backgroundColor: colors.card },
-  optionActive: { borderColor: colors.red, backgroundColor: '#351616' },
+  optionActive: { borderColor: colors.red, backgroundColor: colors.red + '22' },
   optionTitle: { color: colors.text, fontWeight: '900' },
   optionTitleActive: { color: '#fff' },
   optionSubtitle: { color: colors.muted, marginTop: 3, fontSize: 12 },
@@ -470,7 +478,7 @@ const styles = StyleSheet.create({
   linkText: { color: colors.text, fontWeight: '800', lineHeight: 20 },
   footer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   footerItem: { flex: 1, minWidth: 130 }
-  ,totalBox: { marginTop: 12, borderRadius: 14, borderWidth: 1, borderColor: '#2E7D32', backgroundColor: '#152A18', padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  ,totalBox: { marginTop: 12, borderRadius: 14, borderWidth: 1, borderColor: colors.green, backgroundColor: colors.green + '22', padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   totalLabel: { color: colors.muted, fontSize: 12, fontWeight: '900' },
   totalValue: { color: colors.green, fontSize: 22, fontWeight: '900' }
 });

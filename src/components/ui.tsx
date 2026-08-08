@@ -1,11 +1,14 @@
 import React from 'react';
 import { Text, View, TouchableOpacity, StyleSheet, TextInput, Image, ImageSourcePropType, Modal, ScrollView, SafeAreaView, Platform, Pressable } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useResponsive } from '@/hooks/useResponsive';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import { BottomTabs } from '@/components/navigation/BottomTabs';
 import { colors, theme } from '@/theme/theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { radius } = theme;
 
 function blurActiveElement() {
   if (Platform.OS !== 'web') return;
@@ -122,8 +125,14 @@ export function SearchBar({ value, onChangeText, placeholder = 'Pesquisar' }: { 
   </View>;
 }
 
-export function FloatingActionButton({ onPress }: { onPress: () => void }) {
-  return <TouchableOpacity onPress={onPress} style={styles.fab} activeOpacity={0.86}>
+export function FloatingActionButton({ onPress, accessibilityLabel = 'Adicionar' }: { onPress: () => void; accessibilityLabel?: string }) {
+  return <TouchableOpacity
+    onPress={onPress}
+    style={styles.fab}
+    activeOpacity={0.86}
+    accessibilityRole="button"
+    accessibilityLabel={accessibilityLabel}
+  >
     <MaterialCommunityIcons name="plus" color="#fff" size={24} />
   </TouchableOpacity>;
 }
@@ -153,14 +162,20 @@ export function ActionMenu({ actions }: { actions: { label: string; icon: React.
   }
   return <>
     <View ref={buttonRef} collapsable={false}>
-    <TouchableOpacity activeOpacity={0.8} onPress={openMenu} style={styles.iconButton}>
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={openMenu}
+      style={styles.iconButton}
+      accessibilityRole="button"
+      accessibilityLabel="Mais opções"
+    >
       <MaterialCommunityIcons name="dots-vertical" color={colors.text} size={22} />
     </TouchableOpacity>
     </View>
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => { blurActiveElement(); setOpen(false); }}>
       <Pressable style={styles.menuOverlay} onPress={() => { blurActiveElement(); setOpen(false); }}>
         <View style={[styles.menuPanel, isMobile ? styles.menuPanelMobile : styles.menuPanelDesktop, { width: panelWidth, left, top }]}>
-          {actions.map((action) => <TouchableOpacity key={action.label} style={styles.menuItem} onPress={() => run(action.onPress)}>
+          {actions.map((action) => <TouchableOpacity key={action.label} style={styles.menuItem} onPress={() => run(action.onPress)} accessibilityRole="menuitem" accessibilityLabel={action.label}>
             <MaterialCommunityIcons name={action.icon} color={action.tone === 'danger' ? colors.red : colors.text} size={22} />
             <Text style={[styles.menuText, action.tone === 'danger' && { color: colors.red }]}>{action.label}</Text>
           </TouchableOpacity>)}
@@ -195,12 +210,12 @@ export function ModalContent({
       { maxHeight: panelMaxHeight, width: panelWidth }
     ]}>
       {onClose && <View style={styles.modalHeader}>
-        {isMobile ? <TouchableOpacity style={styles.modalBack} onPress={onClose}>
+        {isMobile ? <TouchableOpacity style={styles.modalBack} onPress={onClose} accessibilityRole="button" accessibilityLabel="Voltar">
           <MaterialCommunityIcons name="chevron-left" color={colors.text} size={24} />
           <Text style={styles.modalBackText}>Voltar</Text>
         </TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
         {title ? <Text numberOfLines={1} style={styles.modalTitle}>{title}</Text> : <View style={styles.modalHeaderSpacer} />}
-        {!isMobile ? <TouchableOpacity accessibilityLabel="Fechar modal" style={styles.modalClose} onPress={onClose}><MaterialCommunityIcons name="close" color="#fff" size={22} /></TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
+        {!isMobile ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar modal" style={styles.modalClose} onPress={onClose}><MaterialCommunityIcons name="close" color="#fff" size={22} /></TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
       </View>}
       <ScrollView
         style={styles.modalScroll}
@@ -252,11 +267,31 @@ export function StatusBadge({ status }: { status: string }) {
     PARCIALMENTE_ESTORNADO: '#9B6BC0', CONTESTADO: '#D84B20', CONTESTACAO_PERDIDA: '#8B1010'
   };
   const tone = tones[String(status).toUpperCase()] ?? colors.red;
-  return <View style={[styles.badge, { backgroundColor: tone }]}><Text style={styles.badgeText}>{status}</Text></View>;
+  return <View style={[styles.badge, { backgroundColor: tone }]} accessibilityLabel={`Status: ${status}`}><Text style={styles.badgeText}>{status}</Text></View>;
 }
 
 export function ListCard({ title, subtitle, status, onPress, image }: { title: string; subtitle: string; status?: string; onPress?: () => void; image?: ImageSourcePropType }) {
   return <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.listCard}>{image && <Image source={image} style={styles.thumb} />}<View style={{ flex: 1 }}><Text style={styles.listTitle}>{title}</Text><Text style={styles.listSubtitle}>{subtitle}</Text></View>{status && <StatusBadge status={status} />}</TouchableOpacity>;
+}
+
+export function ChoiceChip({ label, active, onPress, icon, tone = 'red' }: { label: string; active: boolean; onPress: () => void; icon?: React.ComponentProps<typeof MaterialCommunityIcons>['name']; tone?: 'red' | 'green' }) {
+  return <TouchableOpacity
+    activeOpacity={0.85}
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityState={{ selected: active }}
+    accessibilityLabel={label}
+    style={[styles.choiceChip, active && (tone === 'green' ? styles.choiceChipActiveGreen : styles.choiceChipActive)]}
+  >
+    {icon && <MaterialCommunityIcons name={icon} size={16} color={active ? '#fff' : colors.muted} />}
+    <Text numberOfLines={1} style={[styles.choiceChipText, active && styles.choiceChipTextActive]}>{label}</Text>
+  </TouchableOpacity>;
+}
+
+export function ChoiceGroup({ options, value, onChange, tone = 'red' }: { options: { value: string; label: string; icon?: React.ComponentProps<typeof MaterialCommunityIcons>['name'] }[]; value: string; onChange: (value: string) => void; tone?: 'red' | 'green' }) {
+  return <View style={styles.choiceGroup}>
+    {options.map((option) => <ChoiceChip key={option.value} label={option.label} icon={option.icon} tone={tone} active={value === option.value} onPress={() => onChange(option.value)} />)}
+  </View>;
 }
 
 const styles = StyleSheet.create({
@@ -285,8 +320,14 @@ const styles = StyleSheet.create({
   fieldMultiline: { minHeight: 88, paddingTop: 12, textAlignVertical: 'top' },
   searchWrap: { height: 48, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
   searchInput: { flex: 1, color: colors.text, fontSize: 15, height: 46, outlineStyle: 'none' as any },
-  iconButton: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-  fab: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.red, borderWidth: 1, borderColor: colors.redDark },
+  iconButton: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  fab: { width: 44, height: 44, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.red, borderWidth: 1, borderColor: colors.redDark },
+  choiceGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  choiceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 14 },
+  choiceChipActive: { backgroundColor: colors.red, borderColor: colors.red },
+  choiceChipActiveGreen: { backgroundColor: colors.green, borderColor: colors.green },
+  choiceChipText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
+  choiceChipTextActive: { color: '#fff' },
   menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.08)', zIndex: 9000, elevation: 9000 },
   menuPanel: { position: 'absolute', backgroundColor: colors.dark, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', zIndex: 9001, elevation: 9001, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
   menuPanelDesktop: { borderRadius: 14 },
@@ -300,10 +341,10 @@ const styles = StyleSheet.create({
   modalPanelMobile: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   modalHeader: { height: 56, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalHeaderSpacer: { width: 86 },
-  modalBack: { minWidth: 86, height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' },
+  modalBack: { minWidth: 86, height: 44, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' },
   modalBackText: { color: colors.text, fontSize: 14, fontWeight: '900' },
   modalTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 15, fontWeight: '900' },
-  modalClose: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  modalClose: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   modalScroll: { flex: 1, ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : null) },
   modalPanelContent: { padding: 18, paddingTop: 16, paddingBottom: 28 },
   modalPanelContentWithFooter: { paddingBottom: 16 },

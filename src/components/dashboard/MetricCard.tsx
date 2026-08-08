@@ -1,5 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { StyleSheet, Text, View } from 'react-native';
+
 import { colors } from '@/theme/colors';
 import type { DashboardMetric, MetricVariant } from '@/types/entities';
 

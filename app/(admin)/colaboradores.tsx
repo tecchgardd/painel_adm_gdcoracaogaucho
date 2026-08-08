@@ -1,7 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ActionMenu, AppModal, Button, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+
+import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useResponsive } from '@/hooks/useResponsive';
 import {
@@ -12,7 +16,7 @@ import {
   updateColaborador,
   type ColaboradorPayload
 } from '@/services/colaboradores.service';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import type { Colaborador } from '@/types/entities';
 
 type FormState = {
@@ -98,13 +102,7 @@ function OptionGroup<T extends string>({
 }) {
   return <View style={styles.fieldBlock}>
     <Text style={styles.fieldLabel}>{label}</Text>
-    <View style={styles.options}>
-      {options.map((option) => (
-        <TouchableOpacity key={option} style={[styles.option, value === option && styles.optionActive]} onPress={() => onChange(option)}>
-          <Text style={[styles.optionText, value === option && styles.optionTextActive]}>{option}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+    <ChoiceGroup options={options.map((option) => ({ value: option, label: option }))} value={value} onChange={(next) => onChange(next as T)} />
   </View>;
 }
 
@@ -208,11 +206,11 @@ export default function Colaboradores() {
   }
 
   return <Screen variant="admin">
-    <Header title="Colaboradores" right={<TouchableOpacity onPress={openNew} style={styles.plus}><MaterialCommunityIcons name="plus" color="#fff" size={24} /></TouchableOpacity>} />
+    <Header title="Colaboradores" right={<FloatingActionButton onPress={openNew} accessibilityLabel="Novo colaborador" />} />
     <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar colaboradores" />
     {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-    {loading ? <Text style={styles.state}>Carregando colaboradores...</Text> : null}
-    {error ? <TouchableOpacity onPress={refetch} style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+    {loading ? <LoadingState label="Carregando colaboradores..." /> : null}
+    {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error && <View style={styles.grid}>
       {filtered.map((colaborador: Colaborador) => {
         const title = colaborador.nome ?? colaborador.name ?? 'Colaborador sem nome';
@@ -230,14 +228,11 @@ export default function Colaboradores() {
         </View>;
       })}
     </View>}
-    {!loading && !error && !filtered.length ? <Text style={styles.state}>Nenhum colaborador encontrado.</Text> : null}
+    {!loading && !error && !filtered.length ? <EmptyState title="Nenhum colaborador encontrado." /> : null}
 
     <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? 'Colaborador'}>
       {selected ? <>
-        <View style={styles.sheetHeader}>
-          <Text style={styles.title}>{selected.nome}</Text>
-          {selected.status ? <StatusBadge status={selected.status} /> : null}
-        </View>
+        {selected.status ? <View style={styles.sheetHeader}><StatusBadge status={selected.status} /></View> : null}
         <Text style={styles.detail}>CPF: {selected.cpf ?? '-'}</Text>
         <Text style={styles.detail}>Email de login: {selected.email ?? selected.user?.email ?? '-'}</Text>
         <Text style={styles.detail}>Tipo de acesso: {selected.role ?? '-'}</Text>
@@ -315,28 +310,18 @@ export default function Colaboradores() {
 }
 
 const styles = StyleSheet.create({
-  plus: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   rowCard: { flex: 1 },
   state: { color: colors.muted, textAlign: 'center', marginVertical: 16 },
-  errorBox: { backgroundColor: '#3A1717', borderWidth: 1, borderColor: colors.red, borderRadius: 12, padding: 14, marginBottom: 12 },
-  errorText: { color: colors.text, fontWeight: '700' },
-  retry: { color: colors.yellow, marginTop: 4, fontWeight: '700' },
   formError: { color: colors.red, fontWeight: '700', marginBottom: 10 },
   fieldError: { color: colors.red, marginTop: -8, marginBottom: 10, fontSize: 12 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
-  title: { color: colors.text, fontSize: 20, fontWeight: '800', flex: 1 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 12 },
   detail: { color: colors.text, lineHeight: 22, marginBottom: 8 },
   section: { borderTopWidth: 1, borderColor: colors.border, marginTop: 12, paddingTop: 14 },
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '800', marginBottom: 10 },
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { color: colors.text, fontWeight: '700', marginBottom: 8 },
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  option: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.card },
-  optionActive: { backgroundColor: colors.green, borderColor: colors.green },
-  optionText: { color: colors.text, fontWeight: '700' },
-  optionTextActive: { color: '#fff' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 },
   checkText: { color: colors.text, fontWeight: '700', flex: 1 },
   lockedBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#17351D', borderWidth: 1, borderColor: colors.green, borderRadius: 12, padding: 12, marginTop: 4 },

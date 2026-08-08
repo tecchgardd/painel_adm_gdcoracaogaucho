@@ -6,7 +6,15 @@ module.exports = defineConfig([
   ...expoConfig,
   {
     rules: {
-      'react-hooks/set-state-in-effect': 'off'
+      'react-hooks/set-state-in-effect': 'off',
+      'import/order': ['error', {
+        groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+        pathGroups: [
+          { pattern: '@/**', group: 'internal', position: 'before' }
+        ],
+        pathGroupsExcludedImportTypes: ['builtin'],
+        'newlines-between': 'always'
+      }]
     }
   }
 ]);

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { Header, Screen } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/theme';
@@ -65,7 +66,13 @@ export default function Gestao() {
 }
 
 function ManagementCard({ item, quick = false }: { item: ManagementItem; quick?: boolean }) {
-  return <TouchableOpacity activeOpacity={0.86} style={[styles.card, quick && styles.quickCard]} onPress={() => router.push(item.path as any)}>
+  return <TouchableOpacity
+    activeOpacity={0.86}
+    style={[styles.card, quick && styles.quickCard]}
+    onPress={() => router.push(item.path as any)}
+    accessibilityRole="button"
+    accessibilityLabel={item.label}
+  >
     <View style={[styles.iconBox, quick && styles.quickIcon]}><MaterialCommunityIcons name={item.icon} color={quick ? '#fff' : colors.red} size={24} /></View>
     <View style={styles.cardCopy}><Text style={styles.title}>{item.label}</Text><Text style={styles.subtitle}>{item.subtitle}</Text></View>
     <MaterialCommunityIcons name="chevron-right" color={colors.muted} size={22} />

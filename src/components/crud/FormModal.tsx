@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
 import { AppModal, Button, FormField } from '@/components/ui';
-import { colors } from '@/theme/theme';
 import { CrudField, CrudRecord } from '@/types';
 
 export function FormModal({
@@ -30,7 +30,6 @@ export function FormModal({
       <View style={styles.half}><Button title="Salvar" tone="green" onPress={onSubmit} /></View>
     </View>}
   >
-    <Text style={styles.title}>{title}</Text>
     {fields.map((field) => <FormField
       key={field.key}
       label={field.label}
@@ -44,7 +43,6 @@ export function FormModal({
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.text, fontSize: 22, fontWeight: '900', marginBottom: 4 },
   footerRow: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 }
 });

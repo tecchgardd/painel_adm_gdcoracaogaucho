@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tabs, router, usePathname } from 'expo-router';
+
 import { useAuthStore } from '@/stores/auth.store';
 
 const hidden = { href: null };

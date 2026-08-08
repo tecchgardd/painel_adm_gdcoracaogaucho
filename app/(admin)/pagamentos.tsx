@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { ActionMenu, AppModal, Button, FormField, Header, Screen, StatusBadge } from '@/components/ui';
+
+import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, StatusBadge } from '@/components/ui';
+import { EmptyState } from '@/components/crud/EmptyState';
+import { ErrorState } from '@/components/crud/ErrorState';
+import { LoadingState } from '@/components/crud/LoadingState';
 import { PaymentOperationModal } from '@/components/payments/PaymentOperationModal';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { cancelarPagamento, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/services/pagamentos.service';
 import { useAuthStore } from '@/stores/auth.store';
-import { colors } from '@/theme/colors';
+import { colors } from '@/theme/theme';
 import type { Pagamento } from '@/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyToCents } from '@/utils/format';
 
@@ -93,13 +97,16 @@ export default function Pagamentos() {
     <Header title="Pagamentos" />
     <Text style={styles.meta}>Cobranças de cursos, ingressos, lotes, painel e WhatsApp em um só lugar.</Text>
     <View style={styles.filters}>
-      <TouchableOpacity onPress={() => { setStatus(undefined); setPage(1); }} style={[styles.chip, !status && styles.chipActive]}><Text style={styles.chipText}>TODOS</Text></TouchableOpacity>
-      {statuses.map((item) => <TouchableOpacity key={item} onPress={() => { setStatus(item); setPage(1); }} style={[styles.chip, status === item && styles.chipActive]}><Text style={styles.chipText}>{item.replaceAll('_', ' ')}</Text></TouchableOpacity>)}
+      <ChoiceGroup
+        options={[{ value: '', label: 'TODOS' }, ...statuses.map((item) => ({ value: item, label: item.replaceAll('_', ' ') }))]}
+        value={status ?? ''}
+        onChange={(value) => { setStatus((value || undefined) as PagamentoStatus | undefined); setPage(1); }}
+      />
     </View>
     <FormField label="Pesquisar cobranças e movimentações" value={customerId} onChangeText={(v) => { setCustomerId(v); setPage(1); }} placeholder="CPF, nome, venda, curso, evento ou baile" />
     {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
-    {loading ? <Text style={styles.state}>Carregando pagamentos...</Text> : null}
-    {error ? <TouchableOpacity onPress={refetch} style={styles.error}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry}>Tentar novamente</Text></TouchableOpacity> : null}
+    {loading ? <LoadingState label="Carregando pagamentos..." /> : null}
+    {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     <View style={styles.list}>{payments.map((payment) => {
       const person = customer(payment);
       const actions: { label: string; icon: any; onPress: () => void }[] = [{ label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(payment) }];
@@ -118,7 +125,7 @@ export default function Pagamentos() {
         </TouchableOpacity><ActionMenu actions={actions} />
       </View>;
     })}</View>
-    {!loading && !error && !payments.length ? <Text style={styles.state}>Nenhum pagamento encontrado.</Text> : null}
+    {!loading && !error && !payments.length ? <EmptyState title="Nenhum pagamento encontrado." /> : null}
     <View style={styles.pagination}><Button title="Anterior" tone="dark" onPress={page > 1 ? () => setPage(page - 1) : undefined} /><Text style={styles.page}>Página {page} de {totalPages}</Text><Button title="Próxima" tone="dark" onPress={page < totalPages ? () => setPage(page + 1) : undefined} /></View>
 
     <AppModal visible={!!selected && !operation} onClose={() => setSelected(null)} position="center" title="Detalhes do pagamento">
@@ -143,16 +150,28 @@ export default function Pagamentos() {
     <AppModal visible={operation === 'refund'} onClose={() => !busy && setOperation(null)} position="center" title="Confirmar reembolso Stripe">
       <Text style={styles.warning}>A solicitação será enviada à Stripe pelo backend. Aguarde a confirmação definitiva do status.</Text>
       <Text style={styles.value}>Original: {formatCurrencyBRL(amount(selected) / 100)} · já reembolsado: {formatCurrencyBRL(refunded(selected) / 100)} · saldo: {formatCurrencyBRL(balance / 100)}</Text>
-      <View style={styles.filters}><Choice label="Total restante" active={refundType === 'total'} onPress={() => setRefundType('total')} /><Choice label="Parcial" active={refundType === 'partial'} onPress={() => setRefundType('partial')} /></View>
+      <View style={styles.filters}>
+        <ChoiceGroup
+          options={[{ value: 'total', label: 'Total restante' }, { value: 'partial', label: 'Parcial' }]}
+          value={refundType}
+          onChange={(value) => setRefundType(value as 'total' | 'partial')}
+        />
+      </View>
       {refundType === 'partial' ? <FormField label="Valor parcial em reais" value={refundValue} onChangeText={setRefundValue} keyboardType="decimal-pad" placeholder="0,00" /> : null}
-      <Text style={styles.label}>Motivo Stripe</Text><View style={styles.filters}>{(['requested_by_customer', 'duplicate', 'fraudulent'] as const).map((v) => <Choice key={v} label={v} active={stripeReason === v} onPress={() => setStripeReason(v)} />)}</View>
+      <Text style={styles.label}>Motivo Stripe</Text>
+      <View style={styles.filters}>
+        <ChoiceGroup
+          options={(['requested_by_customer', 'duplicate', 'fraudulent'] as const).map((v) => ({ value: v, label: v }))}
+          value={stripeReason}
+          onChange={(value) => setStripeReason(value as StripeRefundReason)}
+        />
+      </View>
       <FormField label="Justificativa administrativa" value={reason} onChangeText={setReason} multiline />
       <Button title={busy ? 'Enviando...' : 'Confirmar reembolso'} tone="green" onPress={!busy && reason.trim().length >= 3 ? submitRefund : undefined} />
     </AppModal>
   </Screen>;
 }
 
-function Choice({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <TouchableOpacity onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text style={styles.chipText}>{label}</Text></TouchableOpacity>; }
 function Detail({ label, value }: { label: string; value?: unknown }) { return <View style={styles.detail}><Text style={styles.label}>{label}</Text><Text selectable style={styles.detailValue}>{value == null || value === '' ? '-' : String(value)}</Text></View>; }
 function Details({ payment, balance }: { payment: Pagamento; balance: number }) {
   const person = customer(payment); const disputed = ['CONTESTADO', 'CONTESTACAO_PERDIDA'].includes(String(payment.status));
@@ -168,5 +187,25 @@ function Details({ payment, balance }: { payment: Pagamento; balance: number }) 
 }
 
 const styles = StyleSheet.create({
-  filters:{flexDirection:'row',flexWrap:'wrap',gap:7,marginVertical:10},chip:{borderWidth:1,borderColor:colors.border,backgroundColor:colors.card,borderRadius:10,paddingHorizontal:9,paddingVertical:7},chipActive:{borderColor:colors.red,backgroundColor:'#3B1717'},chipText:{color:colors.text,fontSize:10,fontWeight:'800'},list:{gap:10,marginTop:12},row:{flexDirection:'row',alignItems:'flex-start',gap:8},card:{flex:1,borderWidth:1,borderColor:colors.border,backgroundColor:colors.card,borderRadius:14,padding:13},cardHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8},title:{color:colors.text,fontSize:15,fontWeight:'900',flex:1},meta:{color:colors.muted,fontSize:12,lineHeight:18},value:{color:colors.text,fontWeight:'900',marginTop:5},dispute:{color:'#FF8A50',fontWeight:'900',marginTop:5},state:{color:colors.muted,fontWeight:'800',marginTop:12},error:{padding:12,backgroundColor:'#241414',borderRadius:12,marginTop:10},errorText:{color:colors.text},retry:{color:colors.red,fontWeight:'900',marginTop:6},notice:{color:colors.yellow,fontWeight:'800',marginTop:10},pagination:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:12,marginVertical:18},page:{color:colors.muted,fontWeight:'800'},footer:{gap:10,marginTop:18},warning:{color:colors.yellow,lineHeight:20,marginBottom:6},label:{color:colors.muted,fontSize:11,fontWeight:'800'},details:{gap:8},detail:{borderBottomWidth:1,borderBottomColor:colors.border,paddingVertical:7},detailValue:{color:colors.text,fontWeight:'700',marginTop:3},alert:{padding:12,borderRadius:12,backgroundColor:'#3A2512',borderWidth:1,borderColor:'#D84B20'},alertLost:{backgroundColor:'#351010',borderColor:'#8B1010'},alertTitle:{color:colors.text,fontWeight:'900',marginBottom:4}
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginVertical: 10 },
+  list: { gap: 10, marginTop: 12 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  card: { flex: 1, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 14, padding: 13 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  title: { color: colors.text, fontSize: 15, fontWeight: '900', flex: 1 },
+  meta: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  value: { color: colors.text, fontWeight: '900', marginTop: 5 },
+  dispute: { color: '#FF8A50', fontWeight: '900', marginTop: 5 },
+  notice: { color: colors.yellow, fontWeight: '800', marginTop: 10 },
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginVertical: 18 },
+  page: { color: colors.muted, fontWeight: '800' },
+  footer: { gap: 10, marginTop: 18 },
+  warning: { color: colors.yellow, lineHeight: 20, marginBottom: 6 },
+  label: { color: colors.muted, fontSize: 11, fontWeight: '800' },
+  details: { gap: 8 },
+  detail: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 7 },
+  detailValue: { color: colors.text, fontWeight: '700', marginTop: 3 },
+  alert: { padding: 12, borderRadius: 12, backgroundColor: '#3A2512', borderWidth: 1, borderColor: '#D84B20' },
+  alertLost: { backgroundColor: '#351010', borderColor: '#8B1010' },
+  alertTitle: { color: colors.text, fontWeight: '900', marginBottom: 4 }
 });

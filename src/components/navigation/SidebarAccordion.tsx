@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { NavItem } from '@/navigation.config';
 import { colors } from '@/theme/theme';
 
@@ -26,14 +27,26 @@ export function SidebarAccordion({ item }: { item: NavItem }) {
   }, [pathname]);
 
   if (!item.children?.length) {
-    return <TouchableOpacity style={[styles.item, active && styles.itemActive]} onPress={() => item.path && router.push(item.path as any)}>
+    return <TouchableOpacity
+      style={[styles.item, active && styles.itemActive]}
+      onPress={() => item.path && router.push(item.path as any)}
+      accessibilityRole="button"
+      accessibilityLabel={item.label}
+      accessibilityState={{ selected: active }}
+    >
       <MaterialCommunityIcons name={item.icon as any} color={active ? colors.red : colors.text} size={22} />
       <Text style={[styles.label, active && styles.labelActive]}>{item.label}</Text>
     </TouchableOpacity>;
   }
 
   return <View style={styles.wrap}>
-    <TouchableOpacity style={[styles.item, active && styles.itemActive]} onPress={toggleOpen}>
+    <TouchableOpacity
+      style={[styles.item, active && styles.itemActive]}
+      onPress={toggleOpen}
+      accessibilityRole="button"
+      accessibilityLabel={item.label}
+      accessibilityState={{ selected: active, expanded: open }}
+    >
       <MaterialCommunityIcons name={item.icon as any} color={active ? colors.red : colors.text} size={22} />
       <Text style={[styles.label, active && styles.labelActive]}>{item.label}</Text>
       <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} color={colors.muted} size={20} />
@@ -41,7 +54,14 @@ export function SidebarAccordion({ item }: { item: NavItem }) {
     {open ? <View style={styles.children}>
       {item.children.map((child) => {
         const selected = !!child.path && (pathname === child.path || pathname.endsWith(child.path));
-        return <TouchableOpacity key={child.label} style={[styles.child, selected && styles.childSelected]} onPress={() => go(child.path)}>
+        return <TouchableOpacity
+          key={child.label}
+          style={[styles.child, selected && styles.childSelected]}
+          onPress={() => go(child.path)}
+          accessibilityRole="button"
+          accessibilityLabel={child.label}
+          accessibilityState={{ selected }}
+        >
           <Text style={[styles.childText, selected && styles.childActive]}>{child.label}</Text>
         </TouchableOpacity>;
       })}
@@ -56,7 +76,7 @@ const styles = StyleSheet.create({
   label: { color: colors.text, fontSize: 15, fontWeight: '800', flex: 1 },
   labelActive: { color: colors.red },
   children: { marginTop: 6, marginLeft: 18, marginBottom: 4, borderLeftWidth: 1, borderLeftColor: colors.border, paddingLeft: 10, gap: 4 },
-  child: { minHeight: 38, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 10 },
+  child: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 10 },
   childSelected: { backgroundColor: '#241313' },
   childText: { color: colors.muted, fontWeight: '700' },
   childActive: { color: colors.red }

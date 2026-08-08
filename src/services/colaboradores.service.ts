@@ -1,5 +1,6 @@
-import { api, unwrapData } from './api';
 import type { Colaborador } from '@/types/entities';
+
+import { api, unwrapData } from './api';
 
 export type ColaboradorPayload = {
   nome?: string;
