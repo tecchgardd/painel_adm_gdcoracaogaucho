@@ -1,182 +1,128 @@
 # Documentos de comprovante (inscrição, ingresso, cupom) — Design
 
-Data: 2026-08-08
-Repositórios envolvidos:
-- `painel-admin` (Expo/React Native, SDK 57) — telas, componentes, geração de PDF.
-- `backend/backend` (Node/TS, Prisma/PostgreSQL) — endpoints e DTOs de documento.
+Data: 2026-08-08 (revisado)
+Repositório: **`painel-admin`** apenas (Expo/React Native). Não há backend neste repositório — a API é externa (`https://backend-coracaogaucho.vercel.app/api`), consumida via `src/services/*.service.ts`.
+
+> Nota: uma versão anterior deste documento assumia mudanças de schema/endpoints em um repositório de backend separado. Essa versão foi descartada — o pedido nesta iteração é explicitamente **frontend apenas**; qualquer necessidade de backend (novos campos, novos endpoints) fica para um processo separado, fora deste repositório e deste spec. Onde o dado necessário não existe hoje na API, o layout se degrada graciosamente (linha some) em vez de inventar dado ou bloquear o documento.
 
 ## 1. Objetivo
 
-Implementar 3 documentos fiéis à referência visual oficial (imagem fornecida pelo usuário em 2026-08-08):
+Redesenhar os 3 documentos já gerados pelo painel (ticket/recibo/ficha) para reproduzir fielmente a referência visual oficial (imagem fornecida em 2026-08-08):
 
 1. **Comprovante de Inscrição** de curso — folha branca/verde.
-2. **Ingresso** de baile/evento — ticket preto/dourado com o flyer real do evento + canhoto com barcode.
+2. **Ingresso** de baile/evento — preto/vermelho/dourado, com o flyer real do evento e canhoto com barcode.
 3. **Cupom/Comprovante de Pagamento** — recibo estilo térmico branco/preto.
 
-Público-alvo: **somente STAFF/ADMIN**, dentro do `painel-admin` (não existe app do cliente final hoje — auth do app é só admin/staff/checkin). As telas ficam em `app/(admin)/documentos/...`.
+Público: staff/admin dentro do `painel-admin` — não existe app de cliente final neste projeto. Documentos são gerados a partir de uma `Sale` já carregada (não há tela nova buscando por ID isolado; ver Seção 4.2).
 
-Todos os dados exibidos vêm do banco via API — zero dado digitado manualmente, zero mock no código final.
+Todos os dados exibidos vêm de `Sale`/`raw.*` (já retornado pela API existente via `sales.service.ts`) — zero dado digitado manualmente, zero mock no código final. Campos que a referência mostra mas que não existem no modelo atual (ex.: dias/horários de curso, modalidades, dados institucionais de CNPJ) **não são inventados**: a linha correspondente simplesmente não é renderizada.
 
-## 2. Arquitetura geral
+## 2. O que já existe e é reaproveitado (não recriado)
 
-```
-PostgreSQL → Prisma → *.service.ts → *.controller.ts → /api/admin/documentos/*
-                                                                  ↓
-                                    painel-admin → documentos.service.ts (API)
-                                                                  ↓
-                                app/(admin)/documentos/**  (telas fiéis à imagem)
-                                                                  ↓
-                     src/services/documents.service.ts (pdf-lib, já existe) → PDF/Share/Print
-```
+- `src/services/documents.service.ts` — motor de PDF via `pdf-lib` + `qrcode`. Continua sendo o motor único; as 3 funções de desenho (`createTicketPdf`/`createReceiptPdf`/`createRegistrationPdf`) são reescritas por dentro para o novo layout, mas a API pública (`downloadSaleDocument`, `viewSaleDocument`, `shareSaleDocument`, `sendDocumentByWhatsApp`, `sendDocumentByEmail`) não muda de assinatura.
+- `src/components/documents/documentUtils.ts` — funções puras de normalização de `Sale` (`getEventInfo`, `getReceiptItems`, `getDocumentCode`, `getRegistrationFields`, etc.) são estendidas com os campos novos que a referência pede, mantendo as existentes.
+- `src/utils/format.ts::maskCpf` — já mascara CPF (`***.***.789-01` — formato de privacidade), reaproveitado sem mudanças.
+- `SaleDetailsModal` (aba DOCUMENTOS) — continua sendo o ponto de entrada; passa a abrir um preview full-screen em vez de renderizar inline (ver 4.2).
+- Paleta: `src/theme/theme.ts` ganha um único token novo, `gold`; todo o resto (`red`, `green`, `yellow`, `black`, `white`) já existe e passa a ser a fonte única de cor dos documentos, substituindo a paleta bordô/dourada hoje hardcoded em `documents.service.ts`/`DocumentHeader.tsx`.
 
-Cada tela faz **uma única chamada** ao backend, que já retorna o DTO pronto (participante, evento, valores da transação, payload de QR/barcode). Nada de múltiplos requests soltos no app para montar um documento.
+## 3. Substituído / novo
 
-Reaproveitamento explícito (nada duplicado):
-- `src/services/documents.service.ts` (pdf-lib + `qrcode`) já existe e continua sendo o motor de PDF — estendido, não recriado.
-- `src/components/documents/` já existe — os novos componentes entram como subpastas dela, substituindo os componentes genéricos atuais (`DocumentHeader`, `TicketCard`, `DocumentQRCode` com ícone falso) que não reproduzem a referência.
-- A aba "Documentos" do `SaleDetailsModal` passa a ter 3 botões que navegam para as novas telas em tela cheia (em vez de renderizar inline).
-
-Ingresso cobre os **dois** models de ticket do backend (`Ingresso` avulso e `IngressoAluno` de lote/curso) — o backend normaliza os dois no mesmo `TicketDocumentDTO`.
-
-## 3. Backend
-
-### 3.1 Alteração de schema (única)
-
-```prisma
-model Evento {
-  // ...campos existentes...
-  modalidades   String?   // ex: "Xote, Vaneira, Vanerão, Milonga, Bugio, Marchinha, Valsa, Chamamé e Rancheira"
-  diasHorarios  String?   // ex: "Terças-feiras - 20:00"
-}
-```
-Nullable, não quebra nada existente. Editáveis no form de evento/curso do admin (`EventFormModal.tsx`). Se vazios, a linha correspondente some do comprovante (nunca aparece em branco).
-
-Nenhuma outra alteração de schema é necessária — os demais dados (código legível do ingresso, autenticação do cupom) são **derivados** de campos já existentes, nunca armazenados de novo (ver 3.3).
-
-### 3.2 Novo módulo `src/modules/documentos/`
-
-`documentos.routes.ts` / `.controller.ts` / `.service.ts` / `.dto.ts`, montado em `/api/admin/documentos`, protegido por `authMiddleware + requireRoles('ADMIN','STAFF')` (mesmo padrão dos módulos irmãos `vendas`/`ingressos`).
-
-| Endpoint | Fonte no banco | Retorna |
-|---|---|---|
-| `GET /documentos/inscricao/:id` | `Inscricao → Customer, Evento` | `InscricaoDocumentDTO` |
-| `GET /documentos/ingresso/:id` | `Ingresso → Customer, Evento, Pedido?, Pagamento` | `TicketDocumentDTO` |
-| `GET /documentos/ingresso-aluno/:id` | `IngressoAluno → LoteIngressoAluno → Customer, Evento` | `TicketDocumentDTO` (mesmo formato) |
-| `GET /documentos/comprovante/:pedidoId` | `Pedido → Customer, PedidoItem[], Pagamento[]` | `PaymentReceiptDTO` |
-
-### 3.3 Regras de derivação (sem novas colunas além de 3.1)
-
-- **CPF mascarado**: novo helper `maskCpf()` (formato `120.***.***-99`), aplicado nos 3 DTOs. CPF completo nunca sai desses endpoints.
-- **Código legível do ingresso avulso** (`Ingresso` não tem código tipo "CGS-2026-00001" hoje): gerado como `CGS-{ano de createdAt}-{id com zeros à esquerda}` — determinístico a partir de campos imutáveis (id/createdAt), sempre o mesmo a cada chamada. `IngressoAluno` já tem `codigo` único e estável — usado diretamente.
-- **Payload do QR**: `{VALIDATION_BASE_URL}/validar/ingresso/{codigo}` e `.../inscricao/{id}` (nova env var `VALIDATION_BASE_URL`).
-- **Barcode**: mesmo `codigo` usado no QR do ingresso, codificado como Code128.
-- **Autenticação do cupom**: `pagamento.gatewayId` (já existe, único) formatado em grupos hex; se ausente (ex. cortesia), hash determinístico de `pedido.id + createdAt` (nunca aleatório a cada abertura).
-- **Subtotal/Taxa-ou-Desconto/Total do cupom**: `subtotal = soma(pedidoItem.total)`, `total = pedido.total` (valor real da transação — nunca `evento.preco` atual, para preservar histórico). A diferença vira "Taxa de Serviço" (positiva) ou "Desconto" (negativa); linha some se for zero.
-- **Forma de pagamento / data / autenticação**: do `Pagamento` com `status = PAGO` vinculado ao pedido — não do texto livre do pedido.
-- **Empresa (CNPJ/endereço/cidade)**: env vars `COMPANY_NAME`, `COMPANY_CNPJ`, `COMPANY_ADDRESS`, `COMPANY_CITY`, incluídas no `PaymentReceiptDTO.empresa`.
-
-## 4. Frontend (painel-admin)
-
-### 4.1 Componentes
+Os componentes genéricos atuais em `src/components/documents/` (`DocumentHeader`, `TicketCard`, `DocumentQRCode` com ícone falso, `ReceiptItems`, `ReceiptTotals`, `RegistrationForm`, `DocumentSection`, `DocumentRow`, `DocumentFooter`) — hoje um card escuro genérico — são **substituídos** pelos componentes fiéis abaixo.
 
 ```
 src/components/documents/
   shared/
-    DocumentLogo.tsx       # assets/logo-oficial.jpeg (logo oficial, não redesenhada)
-    DocumentQRCode.tsx     # QR real via react-native-qrcode-svg
-    DocumentBarcode.tsx    # Code128 real, orientação horizontal ou vertical
-    DocumentDivider.tsx    # sólido / pontilhado
-    DocumentField.tsx      # ícone + rótulo + valor
-    ScaledDocument.tsx     # dimensão fixa, escala proporcional, centralizado, nunca deforma
+    DocumentLogo.tsx        # assets/logo-oficial.jpeg, logo oficial não redesenhada
+    DocumentQRCode.tsx      # QR real (qrcode → data URI → <Image>), memoizado pelo valor
+    DocumentBarcode.tsx     # Code128 real (src/utils/barcode.ts), horizontal ou rotacionado 90°
+    DocumentDivider.tsx     # sólido / pontilhado (borderStyle: 'dashed')
+    DocumentField.tsx       # ícone + rótulo + valor; não renderiza nada se value ausente
+    ScaledDocument.tsx      # dimensão fixa por documento, escala proporcional, centralizado, ScrollView
   CourseRegistrationReceipt/{CourseRegistrationReceipt.tsx, styles.ts}
   EventTicket/{EventTicket.tsx, EventTicketStub.tsx, styles.ts}
   PaymentReceipt/{PaymentReceipt.tsx, styles.ts}
+  DocumentPreviewModal.tsx  # novo: full-screen, hospeda ScaledDocument + [Compartilhar] [Gerar PDF]
+  documentUtils.ts          # estendido (não recriado)
+
+src/services/documents.service.ts  # reescrito por dentro, mesma API pública
+src/utils/barcode.ts               # novo: encoder Code128-B autocontido (sem dependência externa)
+src/theme/theme.ts                 # + token `gold`
 ```
 
-Os componentes genéricos atuais (`DocumentHeader`, `TicketCard`, `DocumentQRCode` com ícone, `ReceiptItems`, `ReceiptTotals`, `RegistrationForm`, `DocumentSection`, `DocumentRow`, `DocumentFooter`) são **substituídos** por esses — eles hoje são só um card escuro genérico, o que o usuário pediu explicitamente para não ter.
+Nenhuma rota nova em `app/(admin)/`, nenhuma dependência nova em `package.json`, nenhuma mudança de autenticação/roles.
 
-Os componentes compartilhados recebem cor/variante por prop — cada documento aplica sua própria paleta (não existe um "estilo único" forçado nos três).
+## 4. Arquitetura
 
-### 4.2 Telas (expo-router)
+### 4.1 Bibliotecas — decisões
 
-```
-app/(admin)/documentos/inscricao/[id].tsx
-app/(admin)/documentos/ingresso/[id].tsx      # ?origem=avulso|aluno
-app/(admin)/documentos/comprovante/[id].tsx   # id = pedidoId
-```
+| Necessidade | Decisão | Motivo |
+|---|---|---|
+| QR na tela (preview) | Reaproveitar `qrcode` (já instalado) via `toDataURL()` → `<Image source={{uri}}>` | Já funciona hoje dentro do PDF em web e nativo (usa `pngjs` puro-JS, sem DOM/canvas); evita adicionar `react-native-svg`/`react-native-qrcode-svg` e o rebuild nativo que isso exigiria |
+| QR no PDF | `qrcode` (já existe) | Sem mudança |
+| Barcode (tela + PDF) | Encoder Code128-B próprio, ~100 linhas, retorna array de larguras de barra | Não existe lib de barcode instalada; alternativas de mercado exigem DOM/canvas, incompatível com nativo. O mesmo array alimenta `<View>`s na tela (rotacionadas via `transform: [{ rotate: '90deg' }]` no canhoto) e retângulos vetoriais no PDF |
+| PDF | `pdf-lib` (já existe) — mantido, não migrado para `expo-print` | `expo-print` está instalado mas sua implementação web (`ExponentPrint.web.ts`) é um stub que só chama `window.print()` e não gera arquivo/base64 — inutilizável para o fluxo de download/compartilhar em web que já funciona hoje via pdf-lib. Migrar quebraria web |
+| Fontes | Fonte padrão do sistema (preview) + `Helvetica`/`HelveticaBold` — `StandardFonts` do pdf-lib (PDF) | Projeto não carrega Poppins hoje (só o ícone via `useFonts`); hierarquia é resolvida com tamanho/peso/caixa-alta sem precisar embutir fonte TTF nova |
 
-Cada tela: `useApiQuery` (hook já usado no projeto) → `loading` (`DocumentSkeleton`) / `error` (`DocumentError` com retry) / sucesso (documento fiel dentro de `ScaledDocument`) + botões **Compartilhar** / **Gerar PDF** fixos abaixo.
+### 4.2 Ponto de entrada (sem rotas novas)
 
-Pontos de entrada (navegação, sem duplicar dados):
-- `vendas.tsx` → "Ver Ingresso" / "Ver Cupom" (quando pago/cortesia).
-- Tela de inscrições de curso (`cursos.tsx`/`alunos.tsx`) → "Ver Comprovante".
-- `ingressos.tsx` (lotes `IngressoAluno`) → "Ver Ingresso" por aluno (`?origem=aluno`).
-- `SaleDetailsModal` → aba Documentos vira 3 botões de navegação.
+`SaleDetailsModal` → aba DOCUMENTOS → botão "Visualizar documento" (por tipo: ingresso/inscrição/cupom, conforme `sale.tipo` e status) → abre `DocumentPreviewModal` (novo, `Modal` full-screen do RN, não rota) → `ScaledDocument` centraliza e escala o documento (dimensão fixa por tipo, nunca deforma, `ScrollView` quando necessário) → botões fixos `[Compartilhar]` `[Gerar PDF]` chamam `shareSaleDocument`/`downloadSaleDocument` já existentes via import dinâmico (padrão já usado, mantém `documents.service.ts` fora do bundle inicial).
 
-### 4.3 Serviços
+Nenhum dado é buscado de novo — o `Sale` já carregado no modal (via `sales.service.ts`) é a única fonte, incluindo `raw.evento` (flyer), `raw.customer`, `raw.pagamentos[]`, `raw.ingressos[]`/`raw.loteIngresso.tickets[]` (código/QR individual), `raw.inscricoes[]`.
 
-- `src/services/documentos.service.ts` (novo, português — mesmo padrão de `eventos.service.ts`): chamadas HTTP aos 3 endpoints.
-- `src/services/documents.service.ts` (já existe, inglês — motor de PDF): mantém import dinâmico já usado; `createTicketPdf/createReceiptPdf/createRegistrationPdf` são substituídas por `createEventTicketPdf`, `createCourseRegistrationPdf`, `createPaymentReceiptPdf` fiéis ao novo layout (incluindo embutir o flyer real do evento no PDF via fetch + `embedJpg/embedPng`). Funções de entrega (`download/view/share/WhatsApp`) mantidas como estão.
+### 4.3 QR e código de validação
 
-### 4.4 Bibliotecas
+Payload do QR = o mesmo código já usado hoje (`ticket.qrcode ?? ticket.codigo ?? sale.codigo`, via `getDocumentCode`), **não** uma URL pública. Confirmado em `scanner.service.ts`: `POST /admin/scanner/validar` espera `{ codigo }` bruto. Manter o payload como código puro garante compatibilidade com o scanner existente sem exigir uma página pública de validação (que não existe neste repositório).
 
-| Necessidade | Decisão |
-|---|---|
-| QR na tela | **nova dep** `react-native-qrcode-svg` (o `qrcode` já instalado só gera para dentro do PDF) |
-| QR no PDF | `qrcode` (já existe) |
-| Barcode (tela + PDF) | **sem nova dependência** — encoder Code128 pequeno e puro, mesmo array de barras alimenta a tela (Views rotacionadas -90° no canhoto) e o PDF (retângulos pdf-lib) |
-| PDF | `pdf-lib` (já existe) |
-| Fontes | `Barlow Condensed` 700/900 (títulos, condensada e forte) via `expo-font` + fonte padrão do sistema para texto normal — só 2 famílias |
+### 4.4 Campos sem fonte de dados hoje
 
-### 4.5 Tipos
-
-`src/types/entities.ts` (fonte já usada pelos services relevantes) recebe `InscricaoDocument`, `TicketDocument`, `PaymentReceiptDocument`, espelhando os DTOs do backend. Não usa `src/types/index.ts` (mais antigo/duplicado).
+A referência mostra `DIAS E HORÁRIOS`, `MODALIDADES` (comprovante) e CNPJ/endereço institucional (cupom) — nenhum existe em `Evento`/`Sale`/`Customer` hoje. Regra: **a linha some quando o campo é `undefined`/vazio** (`DocumentField` não renderiza nada nesse caso); nunca texto inventado, nunca placeholder visível. Se o backend passar a expor esses campos futuramente (fora deste repositório/spec), as linhas aparecem automaticamente sem mudança de componente.
 
 ## 5. Especificação visual
 
-Paleta dedicada (`src/theme/documentColors.ts`, separada do tema escuro do app — cores fixas de marca):
+Paleta (via `@/theme/colors`, sem arquivo de cor paralelo):
 ```
-comprovante: bg #FFFFFF · faixa/rodapé verde #1B5E20 (rodapé #124A19) · texto #111 · badges #2E7D32
-ingresso:    bg #0A0A0A · dourado #D9A62E · texto branco
-cupom:       bg #FFFFFF · texto/traços #111 · pontilhado #888
-hearts:      verde #2E7D32 · vermelho #C62828 · amarelo #F9A825
+comprovante: bg branco (#F5F5F5) · faixa/rodapé verde (#2E7D32, tom escuro derivado) · texto preto (#111111)
+ingresso:    bg preto (#111111) · dourado (#D4A62A, novo token) · texto branco
+cupom:       bg branco · texto/traços preto · pontilhado cinza (colors.muted)
+corações:    verde #2E7D32 · vermelho #C62828 · amarelo #F9A825
 ```
 
-### 5.1 Comprovante de Inscrição
-Folha branca vertical, cantos arredondados (~20), sombra leve.
-- "COMPROVANTE DE INSCRIÇÃO" (preto, caixa alta, forte) + "CURSO DE DANÇAS GAÚCHAS" (verde, forte), centralizados.
-- Logo oficial centralizada (~140px) sobre floreio/silhueta de dançarinos bem sutil (~6-8% opacidade, decoração genérica, não reprodução exata da arte de referência).
-- Faixa verde cheia: ✓ em círculo branco + "INSCRIÇÃO CONFIRMADA" branco forte. Abaixo: "Parabéns! Sua inscrição foi realizada com sucesso." (texto institucional fixo).
-- Campos (ícone circular verde + rótulo caixa-alta pequeno + valor em negrito), na ordem: ALUNO(A), CPF, CURSO, LOCAL, INÍCIO DAS AULAS, DIAS E HORÁRIOS, MODALIDADES, TEM PAR (+ PAR se `temPar`).
-- Caixa cinza clara "ℹ️ INFORMAÇÕES IMPORTANTES" com texto de `evento.observacao` (some se vazio).
-- QR de validação ao lado da caixa de informações.
-- Rodapé verde escuro "Coração que dança, tradição que encanta!" itálico branco; fora do rodapé, 💚❤️💛.
+### 5.1 Comprovante de Inscrição (`CourseRegistrationReceipt`)
+Retrato, ~620×950pt, cantos arredondados (via `drawSvgPath` no PDF / `borderRadius` na tela).
+- "COMPROVANTE DE INSCRIÇÃO" (preto, caixa alta) + "CURSO DE DANÇAS GAÚCHAS" (verde), centralizados.
+- Logo oficial centralizada, com marca d'água muito sutil (~5% opacidade, a própria logo ampliada — não há asset de silhueta gaúcha separado no projeto) e ornamento simples (linha + losango) nas laterais.
+- Faixa verde escura cheia: ✓ + "INSCRIÇÃO CONFIRMADA" branco. Abaixo: "Parabéns! Sua inscrição foi realizada com sucesso."
+- Campos com ícone (`@expo/vector-icons`, já usado no projeto), nesta ordem, cada um condicional à existência do dado: ALUNO(A) (`raw.customer.nome`/`sale.nome`), CPF (mascarado), CURSO (`getEventInfo(sale).name`), LOCAL (`evento.local`), INÍCIO DAS AULAS (`evento.data`), DIAS E HORÁRIOS*, MODALIDADES*, TEM PAR (`inscricao.semPar` invertido), PAR (`inscricao.nomePar`, só se houver par).
+- Caixa "INFORMAÇÕES IMPORTANTES" com texto de `evento.observacao` (some se vazio, nunca texto fixo inventado).
+- QR de validação no canto inferior direito.
+- Rodapé verde escuro "Coração que dança, tradição que encanta!" + 💚❤️💛.
 
-### 5.2 Ingresso
-Fundo preto, proporção fixa (documento nunca deforma, só escala na tela).
-- O texto de marketing sobre o flyer ("SÁB.30 MAIO", "BAILE DO ANO"...) já está **dentro da imagem** `evento.banner` enviada pelo admin — o app não desenha texto por cima, só exibe fiel (`cover`, sem distorcer).
-- Abaixo do flyer, chrome desenhado pelo app: barra DATA/INÍCIO/LOCAL → barra PORTADOR/CPF → barra VALOR/CÓDIGO → linha final com QR branco + caixa dourada "APRESENTE NA ENTRADA" / "Este QR Code é único e pessoal. Não compartilhe."
-- Fallback elegante (gradiente escuro + nome do evento + marca-d'água da logo) só quando `banner` ausente/falha — nunca ícone de imagem quebrada.
-- **Canhoto** (`EventTicketStub`): linha pontilhada vertical + coluna preta estreita com barcode vertical + código do ingresso rotacionado 90°.
+### 5.2 Ingresso (`EventTicket` + `EventTicketStub`)
+~600×950pt, fundo preto. Documento em duas colunas: conteúdo principal + canhoto estreito à direita.
+- Flyer do evento (`raw.evento.banner ?? raw.evento.imagemUrl`) ocupa o topo, `cover`-fit sem distorcer (crop calculado manualmente para o PDF, já que pdf-lib não recorta imagem nativamente; `resizeMode="cover"` na tela). O texto promocional ("BAILE DO ANO" etc.) já está dentro da imagem — o app nunca desenha texto por cima do flyer.
+- **Fallback** (só quando `banner`/`imagemUrl` ausentes ou a imagem falha ao carregar): painel preto/vermelho/dourado com a logo centralizada + nome do evento — mantém a estrutura do ingresso, nunca ícone de imagem quebrada.
+- Abaixo do flyer: barra DATA/INÍCIO/LOCAL → PORTADOR/CPF → VALOR/CÓDIGO DO INGRESSO → linha final com QR (esquerda) + caixa dourada "APRESENTE NA ENTRADA / Este QR Code é único e pessoal. Não compartilhe." (direita).
+- Canhoto: separado por linha pontilhada/serrilhada (círculos "recortados" no PDF via `drawEllipse`; `borderStyle: 'dashed'` na tela), barcode Code128 vertical + código do ingresso em texto vertical.
+- Fonte de dados: `raw.ingressos[ticketIndex]` ou `raw.loteIngresso.tickets[ticketIndex]` (código/QR individual, já usado por `getDocumentCode`), `sale.nome`/`cpf` (portador), `sale.valorUnitario`.
 
-### 5.3 Cupom
-Folha branca estreita (proporção de cupom térmico), borda superior serrilhada, cantos inferiores arredondados.
-- Cabeçalho: logo pequena + "GRUPO DE DANÇAS / CORAÇÃO GAÚCHO" + CNPJ/endereço/cidade (env vars).
-- Título "CUPOM" / "COMPROVANTE DE PAGAMENTO" — string configurável via constante, não hardcoded no componente.
-- Nº do cupom / Data / Código do ingresso / Forma de pagamento → dados do participante → tabela de itens → SUBTOTAL / TAXA-ou-DESCONTO / **TOTAL** → "Valor pago via X" / "Troco" (calculado: `total - valorPago`, nunca fixo).
-- Autenticação + "consulte pela chave de acesso" + QR + "Obrigado por prestigiar a cultura gaúcha!" + slogan itálico + 💚❤️💛.
+### 5.3 Cupom (`PaymentReceipt`)
+Estreito e alto (~380×900pt), branco, borda superior serrilhada (círculos recortados).
+- Logo + "GRUPO DE DANÇAS CORAÇÃO GAÚCHO"; linha de CNPJ/endereço só aparece se algum dia existir fonte de dado para isso — hoje some (ver 4.4).
+- Título: constante configurável (`"CUPOM"` / `"COMPROVANTE DE PAGAMENTO"`), nunca "Nota Fiscal"/NFC-e.
+- Nº do cupom (`sale.codigo`) / Data (`sale.createdAt`) / Código do ingresso / Forma de pagamento (`getReceiptPaymentMethodLabel`) → separador pontilhado → DADOS DO PARTICIPANTE (nome + CPF mascarado) → separador → tabela DESCRIÇÃO/QTD/UN/VL.UNIT/VL.TOTAL (`getReceiptItems`) → SUBTOTAL / desconto-ou-taxa (se houver) / **TOTAL** (`sale.valorTotal` — valor congelado da venda, nunca recalculado do preço atual do evento, como `getReceiptItems` já garante hoje) → valor pago + troco → Autenticação (hash determinístico já existente via `hashOf`) → QR → rodapé de agradecimento + 💚❤️💛 → barcode vertical na borda direita.
 
-## 6. Fora do escopo
+## 6. Fora do escopo (fica para processo de backend separado, fora deste repositório)
 
-- App do cliente final (arquitetura preparada, não implementado).
-- Tela de configuração de empresa no admin (env vars agora; tabela fica para depois).
-- Alterações no fluxo/lógica do scanner de validação (`/admin/scanner/validar`) — só passa a receber QRs já compatíveis com o formato que ele espera.
-- Reembolso, cancelamento e demais fluxos de pagamento.
+- Campos estruturados de `modalidades`/`diasHorarios` no evento.
+- Dados institucionais de empresa (CNPJ/endereço) para o cupom.
+- Página pública de validação (`/validar/ingresso/:codigo`) — o QR continua apontando para o código bruto compatível com o scanner interno.
+- Qualquer novo endpoint `/admin/documentos/*` ou DTO de backend.
+- App de cliente final.
 
 ## 7. Critério de aceite
 
-Abrir uma tela passando só o ID real do banco (`inscricaoId`, `ingressoId`, `pedidoId`) é suficiente para localizar participante, evento, flyer, valores, montar QR/barcode e gerar PDF — nada digitado manualmente. Nenhum `mock*`/dado de exemplo sobra no código final.
+A partir de uma `Sale` real já carregada em `SaleDetailsModal` (nenhum dado digitado manualmente), abrir "Visualizar documento" deve montar o documento correto (ingresso/inscrição/cupom conforme `sale.tipo`/status) com QR e barcode reais e permitir gerar/compartilhar o PDF — em web e nativo. Nenhum `mock*`/dado de exemplo no código final. Linhas de campos sem dado disponível somem, nunca aparecem vazias ou com texto inventado.
 
 ## 8. Verificação
 
-`tsc`/typecheck limpo nos dois repos · `eslint` sem erros · migration Prisma aplicada localmente · telas abertas no Expo (web ou Android) com `inscricaoId`/`ingressoId`/`pedidoId` reais do banco · PDF gerado e compartilhado a partir de cada uma das 3 telas.
+`npm run validate` (typecheck + lint + doctor) limpo · `npm run test` sem regressão nos testes de service existentes · preview aberto no Expo (web e Android/iOS) a partir de uma venda real de cada tipo (`CURSO`, `BAILE`/`EVENTO`) · PDF gerado e compartilhado a partir de cada um dos 3 documentos, em web e nativo.
