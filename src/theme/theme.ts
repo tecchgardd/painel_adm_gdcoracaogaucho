@@ -6,6 +6,7 @@ export const theme = {
     redDark: '#8E1616',
     green: '#2E7D32',
     yellow: '#F9A825',
+    gold: '#D4A62A',
     info: '#16738A',
     infoBg: '#102D34',
     infoText: '#C6F4FF',
