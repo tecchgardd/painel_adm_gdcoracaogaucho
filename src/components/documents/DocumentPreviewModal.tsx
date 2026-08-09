@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Button } from '@/components/ui';
 import { colors } from '@/theme/colors';
 import type { Sale } from '@/types/entities';
+
 import { CourseRegistrationReceipt } from './CourseRegistrationReceipt/CourseRegistrationReceipt';
 import { COURSE_RECEIPT_WIDTH } from './CourseRegistrationReceipt/styles';
 import { EventTicket } from './EventTicket/EventTicket';
