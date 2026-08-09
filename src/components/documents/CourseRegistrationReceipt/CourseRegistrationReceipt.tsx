@@ -4,10 +4,12 @@ import { Text, View } from 'react-native';
 import type { Sale } from '@/types/entities';
 import { formatDateTime, maskCpf } from '@/utils/format';
 import { colors } from '@/theme/colors';
+
 import { getDocumentCode, getEventInfo, getRegistrationFields } from '../documentUtils';
 import { DocumentField } from '../shared/DocumentField';
 import { DocumentLogo } from '../shared/DocumentLogo';
 import { DocumentQRCode } from '../DocumentQRCode';
+
 import { styles } from './styles';
 
 export function CourseRegistrationReceipt({ sale }: { sale: Sale }) {

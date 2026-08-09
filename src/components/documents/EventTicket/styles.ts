@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+
 import { colors } from '@/theme/colors';
 
 export const EVENT_TICKET_MAIN_WIDTH = 560;

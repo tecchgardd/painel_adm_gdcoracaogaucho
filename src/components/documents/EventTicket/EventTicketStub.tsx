@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
+
 import { DocumentBarcode } from '../shared/DocumentBarcode';
+
 import { styles } from './styles';
 
 export function EventTicketStub({ codigo }: { codigo: string }) {

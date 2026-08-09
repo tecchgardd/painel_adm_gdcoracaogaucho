@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+
 import { colors } from '@/theme/colors';
 
 export const COURSE_RECEIPT_WIDTH = 380;

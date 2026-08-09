@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { getEventInfo, getReceiptTotals, getRegistrationFields } from './documentUtils';
+
 import type { Sale } from '@/types/entities';
+
+import { getEventInfo, getReceiptTotals, getRegistrationFields } from './documentUtils';
 
 function buildSale(overrides: Partial<Sale> = {}): Sale {
   return {

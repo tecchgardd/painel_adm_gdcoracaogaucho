@@ -3,8 +3,10 @@ import { Image, Text, View } from 'react-native';
 
 import type { Sale } from '@/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
+
 import { getDocumentCode, getEventInfo } from '../documentUtils';
 import { DocumentQRCode } from '../DocumentQRCode';
+
 import { EventTicketStub } from './EventTicketStub';
 import { styles } from './styles';
 

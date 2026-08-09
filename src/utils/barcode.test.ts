@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { encodeCode128B } from './barcode';
 
 describe('encodeCode128B', () => {

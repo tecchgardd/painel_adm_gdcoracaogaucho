@@ -22,6 +22,8 @@
 - No route/navigation change, no new screen, no auth change — everything happens inside the existing `SaleDetailsModal` flow.
 - Design spec: `docs/superpowers/specs/2026-08-08-documentos-comprovantes-design.md` is the source of truth for visual details.
 
+**Infra note (discovered during Task 12, applies retroactively to all tasks):** `eslint.config.js`'s `globalIgnores` did not exclude `.agents/**`/`.claude/**` (vendored Claude Code skill assets, not application code), so a repo-wide `npm run lint` showed ~194 pre-existing, unrelated errors that made "exit 0" impossible to verify meaningfully. This was fixed by adding those two globs to `globalIgnores` — a minimal, correct fix (same pattern as the existing `.expo/**`/`dist/**` ignores), not a scope change. After that fix, `npm run lint` is clean (0 errors/warnings) across the whole repo as of Task 12, including every file created by Tasks 1-11. Every code block below that shows an import list assumes `eslint`'s `import/order` rule (`newlines-between: 'always'`, groups `builtin/external/internal/parent/sibling/index`, `@/**` treated as `internal`) — a blank line is required between the `react`/`react-native`/third-party group, the `@/`-alias group, and any relative (`./`/`../`) group. Code blocks below have been corrected to include these blank lines where the original draft missed them.
+
 ---
 
 ### Task 1: Code128-B barcode encoder
@@ -261,7 +263,6 @@ import { Image, StyleSheet } from 'react-native';
 
 export function DocumentLogo({ size = 92 }: { size?: number }) {
   return (
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     <Image source={require('../../../../assets/logo-oficial.jpeg')} style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]} resizeMode="cover" />
   );
 }

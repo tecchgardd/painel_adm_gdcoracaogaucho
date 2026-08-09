@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+
 import { encodeCode128B } from '@/utils/barcode';
 
 export function DocumentBarcode({

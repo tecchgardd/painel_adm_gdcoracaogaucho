@@ -4,10 +4,12 @@ import { Text, View } from 'react-native';
 import type { Sale } from '@/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
 import { colors } from '@/theme/colors';
+
 import { getDocumentCode, getReceiptItems, getReceiptPaymentMethodLabel, getReceiptTotals } from '../documentUtils';
 import { DocumentDivider } from '../shared/DocumentDivider';
 import { DocumentLogo } from '../shared/DocumentLogo';
 import { DocumentQRCode } from '../DocumentQRCode';
+
 import { styles } from './styles';
 
 export function PaymentReceipt({ sale, title = 'CUPOM', subtitle = 'COMPROVANTE DE PAGAMENTO' }: { sale: Sale; title?: string; subtitle?: string }) {
