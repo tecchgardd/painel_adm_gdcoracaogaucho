@@ -1468,10 +1468,11 @@ git commit -m "refactor(documents): redraw the 3 PDF documents to match the refe
 
 **Files:**
 - Modify: `src/components/sales/SaleDetailsModal.tsx`
+- Delete: `src/components/documents/TicketCard.tsx`, `DocumentHeader.tsx`, `DocumentFooter.tsx`, `DocumentRow.tsx`, `DocumentSection.tsx`, `ReceiptItems.tsx`, `ReceiptTotals.tsx`, `RegistrationForm.tsx`, `DocumentActions.tsx`
 
 **Interfaces:**
 - Consumes: `DocumentPreviewModal` (Task 11).
-- Removes the inline `TicketCard`/`DocumentHeader`/`ReceiptItems`/`ReceiptTotals`/`RegistrationForm`/`DocumentQRCode`/`DocumentActions` usage inside the "DOCUMENTOS" tab, replacing it with 1-2 buttons that open `DocumentPreviewModal`. Resolves the pending typecheck failure noted in Task 5.
+- Removes the inline `TicketCard`/`DocumentHeader`/`ReceiptItems`/`ReceiptTotals`/`RegistrationForm`/`DocumentQRCode`/`DocumentActions` usage inside the "DOCUMENTOS" tab, replacing it with 1-2 buttons that open `DocumentPreviewModal`. `SaleDetailsModal.tsx` is their only caller anywhere in the codebase, so this task also deletes those 9 now-dead files (Step 6) — two of them (`TicketCard.tsx`, `RegistrationForm.tsx`) still call `DocumentQRCode` with the `label` prop Task 5 removed, so leaving them in place would fail typecheck. Resolves the pending typecheck failure noted in Task 5.
 
 - [ ] **Step 1: Replace the imports**
 
@@ -1557,16 +1558,38 @@ In the `StyleSheet.create` block, add:
 
 Remove any now-unused styles (`docSwitch`, `docTab`, `docTabActive`, `docTabText`, `ticketSelector`, `ticketChip`, `ticketChipActive`, `docCard`, `docBody`, `twoCols`, `leftCol`, `rightCol`, `qrBox`) if nothing else in the file references them — verify with a search before deleting each.
 
-- [ ] **Step 6: Typecheck and lint**
+- [ ] **Step 6: Delete the now-fully-orphaned generic document components**
+
+`SaleDetailsModal.tsx` was the *only* consumer of these 9 files anywhere in the codebase (confirmed by `grep -rn "TicketCard\|DocumentHeader\|DocumentFooter\|DocumentRow\|DocumentSection\|ReceiptItems\|ReceiptTotals\|RegistrationForm\|DocumentActions" app src`, excluding the files' own definitions and `getReceiptItems`/`ReceiptItem` in `documentUtils.ts`, which are unrelated same-named exports still in use). After Step 1's import removal, they are dead code — and two of them (`TicketCard.tsx`, `RegistrationForm.tsx`) still call `<DocumentQRCode value={...} label="..." />`, which fails typecheck against Task 5's rewritten `DocumentQRCode` props (`label` no longer exists). Delete all 9:
+
+```bash
+git rm src/components/documents/TicketCard.tsx \
+  src/components/documents/DocumentHeader.tsx \
+  src/components/documents/DocumentFooter.tsx \
+  src/components/documents/DocumentRow.tsx \
+  src/components/documents/DocumentSection.tsx \
+  src/components/documents/ReceiptItems.tsx \
+  src/components/documents/ReceiptTotals.tsx \
+  src/components/documents/RegistrationForm.tsx \
+  src/components/documents/DocumentActions.tsx
+```
+
+- [ ] **Step 7: Typecheck and lint**
 
 Run: `npm run typecheck && npm run lint`
-Expected: both exit 0 — this resolves the pending failure noted in Task 5.
+Expected: both exit 0 — this resolves the pending failure noted in Task 5, and confirms no other file referenced the 9 deleted components.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/components/sales/SaleDetailsModal.tsx
-git commit -m "refactor(sales): open the new DocumentPreviewModal from SaleDetailsModal"
+git commit -m "refactor(sales): open the new DocumentPreviewModal from SaleDetailsModal
+
+Also removes the 9 generic document components (TicketCard, DocumentHeader,
+DocumentFooter, DocumentRow, DocumentSection, ReceiptItems, ReceiptTotals,
+RegistrationForm, DocumentActions) now that SaleDetailsModal was their only
+caller — they're superseded by the document-specific components from
+Tasks 8-11."
 ```
 
 ---
