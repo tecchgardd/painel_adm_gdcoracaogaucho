@@ -428,7 +428,8 @@ Create `src/components/documents/shared/ScaledDocument.tsx`:
 
 ```tsx
 import { useState } from 'react';
-import type { LayoutChangeEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import type { LayoutChangeEvent } from 'react-native';
 import { StyleSheet, View } from 'react-native';
 
 export function ScaledDocument({ width, children }: { width: number; children: ReactNode }) {
