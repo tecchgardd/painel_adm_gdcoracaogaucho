@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { PDFImage, PDFPage } from 'pdf-lib';
 // @ts-expect-error entrada ESM usada para evitar problemas do Metro Web
-import { PDFDocument, StandardFonts, clip, closePath, endPath, lineTo, moveTo, popGraphicsState, pushGraphicsState, rgb } from 'pdf-lib/dist/pdf-lib.esm.js';
+import { PDFDocument, StandardFonts, clip, closePath, degrees, endPath, lineTo, moveTo, popGraphicsState, pushGraphicsState, rgb } from 'pdf-lib/dist/pdf-lib.esm.js';
 import QRCode from 'qrcode';
 import { Linking, Platform } from 'react-native';
 
@@ -51,11 +51,27 @@ function drawCoverImage(page: PDFPage, image: PDFImage, x: number, y: number, wi
   page.pushOperators(popGraphicsState());
 }
 
-function drawBarcode(page: PDFPage, value: string, x: number, y: number, unitWidth: number, height: number, color = rgb(0.04, 0.04, 0.04)) {
-  let cursor = x;
+function drawBarcode(
+  page: PDFPage,
+  value: string,
+  x: number,
+  y: number,
+  unitWidth: number,
+  crossAxisLength: number,
+  color = rgb(0.04, 0.04, 0.04),
+  orientation: 'horizontal' | 'vertical' = 'horizontal'
+) {
+  let cursor = orientation === 'vertical' ? y : x;
   encodeCode128B(value).forEach((bar) => {
-    if (bar.isBar) page.drawRectangle({ x: cursor, y, width: bar.width * unitWidth, height, color });
-    cursor += bar.width * unitWidth;
+    const barLength = bar.width * unitWidth;
+    if (bar.isBar) {
+      if (orientation === 'vertical') {
+        page.drawRectangle({ x, y: cursor, width: crossAxisLength, height: barLength, color });
+      } else {
+        page.drawRectangle({ x: cursor, y, width: barLength, height: crossAxisLength, color });
+      }
+    }
+    cursor += barLength;
   });
 }
 
@@ -110,8 +126,8 @@ async function createTicketPdf(sale: Sale, ticketIndex: number) {
   page.drawText('APRESENTE NA ENTRADA', { x: 88, y: 32, size: 10, font: bold, color: black });
   page.drawText('Este QR Code é único e pessoal. Não compartilhe.', { x: 88, y: 18, size: 7.5, font: regular, color: black });
 
-  drawBarcode(page, codigo, 610, 60, 1.4, 260, black);
-  page.drawText(codigo, { x: 690, y: 60, size: 8, font: bold, color: white });
+  drawBarcode(page, codigo, 618, 58, 1.4, 34, black, 'vertical');
+  page.drawText(codigo, { x: 668, y: 70, size: 8, font: bold, color: white, rotate: degrees(90) });
 
   return pdf.saveAsBase64();
 }
