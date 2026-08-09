@@ -1,18 +1,35 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
+import QRCode from 'qrcode';
 
-export function DocumentQRCode({ value, label }: { value: string; label?: string }) {
+const qrCache = new Map<string, string>();
+
+export function DocumentQRCode({ value, size = 90 }: { value: string; size?: number }) {
+  const [uri, setUri] = useState<string | null>(qrCache.get(value) ?? null);
+
+  useEffect(() => {
+    const cached = qrCache.get(value);
+    if (cached) {
+      setUri(cached);
+      return;
+    }
+    let active = true;
+    QRCode.toDataURL(value, { errorCorrectionLevel: 'M', margin: 1, width: 240 }).then((dataUrl) => {
+      qrCache.set(value, dataUrl);
+      if (active) setUri(dataUrl);
+    });
+    return () => {
+      active = false;
+    };
+  }, [value]);
+
   return (
-    <View style={styles.box}>
-      <MaterialCommunityIcons name="qrcode" size={92} color="#111" />
-      <Text style={styles.code} numberOfLines={1}>{value}</Text>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+    <View style={[styles.box, { width: size, height: size }]}>
+      {uri ? <Image source={{ uri }} style={{ width: size, height: size }} resizeMode="contain" /> : <ActivityIndicator size="small" />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { alignSelf: 'center', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 14, gap: 4 },
-  code: { color: '#111', fontSize: 10, fontWeight: '800', maxWidth: 160 },
-  label: { color: '#555', fontSize: 9, fontWeight: '700' }
+  box: { alignSelf: 'center', backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center' }
 });
