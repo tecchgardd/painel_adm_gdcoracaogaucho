@@ -8,3 +8,4 @@ dist-validation*/
 !.env.example
 *.log
 *.tsbuildinfo
+.superpowers/
