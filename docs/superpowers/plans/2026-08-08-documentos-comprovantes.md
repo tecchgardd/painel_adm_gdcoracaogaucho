@@ -483,7 +483,7 @@ git commit -m "feat(documents): add ScaledDocument responsive preview container"
 - Test: `src/components/documents/documentUtils.test.ts` (new)
 
 **Interfaces:**
-- Produces: `RegistrationFields.temPar?: boolean`, `RegistrationFields.parNome?: string`, and `EventInfo.observacao?: string`, populated by `getRegistrationFields`/`getEventInfo` — consumed by Task 9 (`CourseRegistrationReceipt`) and Task 12 (`createRegistrationPdf`).
+- Produces: `RegistrationFields.temPar?: boolean`, `RegistrationFields.parNome?: string`, `EventInfo.observacao?: string` (populated by `getRegistrationFields`/`getEventInfo`), and a new `getReceiptTotals(sale: Sale): { subtotal: number; ajusteLabel: 'Taxa de serviço' | 'Desconto' | null; ajusteValor: number }` — consumed by Task 9 (`CourseRegistrationReceipt`), Task 10 (`PaymentReceipt`), and Task 12 (`createRegistrationPdf`/`createReceiptPdf`). `getReceiptTotals` exists so the subtotal/taxa-ou-desconto math is written exactly once instead of duplicated in the screen component and the PDF builder.
 
 The reference shows "TEM PAR"/"PAR" and an "INFORMAÇÕES IMPORTANTES" box sourced from `evento.observacao` on the comprovante — per design spec §5.1 that box's text must come from the event's real `observacao` field and disappear when empty, never a fixed invented string. The API's `Sale.raw.inscricoes[]` isn't typed with pair info today, even though the underlying inscrição record has it — this task only widens the TypeScript type to describe fields the API may already send (no backend change), and reads them defensively. `getEventInfo` already reads from `sale.raw?.evento`, which is typed to carry `observacao` (see `Evento` type) — this task only forwards it.
 
@@ -493,7 +493,7 @@ Create `src/components/documents/documentUtils.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { getEventInfo, getRegistrationFields } from './documentUtils';
+import { getEventInfo, getReceiptTotals, getRegistrationFields } from './documentUtils';
 import type { Sale } from '@/types/entities';
 
 function buildSale(overrides: Partial<Sale> = {}): Sale {
@@ -529,12 +529,27 @@ describe('getEventInfo observacao', () => {
     expect(getEventInfo(sale).observacao).toBeUndefined();
   });
 });
+
+describe('getReceiptTotals', () => {
+  it('labels a positive gap between valorTotal and the items subtotal as a service fee', () => {
+    const sale = buildSale({ valorTotal: 38.5, raw: { items: [{ description: 'Ingresso', quantity: 1, unitPrice: 35, total: 35 }] } });
+    const totals = getReceiptTotals(sale);
+    expect(totals.subtotal).toBe(35);
+    expect(totals.ajusteLabel).toBe('Taxa de serviço');
+    expect(totals.ajusteValor).toBe(3.5);
+  });
+
+  it('labels a negative gap as a discount and omits the label when there is no gap', () => {
+    expect(getReceiptTotals(buildSale({ valorTotal: 90, raw: { items: [{ description: 'Item', quantity: 1, unitPrice: 100, total: 100 }] } })).ajusteLabel).toBe('Desconto');
+    expect(getReceiptTotals(buildSale({ valorTotal: 50, raw: { items: [{ description: 'Item', quantity: 1, unitPrice: 50, total: 50 }] } })).ajusteLabel).toBeNull();
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- documentUtils`
-Expected: FAIL — `temPar`/`parNome`/`observacao` undefined, `raw.inscricoes[].nomePar`/`semPar` not on the type yet.
+Expected: FAIL — `temPar`/`parNome`/`observacao` undefined, `raw.inscricoes[].nomePar`/`semPar` not on the type yet, and `getReceiptTotals` does not exist yet.
 
 - [ ] **Step 3: Widen the `Sale.raw.inscricoes` type**
 
@@ -601,6 +616,18 @@ And add `temPar` and `parNome` to the returned object:
     consent:
 ```
 
+Add the shared totals helper — export it from `documentUtils.ts` alongside the existing exports:
+
+```ts
+export function getReceiptTotals(sale: Sale) {
+  const items = getReceiptItems(sale);
+  const subtotal = Math.round(items.reduce((acc, item) => acc + item.total, 0) * 100) / 100;
+  const ajusteValor = Math.round((sale.valorTotal - subtotal) * 100) / 100;
+  const ajusteLabel: 'Taxa de serviço' | 'Desconto' | null = ajusteValor > 0 ? 'Taxa de serviço' : ajusteValor < 0 ? 'Desconto' : null;
+  return { subtotal, ajusteLabel, ajusteValor: Math.abs(ajusteValor) };
+}
+```
+
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `npm test -- documentUtils`
@@ -610,7 +637,7 @@ Expected: PASS
 
 ```bash
 git add src/types/entities.ts src/components/documents/documentUtils.ts src/components/documents/documentUtils.test.ts
-git commit -m "feat(documents): expose pair info for the course registration receipt"
+git commit -m "feat(documents): expose pair info and shared receipt totals helper"
 ```
 
 ---
@@ -892,8 +919,10 @@ git commit -m "feat(documents): implement CourseRegistrationReceipt matching the
 - Create: `src/components/documents/PaymentReceipt/styles.ts`
 
 **Interfaces:**
-- Consumes: `Sale`, `getReceiptItems`/`getReceiptPaymentMethodLabel`/`getDocumentCode` (existing `documentUtils.ts`), `DocumentLogo`/`DocumentQRCode`/`DocumentDivider` (Tasks 3/5), `formatCurrencyBRL`/`formatDateTime`.
+- Consumes: `Sale`, `getReceiptItems`/`getReceiptPaymentMethodLabel`/`getDocumentCode`/`getReceiptTotals` (existing + Task 7 `documentUtils.ts`), `DocumentLogo`/`DocumentQRCode`/`DocumentDivider` (Tasks 3/5), `formatCurrencyBRL`/`formatDateTime`.
 - Produces: `<PaymentReceipt sale={Sale} title="CUPOM" subtitle="COMPROVANTE DE PAGAMENTO" />`, exported `PAYMENT_RECEIPT_WIDTH = 300` — consumed by Task 11.
+
+This depends on `getReceiptTotals` from Task 7, which centralizes the subtotal/taxa-ou-desconto computation so it isn't duplicated between this screen component and `createReceiptPdf` (Task 12).
 
 - [ ] **Step 1: Styles**
 
@@ -951,7 +980,7 @@ import { Text, View } from 'react-native';
 import type { Sale } from '@/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
 import { colors } from '@/theme/colors';
-import { getDocumentCode, getReceiptItems, getReceiptPaymentMethodLabel } from '../documentUtils';
+import { getDocumentCode, getReceiptItems, getReceiptPaymentMethodLabel, getReceiptTotals } from '../documentUtils';
 import { DocumentDivider } from '../shared/DocumentDivider';
 import { DocumentLogo } from '../shared/DocumentLogo';
 import { DocumentQRCode } from '../DocumentQRCode';
@@ -959,9 +988,7 @@ import { styles } from './styles';
 
 export function PaymentReceipt({ sale, title = 'CUPOM', subtitle = 'COMPROVANTE DE PAGAMENTO' }: { sale: Sale; title?: string; subtitle?: string }) {
   const items = getReceiptItems(sale);
-  const subtotal = items.reduce((acc, item) => acc + item.total, 0);
-  const ajusteValor = Math.round((sale.valorTotal - subtotal) * 100) / 100;
-  const ajusteLabel = ajusteValor > 0 ? 'Taxa de serviço' : ajusteValor < 0 ? 'Desconto' : null;
+  const { subtotal, ajusteLabel, ajusteValor } = getReceiptTotals(sale);
   const metodo = getReceiptPaymentMethodLabel(sale);
 
   return (
@@ -1012,7 +1039,7 @@ export function PaymentReceipt({ sale, title = 'CUPOM', subtitle = 'COMPROVANTE 
         {ajusteLabel ? (
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>{ajusteLabel.toUpperCase()}</Text>
-            <Text style={styles.totalValue}>{formatCurrencyBRL(Math.abs(ajusteValor))}</Text>
+            <Text style={styles.totalValue}>{formatCurrencyBRL(ajusteValor)}</Text>
           </View>
         ) : null}
         <DocumentDivider variant="solid" color="#111111" />
@@ -1185,7 +1212,7 @@ git commit -m "feat(documents): add full-screen DocumentPreviewModal"
 - Modify: `src/services/documents.service.ts`
 
 **Interfaces:**
-- Consumes: `Sale`, `getEventInfo`/`getReceiptItems`/`getReceiptPaymentMethodLabel`/`getDocumentCode`/`getRegistrationFields` (existing `documentUtils.ts`), `encodeCode128B` (Task 1).
+- Consumes: `Sale`, `getEventInfo`/`getReceiptItems`/`getReceiptPaymentMethodLabel`/`getReceiptTotals`/`getDocumentCode`/`getRegistrationFields` (existing + Task 7 `documentUtils.ts`), `encodeCode128B` (Task 1).
 - Produces: same exact public API as before — `downloadSaleDocument(sale, kind, ticketIndex?)`, `viewSaleDocument`, `shareSaleDocument`, `sendDocumentByWhatsApp`, `sendDocumentByEmail`, `SaleDocumentKind` — only the internal `createTicketPdf`/`createReceiptPdf`/`createRegistrationPdf` implementations change. Consumed today by `DocumentPreviewModal` (Task 11).
 
 - [ ] **Step 1: Replace the internal PDF builders**
@@ -1203,11 +1230,11 @@ import { Linking, Platform } from 'react-native';
 
 import type { Sale } from '@/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
-import { getDocumentCode, getEventInfo, getReceiptItems, getReceiptPaymentMethodLabel, getRegistrationFields } from '@/components/documents/documentUtils';
+import { getDocumentCode, getEventInfo, getReceiptItems, getReceiptPaymentMethodLabel, getReceiptTotals, getRegistrationFields } from '@/components/documents/documentUtils';
 import { encodeCode128B } from '@/utils/barcode';
 ```
 
-This drops the now-unused `getReceiptStatusLabel` import (the new cupom layout doesn't show a status line) and adds `getReceiptPaymentMethodLabel` (used by the new `createReceiptPdf` below) and `PDFImage` (typed parameter for the new cover-crop helper).
+This drops the now-unused `getReceiptStatusLabel` import (the new cupom layout doesn't show a status line) and adds `getReceiptPaymentMethodLabel` and `getReceiptTotals` (Task 7 — used by the new `createReceiptPdf` below, the same helper `PaymentReceipt.tsx` uses, so the subtotal/taxa-ou-desconto math isn't duplicated) and `PDFImage` (typed parameter for the new cover-crop helper).
 
 Add these helpers (after `embedQr`):
 
@@ -1302,8 +1329,7 @@ async function createReceiptPdf(sale: Sale) {
   const black = rgb(0.07, 0.07, 0.07);
   const muted = rgb(0.42, 0.42, 0.42);
   const items = getReceiptItems(sale);
-  const subtotal = items.reduce((acc, item) => acc + item.total, 0);
-  const ajuste = Math.round((sale.valorTotal - subtotal) * 100) / 100;
+  const { subtotal, ajusteLabel, ajusteValor } = getReceiptTotals(sale);
   const metodo = getReceiptPaymentMethodLabel(sale);
   const codigo = getDocumentCode(sale);
   const qr = await embedQr(pdf, `${sale.codigo}|${sale.id}`);
@@ -1349,9 +1375,9 @@ async function createReceiptPdf(sale: Sale) {
   page.drawText('SUBTOTAL', { x: 20, y, size: 9, font: regular, color: black });
   page.drawText(formatCurrencyBRL(subtotal), { x: 220, y, size: 9, font: regular, color: black });
   y -= 14;
-  if (ajuste !== 0) {
-    page.drawText(ajuste > 0 ? 'TAXA DE SERVIÇO' : 'DESCONTO', { x: 20, y, size: 9, font: regular, color: black });
-    page.drawText(formatCurrencyBRL(Math.abs(ajuste)), { x: 220, y, size: 9, font: regular, color: black });
+  if (ajusteLabel) {
+    page.drawText(ajusteLabel.toUpperCase(), { x: 20, y, size: 9, font: regular, color: black });
+    page.drawText(formatCurrencyBRL(ajusteValor), { x: 220, y, size: 9, font: regular, color: black });
     y -= 14;
   }
   page.drawText('TOTAL', { x: 20, y, size: 13, font: bold, color: black });
