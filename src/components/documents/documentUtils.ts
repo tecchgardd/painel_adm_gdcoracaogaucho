@@ -15,6 +15,7 @@ export type EventInfo = {
   date?: string;
   location: string;
   banner?: string | null;
+  observacao?: string;
 };
 
 export type RegistrationFields = {
@@ -35,6 +36,8 @@ export type RegistrationFields = {
   responsible?: string;
   consent: string;
   signature?: string;
+  temPar?: boolean;
+  parNome?: string;
 };
 
 export function formatMoney(value?: number | string | null) {
@@ -57,7 +60,8 @@ export function getEventInfo(sale: Sale): EventInfo {
     lot: firstItem?.lote ?? (sale.raw?.loteIngresso?.id ? `Lote ${sale.raw.loteIngresso.id}` : '-'),
     date: evento?.data ?? evento?.date ?? sale.createdAt,
     location: evento?.local ?? evento?.location ?? evento?.cidade ?? sale.cidade ?? '-',
-    banner: evento?.banner ?? evento?.imagemUrl ?? null
+    banner: evento?.banner ?? evento?.imagemUrl ?? null,
+    observacao: evento?.observacao || undefined
   };
 }
 
@@ -71,6 +75,14 @@ export function getReceiptItems(sale: Sale): ReceiptItem[] {
     const unitPrice = item.unitPrice ?? item.valorUnitario ?? 0;
     return { description: item.description ?? item.nome ?? 'Item', quantity, unitPrice, total: item.total ?? unitPrice * quantity };
   });
+}
+
+export function getReceiptTotals(sale: Sale) {
+  const items = getReceiptItems(sale);
+  const subtotal = Math.round(items.reduce((acc, item) => acc + item.total, 0) * 100) / 100;
+  const ajusteValor = Math.round((sale.valorTotal - subtotal) * 100) / 100;
+  const ajusteLabel: 'Taxa de serviço' | 'Desconto' | null = ajusteValor > 0 ? 'Taxa de serviço' : ajusteValor < 0 ? 'Desconto' : null;
+  return { subtotal, ajusteLabel, ajusteValor: Math.abs(ajusteValor) };
 }
 
 export function getReceiptPaymentMethodLabel(sale: Sale) {
@@ -107,6 +119,8 @@ export function getRegistrationFields(sale: Sale): RegistrationFields {
   const info = getEventInfo(sale);
   const startDate = evento?.data ?? evento?.date;
   const time = startDate ? new Date(startDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : undefined;
+  const inscricao = sale.raw?.inscricoes?.[0];
+  const temPar = Boolean(inscricao?.nomePar) && inscricao?.semPar !== true;
   return {
     name: sale.nome,
     cpf: maskCpf(sale.cpf),
@@ -121,6 +135,8 @@ export function getRegistrationFields(sale: Sale): RegistrationFields {
     time,
     location: info.location,
     responsible: customer?.nome ?? sale.nome,
+    temPar,
+    parNome: temPar ? inscricao?.nomePar : undefined,
     consent:
       'Declaro que as informações prestadas são verídicas e autorizo o uso de imagem para fins promocionais do evento/curso, conforme regulamento do Coração Gaúcho.'
   };

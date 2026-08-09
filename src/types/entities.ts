@@ -255,6 +255,8 @@ export type Sale = {
       id: string | number;
       status?: string;
       quantidadeParticipantes?: number;
+      nomePar?: string;
+      semPar?: boolean;
     }[];
     loteIngresso?: {
       id: string | number;
