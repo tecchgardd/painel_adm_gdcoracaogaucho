@@ -4,7 +4,7 @@ import { Tabs, router, usePathname } from 'expo-router';
 import { useAuthStore } from '@/stores/auth.store';
 
 const hidden = { href: null };
-const checkinAllowed = ['/scanner', '/historico-validacoes'];
+const checkinAllowed = ['/scanner', '/historico-validacoes', '/menu'];
 const staffBlocked = ['/relatorios'];
 
 export default function AdminTabs() {

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { filterNavigationByRole, mobileTabs } from '@/navigation.config';
 import { useAuthStore } from '@/stores/auth.store';
-import { colors } from '@/theme/theme';
+import { colors, theme } from '@/theme/theme';
 
 const activeGroups: Record<string, string[]> = {
   '/eventos': ['/eventos', '/bailes', '/cursos'],
@@ -96,9 +96,9 @@ const styles = StyleSheet.create({
     borderRadius: 16
   },
   label: {
+    fontFamily: theme.font.bold,
     color: colors.muted,
-    fontSize: 10,
-    fontWeight: '900'
+    fontSize: 10
   },
   labelActive: {
     color: colors.red
