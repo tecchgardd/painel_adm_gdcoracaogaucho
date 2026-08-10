@@ -105,14 +105,6 @@ export function Button(props: { title: string; onPress?: () => void; tone?: 'red
   return <AppButton {...props} />;
 }
 
-export function AppInput(props: React.ComponentProps<typeof TextInput>) {
-  return <TextInput placeholderTextColor="#999" {...props} style={[styles.input, props.style]} />;
-}
-
-export function Input(props: React.ComponentProps<typeof TextInput>) {
-  return <AppInput {...props} />;
-}
-
 export function FormField({ label, multiline = false, ...props }: React.ComponentProps<typeof TextInput> & { label: string; multiline?: boolean }) {
   return <View style={styles.fieldWrap}>
     <Text style={styles.fieldLabel}>{label}</Text>
@@ -311,7 +303,6 @@ const styles = StyleSheet.create({
   button: { minHeight: 46, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   buttonDisabled: { opacity: 0.45 },
   buttonText: { fontSize: 14, fontWeight: '800', maxWidth: '100%' },
-  input: { height: 46, borderRadius: 12, borderWidth: 1, borderColor: '#DDD', backgroundColor: '#FAFAFA', paddingHorizontal: 14, color: '#111', marginTop: 8 },
   fieldWrap: { marginTop: 12 },
   fieldLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 7 },
   fieldInput: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#111', paddingHorizontal: 14, color: colors.text, outlineStyle: 'none' as any },
