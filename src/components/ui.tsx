@@ -7,6 +7,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import { BottomTabs } from '@/components/navigation/BottomTabs';
 import { colors, theme } from '@/theme/theme';
+import { buttonTones, statusTones } from '@/theme/tones';
 
 const { radius } = theme;
 
@@ -20,6 +21,13 @@ function blurActiveElement() {
 
 export function Logo({ size = 92 }: { size?: number }) {
   return <Image source={require('../../assets/logo-oficial.jpeg')} style={{ width: size, height: size, borderRadius: size / 2 }} resizeMode="cover" />;
+}
+
+export function Avatar({ name, size = 44 }: { name?: string; size?: number }) {
+  const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
+  return <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
+    <Text style={[styles.avatarText, { fontSize: size * 0.42 }]}>{initial}</Text>
+  </View>;
 }
 
 export function ResponsiveContainer({ children, variant = 'mobile' }: { children: React.ReactNode; variant?: 'mobile' | 'admin' }) {
@@ -88,12 +96,12 @@ export function StatCard({ title, value, tone = 'red', onPress }: { title: strin
     : <View style={[styles.stat, { width, backgroundColor: bg, borderColor: fg + '66' }]}>{content}</View>;
 }
 
-export function AppButton({ title, onPress, tone = 'red', disabled = false }: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark'; disabled?: boolean }) {
-  const bg = tone === 'green' ? colors.green : tone === 'dark' ? colors.card : colors.red;
-  return <TouchableOpacity activeOpacity={0.85} disabled={disabled} onPress={onPress} style={[styles.button, { backgroundColor: bg }, disabled && styles.buttonDisabled]}><Text numberOfLines={1} adjustsFontSizeToFit style={styles.buttonText}>{title}</Text></TouchableOpacity>;
+export function AppButton({ title, onPress, tone = 'red', disabled = false }: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark' | 'soft'; disabled?: boolean }) {
+  const { bg, border, text } = buttonTones[tone];
+  return <TouchableOpacity activeOpacity={0.85} disabled={disabled} onPress={onPress} style={[styles.button, { backgroundColor: bg, borderColor: border }, disabled && styles.buttonDisabled]}><Text numberOfLines={1} adjustsFontSizeToFit style={[styles.buttonText, { color: text }]}>{title}</Text></TouchableOpacity>;
 }
 
-export function Button(props: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark'; disabled?: boolean }) {
+export function Button(props: { title: string; onPress?: () => void; tone?: 'red' | 'green' | 'dark' | 'soft'; disabled?: boolean }) {
   return <AppButton {...props} />;
 }
 
@@ -187,10 +195,10 @@ export function ActionMenu({ actions }: { actions: { label: string; icon: React.
 
 export function ModalContent({
   children,
-  position = 'bottom',
   onClose,
   title,
-  footer
+  footer,
+  position: _position = 'bottom'
 }: {
   children: React.ReactNode;
   position?: 'bottom' | 'center';
@@ -198,24 +206,18 @@ export function ModalContent({
   title?: string;
   footer?: React.ReactNode;
 }) {
+  // `position` is kept for backward compatibility with existing call sites (many pass
+  // position="center" explicitly) but modals are now always centered per the design system.
   const { width, height, isMobile, isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
-  const centered = !isMobile;
-  const panelWidth = isMobile ? width : isTablet ? Math.min(width - 32, 720) : Math.min(width - 48, 800);
-  const panelMaxHeight = Math.max(320, isMobile ? height - Math.max(insets.top, 16) - 8 : height * 0.86);
-  return <View style={[styles.modalOverlay, isMobile && styles.modalOverlayMobile, { justifyContent: centered ? 'center' : 'flex-end', alignItems: 'center', paddingVertical: centered ? 20 : 0 }]}>
-    <View style={[
-      styles.modalPanel,
-      isMobile ? styles.modalPanelMobile : styles.modalPanelDesktop,
-      { maxHeight: panelMaxHeight, width: panelWidth }
-    ]}>
-      {onClose && <View style={styles.modalHeader}>
-        {isMobile ? <TouchableOpacity style={styles.modalBack} onPress={onClose} accessibilityRole="button" accessibilityLabel="Voltar">
-          <MaterialCommunityIcons name="chevron-left" color={colors.text} size={24} />
-          <Text style={styles.modalBackText}>Voltar</Text>
-        </TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
+  const panelWidth = isMobile ? Math.min(width - 32, theme.layout.mobileMaxWidth) : isTablet ? Math.min(width - 32, 720) : Math.min(width - 48, 800);
+  const panelMaxHeight = Math.max(320, height - Math.max(insets.top, 16) - Math.max(insets.bottom, 16) - 40);
+  return <View style={[styles.modalOverlay, { justifyContent: 'center', alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16 }]}>
+    <View style={[styles.modalPanel, styles.modalPanelDesktop, { maxHeight: panelMaxHeight, width: panelWidth }]}>
+      {(title || onClose) && <View style={styles.modalHeader}>
+        <View style={styles.modalHeaderSpacer} />
         {title ? <Text numberOfLines={1} style={styles.modalTitle}>{title}</Text> : <View style={styles.modalHeaderSpacer} />}
-        {!isMobile ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar modal" style={styles.modalClose} onPress={onClose}><MaterialCommunityIcons name="close" color="#fff" size={22} /></TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
+        {onClose ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar modal" style={styles.modalClose} onPress={onClose}><MaterialCommunityIcons name="close" color={colors.text} size={20} /></TouchableOpacity> : <View style={styles.modalHeaderSpacer} />}
       </View>}
       <ScrollView
         style={styles.modalScroll}
@@ -225,7 +227,7 @@ export function ModalContent({
       >
         {children}
       </ScrollView>
-      {footer ? <View style={[styles.modalFooter, isMobile && { paddingBottom: Math.max(12, insets.bottom + 8) }]}>{footer}</View> : null}
+      {footer ? <View style={[styles.modalFooter, { paddingBottom: Math.max(12, insets.bottom + 8) }]}>{footer}</View> : null}
     </View>
   </View>;
 }
@@ -260,13 +262,7 @@ export function AppModal({
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const tones: Record<string, string> = {
-    ATIVO: colors.green, PAGO: colors.green, CONFIRMADO: colors.green, ENTREGUE: colors.green,
-    PENDENTE: '#C99700', FUTURO: colors.yellow, PROCESSANDO: '#2878C8', FALHOU: '#D32F2F',
-    CANCELADO: '#666666', EXPIRADO: '#D66A00', ESTORNADO: '#7137A8',
-    PARCIALMENTE_ESTORNADO: '#9B6BC0', CONTESTADO: '#D84B20', CONTESTACAO_PERDIDA: '#8B1010'
-  };
-  const tone = tones[String(status).toUpperCase()] ?? colors.red;
+  const tone = statusTones[String(status).toUpperCase()] ?? colors.red;
   return <View style={[styles.badge, { backgroundColor: tone }]} accessibilityLabel={`Status: ${status}`}><Text style={styles.badgeText}>{status}</Text></View>;
 }
 
@@ -305,14 +301,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingTop: 10 },
   headerTitle: { color: colors.text, fontSize: 22, fontWeight: '800' },
   card: { backgroundColor: colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border },
+  avatar: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  avatarText: { color: colors.text, fontWeight: '800' },
   stat: { minHeight: 112, maxHeight: 130, borderRadius: 14, padding: 13, borderWidth: 1, marginBottom: 12, justifyContent: 'space-between' },
   dot: { width: 24, height: 24, borderRadius: 8 },
   statTitle: { color: colors.text, fontSize: 12, fontWeight: '700' },
   statValue: { color: colors.text, fontSize: 22, fontWeight: '900', marginTop: 3 },
   small: { color: colors.muted, fontSize: 11, marginTop: 2 },
-  button: { minHeight: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
+  button: { minHeight: 46, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   buttonDisabled: { opacity: 0.45 },
-  buttonText: { color: '#fff', fontSize: 14, fontWeight: '800', maxWidth: '100%' },
+  buttonText: { fontSize: 14, fontWeight: '800', maxWidth: '100%' },
   input: { height: 46, borderRadius: 12, borderWidth: 1, borderColor: '#DDD', backgroundColor: '#FAFAFA', paddingHorizontal: 14, color: '#111', marginTop: 8 },
   fieldWrap: { marginTop: 12 },
   fieldLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 7 },
@@ -335,14 +333,10 @@ const styles = StyleSheet.create({
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#282828' },
   menuText: { color: colors.text, fontSize: 14, fontWeight: '800' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.65)', zIndex: 10000, elevation: 10000 },
-  modalOverlayMobile: { justifyContent: 'flex-end', paddingTop: 34 },
   modalPanel: { width: '100%', backgroundColor: colors.dark, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   modalPanelDesktop: { borderRadius: 22 },
-  modalPanelMobile: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   modalHeader: { height: 56, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalHeaderSpacer: { width: 86 },
-  modalBack: { minWidth: 86, height: 44, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' },
-  modalBackText: { color: colors.text, fontSize: 14, fontWeight: '900' },
   modalTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 15, fontWeight: '900' },
   modalClose: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   modalScroll: { flex: 1, ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : null) },
