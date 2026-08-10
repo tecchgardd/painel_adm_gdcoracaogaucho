@@ -20,6 +20,7 @@ export default function Login() {
   const [forgotVisible, setForgotVisible] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
   const login = useAuthStore((state) => state.login);
+  const loadSession = useAuthStore((state) => state.loadSession);
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   useEffect(() => {
@@ -44,16 +45,21 @@ export default function Login() {
     setError(null);
     try {
       await login(email.trim().toLowerCase(), password);
-      if (remember) await setRememberedEmail(email.trim().toLowerCase());
-      else await clearRememberedEmail();
-      if (await isBiometricAvailable()) await setBiometricEnabled(true);
-      router.replace('/dashboard');
     } catch (err) {
       const message = err instanceof Error ? err.message : (err as { message?: string })?.message ?? 'Não foi possível entrar.';
       setError(message);
-    } finally {
       setLoading(false);
+      return;
     }
+    try {
+      if (remember) await setRememberedEmail(email.trim().toLowerCase());
+      else await clearRememberedEmail();
+      if (await isBiometricAvailable()) await setBiometricEnabled(true);
+    } catch {
+      // Preferências locais são best-effort — nunca devem bloquear um login bem-sucedido.
+    }
+    setLoading(false);
+    router.replace('/dashboard');
   }
 
   async function entrarComBiometria() {
@@ -63,7 +69,15 @@ export default function Login() {
       setError('Não foi possível validar sua biometria.');
       return;
     }
-    router.replace('/dashboard');
+    try {
+      const sessionUser = await loadSession();
+      if (!sessionUser) throw new Error('no session');
+      router.replace('/dashboard');
+    } catch {
+      await setBiometricEnabled(false);
+      setBiometricReady(false);
+      setError('Sua sessão expirou. Entre novamente com e-mail e senha.');
+    }
   }
 
   return <ScrollView

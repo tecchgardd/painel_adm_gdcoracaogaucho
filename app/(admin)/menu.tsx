@@ -5,9 +5,10 @@ import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { AppModal, Avatar, Button, Screen } from '@/components/ui';
-import { logout as logoutSession } from '@/services/auth.service';
+import { setBiometricEnabled } from '@/services/biometric.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
+import type { UserRole } from '@/types/entities';
 
 type MenuItem = {
   title: string;
@@ -16,6 +17,7 @@ type MenuItem = {
   path?: string;
   danger?: boolean;
   adminOnly?: boolean;
+  roles?: UserRole[];
 };
 
 const roleLabels: Record<string, string> = {
@@ -27,10 +29,10 @@ const roleLabels: Record<string, string> = {
 const menuItems: MenuItem[] = [
   { title: 'Meu perfil', subtitle: 'Seus dados de acesso', icon: 'account-outline', path: '/perfil' },
   { title: 'Colaboradores', subtitle: 'Gerenciar colaboradores e acessos', icon: 'account-multiple-outline', path: '/colaboradores', adminOnly: true },
-  { title: 'Configurações', subtitle: 'Preferências do painel', icon: 'cog-outline', path: '/configuracoes' },
-  { title: 'Empresas', subtitle: 'Cadastro de patrocinadores e apoiadores', icon: 'office-building-outline', path: '/empresas' },
-  { title: 'Relatórios', subtitle: 'Indicadores completos e exportações', icon: 'chart-bar', path: '/relatorios' },
-  { title: 'Fotos', subtitle: 'Uploads em lote e galeria Cloudinary', icon: 'image-multiple-outline', path: '/fotos' },
+  { title: 'Configurações', subtitle: 'Preferências do painel', icon: 'cog-outline', path: '/configuracoes', roles: ['ADMIN', 'STAFF'] },
+  { title: 'Empresas', subtitle: 'Cadastro de patrocinadores e apoiadores', icon: 'office-building-outline', path: '/empresas', roles: ['ADMIN', 'STAFF'] },
+  { title: 'Relatórios', subtitle: 'Indicadores completos e exportações', icon: 'chart-bar', path: '/relatorios', roles: ['ADMIN'] },
+  { title: 'Fotos', subtitle: 'Uploads em lote e galeria Cloudinary', icon: 'image-multiple-outline', path: '/fotos', roles: ['ADMIN', 'STAFF'] },
   { title: 'Ajuda', subtitle: 'Suporte e dúvidas sobre o painel', icon: 'help-circle-outline', path: '/ajuda' },
   { title: 'Sobre o app', subtitle: 'Versão e créditos', icon: 'information-outline', path: '/sobre' },
   { title: 'Sair da conta', subtitle: 'Encerrar sessão administrativa', icon: 'logout', danger: true }
@@ -40,6 +42,7 @@ export default function Menu() {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const user = useAuthStore((state) => state.user);
   const role = useAuthStore((state) => state.role);
+  const logout = useAuthStore((state) => state.logout);
   const displayName = user?.nome ?? user?.name ?? 'Usuário';
 
   function handlePress(item: MenuItem) {
@@ -50,13 +53,18 @@ export default function Menu() {
     if (item.path) router.push(item.path as never);
   }
 
-  async function logout() {
+  async function handleLogout() {
     setConfirmLogout(false);
-    await logoutSession();
+    await setBiometricEnabled(false);
+    await logout();
     router.replace('/login');
   }
 
-  const visibleItems = menuItems.filter((item) => !item.adminOnly || role === 'ADMIN');
+  const visibleItems = menuItems.filter((item) => {
+    if (item.adminOnly && role !== 'ADMIN') return false;
+    if (item.roles && (!role || !item.roles.includes(role))) return false;
+    return true;
+  });
 
   return (
     <Screen variant="admin">
@@ -101,7 +109,7 @@ export default function Menu() {
         title="Sair da conta"
         footer={<View style={styles.footerRow}>
           <View style={styles.half}><Button title="Cancelar" tone="dark" onPress={() => setConfirmLogout(false)} /></View>
-          <View style={styles.half}><Button title="Sair" onPress={logout} /></View>
+          <View style={styles.half}><Button title="Sair" onPress={handleLogout} /></View>
         </View>}
       >
         <Text style={styles.modalTitle}>Deseja realmente sair da conta?</Text>
