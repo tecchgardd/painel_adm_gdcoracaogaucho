@@ -1,9 +1,12 @@
+import Constants from 'expo-constants';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Header, Logo, Screen } from '@/components/ui';
 import { colors, theme } from '@/theme/theme';
 
 export default function Sobre() {
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
   return (
     <Screen variant="admin">
       <Header title="Sobre o app" />
@@ -11,7 +14,7 @@ export default function Sobre() {
         <Logo size={64} />
         <Text style={styles.name}>Coração Gaúcho</Text>
         <Text style={styles.tagline}>Tradição que nos une</Text>
-        <Text style={styles.version}>Versão 1.0.0</Text>
+        <Text style={styles.version}>{`Versão ${appVersion}`}</Text>
       </View>
     </Screen>
   );

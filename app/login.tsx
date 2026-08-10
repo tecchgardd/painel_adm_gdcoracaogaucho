@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -19,6 +20,7 @@ export default function Login() {
   const [forgotVisible, setForgotVisible] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
   const login = useAuthStore((state) => state.login);
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   useEffect(() => {
     (async () => {
@@ -136,7 +138,7 @@ export default function Login() {
       </> : null}
     </View>
 
-    <Text style={styles.version}>Versão 1.0.0</Text>
+    <Text style={styles.version}>{`Versão ${appVersion}`}</Text>
 
     <AppModal visible={forgotVisible} onClose={() => setForgotVisible(false)} position="center" title="Esqueci minha senha">
       <Text style={styles.modalText}>
