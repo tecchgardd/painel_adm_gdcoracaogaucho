@@ -26,6 +26,18 @@ export function isValidCpf(value: string) {
 const cpfString = requiredString.refine(isValidCpf, 'CPF invalido');
 const emailOptional = z.string().trim().email('E-mail invalido').optional().or(z.literal(''));
 
+const requiredStringMin = (min: number, message: string) =>
+  z.preprocess((value) => value ?? '', z.string().trim().min(min, message));
+
+const emptyToUndefined = (value: unknown) => (value === '' || value == null ? undefined : value);
+
+const optionalAgentStatus = z.preprocess(emptyToUndefined, z.enum(['ATIVO', 'INATIVO']).optional());
+const optionalRuleCategory = z.preprocess(emptyToUndefined, z.enum(['GERAL', 'VENDAS', 'INSCRICAO', 'ATENDIMENTO', 'PAGAMENTO']).optional());
+const optionalPromptScope = z.preprocess(emptyToUndefined, z.enum(['GENERAL', 'VENDAS', 'INSCRICAO']).optional());
+const optionalPriority = z.preprocess(emptyToUndefined, z.coerce.number().int().optional());
+const requiredKnowledgeType = z.preprocess(emptyToUndefined, z.enum(['FAQ', 'POLICY', 'EVENT', 'COURSE', 'PAYMENT', 'TICKET', 'OTHER']).optional())
+  .refine((value) => value != null, 'Selecione um tipo de conhecimento');
+
 export const ticketLotSchema = z.object({
   nome: requiredString,
   valor: positiveOrZero,
@@ -170,4 +182,30 @@ export const cortesiaSchema = z.object({
   beneficiario: requiredString,
   evento: optionalString,
   codigo: optionalString
+});
+
+export const agentRuleSchema = z.object({
+  name: requiredStringMin(2, 'Nome deve ter ao menos 2 caracteres'),
+  description: optionalString,
+  category: optionalRuleCategory,
+  content: requiredString,
+  priority: optionalPriority,
+  status: optionalAgentStatus
+});
+
+export const agentPromptSchema = z.object({
+  name: requiredStringMin(2, 'Nome deve ter ao menos 2 caracteres'),
+  description: optionalString,
+  content: requiredString,
+  tone: optionalString,
+  scope: optionalPromptScope,
+  status: optionalAgentStatus
+});
+
+export const agentKnowledgeSchema = z.object({
+  title: requiredStringMin(2, 'Titulo deve ter ao menos 2 caracteres'),
+  content: requiredString,
+  type: requiredKnowledgeType,
+  source: optionalString,
+  status: optionalAgentStatus
 });

@@ -1,0 +1,17 @@
+node_modules/
+.expo/
+dist/
+dist-test*/
+dist-validation*/
+dist-pdf-check/
+dist-video-review/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.superpowers/
+.claude/
+.agents/
+docs/
+skills-lock.json

@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
+import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { z } from 'zod';
 
 import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
@@ -18,6 +20,14 @@ export type ApiField = {
   multiline?: boolean;
   keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad' | 'decimal-pad';
   options?: string[];
+  readOnly?: boolean;
+};
+
+export type ExtraAction = {
+  label: string;
+  icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
+  tone?: 'default' | 'danger';
+  onPress: () => Promise<void> | void;
 };
 
 type CrudApi = {
@@ -44,7 +54,9 @@ export function ApiRecordScreen({
   primaryKey = 'nome',
   secondaryKeys = ['cpf', 'telefone'],
   buildPayload = (record) => record,
-  normalizeRecord = (record) => record
+  normalizeRecord = (record) => record,
+  extraActions,
+  embedded = false
 }: {
   title: string;
   singular: string;
@@ -57,6 +69,8 @@ export function ApiRecordScreen({
   secondaryKeys?: string[];
   buildPayload?: (record: any) => any;
   normalizeRecord?: (record: any) => any;
+  extraActions?: (record: any) => ExtraAction[];
+  embedded?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<any | null>(null);
@@ -65,6 +79,7 @@ export function ApiRecordScreen({
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [actionError, setActionError] = useState('');
   const { numColumns } = useResponsive();
   const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
   const queryRecords = useCallback(() => api.list(), [api]);
@@ -140,10 +155,21 @@ export function ApiRecordScreen({
     }
   }
 
-  return (
-    <Screen variant="admin">
+  async function runExtraAction(action: ExtraAction) {
+    setActionError('');
+    try {
+      await action.onPress();
+      refetch();
+    } catch (extraActionError) {
+      setActionError((extraActionError as { message?: string })?.message ?? 'Não foi possível concluir a ação.');
+    }
+  }
+
+  const body = (
+    <>
       <Header title={title} right={<FloatingActionButton onPress={openNew} accessibilityLabel={`Novo ${singular}`} />} />
       <SearchBar value={query} onChangeText={setQuery} placeholder={`Pesquisar ${title.toLowerCase()}`} />
+      {actionError ? <Text style={styles.formError}>{actionError}</Text> : null}
       {loading ? <LoadingState label={`Carregando ${title.toLowerCase()}...`} /> : null}
       {error ? <ErrorState message={error} onRetry={refetch} /> : null}
       {!error && <View style={styles.grid}>
@@ -156,6 +182,7 @@ export function ApiRecordScreen({
             <ActionMenu actions={[
               { label: `Ver ${singular}`, icon: 'eye-outline', onPress: () => setSelected(record) },
               { label: `Editar ${singular}`, icon: 'pencil-outline', onPress: () => setEditing(record) },
+              ...(extraActions ? extraActions(record).map((action) => ({ ...action, onPress: () => runExtraAction(action) })) : []),
               ...(api.remove ? [{ label: `Remover ${singular}`, icon: 'delete-outline' as const, tone: 'danger' as const, onPress: () => setDeleting(record) }] : [])
             ]} />
           </View>;
@@ -182,7 +209,7 @@ export function ApiRecordScreen({
         </View>}
       >
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-        {fields.map((field) => field.options ? <View key={field.key} style={styles.fieldBlock}>
+        {fields.filter((field) => !field.readOnly).map((field) => field.options ? <View key={field.key} style={styles.fieldBlock}>
           <Text style={styles.fieldLabel}>{field.label}</Text>
           <ChoiceGroup
             options={field.options.map((option) => ({ value: option, label: option }))}
@@ -214,8 +241,10 @@ export function ApiRecordScreen({
       >
         <Text style={styles.detailValue}>Deseja remover este registro?</Text>
       </AppModal>
-    </Screen>
+    </>
   );
+
+  return embedded ? body : <Screen variant="admin">{body}</Screen>;
 }
 
 const styles = StyleSheet.create({
