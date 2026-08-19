@@ -53,7 +53,8 @@ export const navigationItems: NavItem[] = [
     ]
   },
   { label: 'Relatórios', icon: 'chart-bar', path: '/relatorios', roles: ['ADMIN', 'STAFF'] },
-  { label: 'Fotos', icon: 'image-multiple-outline', path: '/fotos', roles: ['ADMIN', 'STAFF'] }
+  { label: 'Fotos', icon: 'image-multiple-outline', path: '/fotos', roles: ['ADMIN', 'STAFF'] },
+  { label: 'Agente IA', icon: 'robot-outline', path: '/agente-ia', roles: ['ADMIN', 'STAFF'] }
 ];
 
 export const mobileTabs: NavItem[] = [

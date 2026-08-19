@@ -2,8 +2,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
+import { AgentTeaserCard } from '@/components/dashboard/AgentTeaserCard';
 import { DashboardSection } from '@/components/dashboard/DashboardSection';
 import { MetricCard } from '@/components/dashboard/MetricCard';
+import { QuickActionsRow } from '@/components/dashboard/QuickActionsRow';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
@@ -86,6 +88,10 @@ export default function Dashboard() {
           <Text style={styles.healthText}>Stripe {health?.stripeConfigured ? 'configurada' : 'não configurada'}</Text>
           <Text style={styles.healthHint}>Configuração não garante habilitação da conta para cobranças.</Text>
         </View>
+
+        <AgentTeaserCard />
+
+        <QuickActionsRow />
 
         {loading ? <LoadingState label="Carregando dados do servidor..." /> : null}
         {error ? <ErrorState message={error} onRetry={refetch} title="Não foi possível conectar ao servidor." /> : null}
