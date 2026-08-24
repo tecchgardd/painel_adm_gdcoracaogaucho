@@ -3,9 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { EventFormModal } from '@/components/events/EventFormModal';
 import { ActionMenu, AppModal, Button, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listCursos } from '@/services/cursos.service';
