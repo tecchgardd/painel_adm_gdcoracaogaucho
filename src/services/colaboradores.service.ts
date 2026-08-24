@@ -1,4 +1,4 @@
-import type { Colaborador } from '@/types/entities';
+import type { Colaborador } from '@/shared/types/entities';
 import { api, unwrapData } from '@/core/api/client';
 
 export type ColaboradorPayload = {

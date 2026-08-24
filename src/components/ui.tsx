@@ -3,7 +3,7 @@ import { Text, View, TouchableOpacity, StyleSheet, TextInput, Image, ImageSource
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useResponsive } from '@/hooks/useResponsive';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import { BottomTabs } from '@/components/navigation/BottomTabs';
 import { colors, theme } from '@/theme/theme';

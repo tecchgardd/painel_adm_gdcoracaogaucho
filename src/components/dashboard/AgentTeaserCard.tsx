@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { getAgentConfig } from '@/services/agent.service';
 import { colors, theme } from '@/theme/theme';
 

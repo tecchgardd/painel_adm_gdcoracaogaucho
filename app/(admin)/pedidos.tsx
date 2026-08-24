@@ -5,13 +5,13 @@ import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormFi
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { createPedido, listPedidos, updatePedido } from '@/services/pedidos.service';
 import { createCustomer, findCustomerByCpf } from '@/services/customers.service';
 import { listEventos } from '@/services/eventos.service';
 import { colors } from '@/theme/theme';
-import { useResponsive } from '@/hooks/useResponsive';
-import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/format';
+import { useResponsive } from '@/shared/hooks/useResponsive';
+import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/shared/utils/format';
 import { clienteSchema, pedidoEventoSchema, pedidoLojaSchema } from '@/validation/schemas';
 
 type PedidoTab = 'LOJA' | 'EVENTO';

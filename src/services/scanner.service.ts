@@ -1,4 +1,4 @@
-import type { ScannerResult } from '@/types/entities';
+import type { ScannerResult } from '@/shared/types/entities';
 import { api, unwrapData } from '@/core/api/client';
 
 export async function validarQRCode(codigo: string) {

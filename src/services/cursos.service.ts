@@ -1,4 +1,4 @@
-import type { Curso } from '@/types';
+import type { Curso } from '@/shared/types';
 
 import { createEvento, deleteEvento, getEvento, listEventos, updateEvento } from './eventos.service';
 

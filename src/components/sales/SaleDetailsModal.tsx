@@ -5,10 +5,10 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 
 import { AppModal, StatusBadge } from '@/components/ui';
 import { colors } from '@/theme/colors';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { getSaleHistory } from '@/services/sales.service';
-import type { Pagamento, PaymentHistory, Sale } from '@/types/entities';
-import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
+import type { Pagamento, PaymentHistory, Sale } from '@/shared/types/entities';
+import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/shared/utils/format';
 import { DocumentPreviewModal } from '@/components/documents/DocumentPreviewModal';
 import type { DocumentKind } from '@/components/documents/DocumentPreviewModal';
 import { getEventInfo } from '@/components/documents/documentUtils';

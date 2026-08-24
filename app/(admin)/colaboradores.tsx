@@ -6,8 +6,8 @@ import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormFi
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import {
   createColaborador,
   deleteColaborador,
@@ -17,7 +17,7 @@ import {
   type ColaboradorPayload
 } from '@/services/colaboradores.service';
 import { colors } from '@/theme/theme';
-import type { Colaborador } from '@/types/entities';
+import type { Colaborador } from '@/shared/types/entities';
 
 type FormState = {
   id?: string;

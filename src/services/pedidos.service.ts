@@ -1,4 +1,4 @@
-import type { Pedido } from '@/types';
+import type { Pedido } from '@/shared/types';
 import { api, unwrapData } from '@/core/api/client';
 
 function toApiType(type?: 'LOJA' | 'EVENTO' | 'STORE' | 'EVENT') {

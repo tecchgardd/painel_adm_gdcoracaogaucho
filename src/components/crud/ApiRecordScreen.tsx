@@ -8,8 +8,8 @@ import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormFi
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { buscarEnderecoPorCep } from '@/services/cep.service';
 import { colors } from '@/theme/theme';
 

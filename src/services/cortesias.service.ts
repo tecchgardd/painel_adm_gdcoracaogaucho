@@ -1,4 +1,4 @@
-import type { Cortesia } from '@/types/entities';
+import type { Cortesia } from '@/shared/types/entities';
 import { api, unwrapData } from '@/core/api/client';
 
 export async function listCortesias() {

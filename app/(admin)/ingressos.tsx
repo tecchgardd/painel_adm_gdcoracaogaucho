@@ -6,13 +6,13 @@ import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormFi
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { gerarLinkPagamentoLote, gerarLoteIngressos, listLotesIngressos, registrarPagamentoLote } from '@/services/ingressos.service';
 import { findPersonByCpf } from '@/services/people.service';
 import { colors } from '@/theme/theme';
-import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/format';
+import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/shared/utils/format';
 
 type Origin = 'SEM_COBRANCA' | 'CORTESIA' | 'NOVA_VENDA' | 'VENDA_EXISTENTE' | 'PAGAMENTO_EXTERNO';
 type ExternalMethod = 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_EXTERNO';

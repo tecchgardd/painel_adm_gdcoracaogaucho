@@ -4,10 +4,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button, ChoiceGroup, FormField } from '@/components/ui';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { getAgentConfig, updateAgentConfig } from '@/services/agent.service';
 import { colors } from '@/theme/theme';
-import type { AgentFirstResponseMode } from '@/types/agent';
+import type { AgentFirstResponseMode } from '@/shared/types/agent';
 
 export function ConfiguracoesTab() {
   const query = useCallback(() => getAgentConfig(), []);

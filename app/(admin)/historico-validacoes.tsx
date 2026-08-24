@@ -5,9 +5,9 @@ import { Header, ListCard, Screen, SearchBar } from '@/components/ui';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { getHistoricoValidacoes } from '@/services/scanner.service';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime } from '@/shared/utils/format';
 
 export default function HistoricoValidacoes() {
   const [query, setQuery] = useState('');

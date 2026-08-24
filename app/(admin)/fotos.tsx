@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Button, Header, Screen } from '@/components/ui';
 import { uploadFotos, UploadablePhoto } from '@/services/fotos.service';
 import { colors } from '@/theme/theme';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 
 type SelectedPhoto = {
   file: UploadablePhoto;

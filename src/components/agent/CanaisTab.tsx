@@ -5,10 +5,10 @@ import { Button } from '@/components/ui';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { listAgentChannels, updateAgentChannel } from '@/services/agent.service';
 import { colors, theme } from '@/theme/theme';
-import type { AgentChannel, AgentChannelName } from '@/types/agent';
+import type { AgentChannel, AgentChannelName } from '@/shared/types/agent';
 
 const CHANNEL_LABELS: Record<AgentChannelName, string> = {
   WHATSAPP: 'WhatsApp',

@@ -5,11 +5,11 @@ import { ActionMenu, AppModal, Button, ChoiceGroup, StatusBadge } from '@/compon
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { approveAgentLearningSuggestion, listAgentLearningSuggestions, rejectAgentLearningSuggestion } from '@/services/agent.service';
 import { colors, theme } from '@/theme/theme';
-import type { AgentLearningStatus, AgentLearningSuggestion } from '@/types/agent';
-import { formatDateTime } from '@/utils/format';
+import type { AgentLearningStatus, AgentLearningSuggestion } from '@/shared/types/agent';
+import { formatDateTime } from '@/shared/utils/format';
 
 export function AprendizadosTab() {
   const [status, setStatus] = useState<AgentLearningStatus | ''>('');

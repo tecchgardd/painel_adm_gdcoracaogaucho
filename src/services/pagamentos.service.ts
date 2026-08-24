@@ -1,4 +1,4 @@
-import type { Pagamento } from '@/types/entities';
+import type { Pagamento } from '@/shared/types/entities';
 import { api, unwrapData } from '@/core/api/client';
 
 export type PagamentoStatus = 'PENDENTE' | 'PROCESSANDO' | 'PAGO' | 'FALHOU' | 'CANCELADO' | 'EXPIRADO' | 'ESTORNADO' | 'PARCIALMENTE_ESTORNADO' | 'CONTESTADO' | 'CONTESTACAO_PERDIDA';

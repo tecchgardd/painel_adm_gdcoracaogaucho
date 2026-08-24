@@ -8,7 +8,7 @@ import { AppModal, Avatar, Button, Screen } from '@/components/ui';
 import { setBiometricEnabled } from '@/services/biometric.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
-import type { UserRole } from '@/types/entities';
+import type { UserRole } from '@/shared/types/entities';
 
 type MenuItem = {
   title: string;

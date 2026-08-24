@@ -6,8 +6,8 @@ import { AppModal, Button, FloatingActionButton, FormField, Header, Screen } fro
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { colors, theme } from '@/theme/theme';
 import { createEmpresa, deleteEmpresa, listEmpresas, updateEmpresa, type Empresa } from '@/services/empresas.service';
 

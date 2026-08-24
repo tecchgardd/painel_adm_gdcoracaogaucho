@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { clearAuthStorage, getStoredUser, saveAuthToken, saveStoredUser } from '@/core/storage/authStorage';
 import { api, unwrapData } from '@/core/api/client';
-import type { AuthSession, SessionUser } from '@/types/entities';
+import type { AuthSession, SessionUser } from '@/shared/types/entities';
 
 export async function login(email: string, password: string) {
   const response = await api.post('/auth/sign-in/email', { email, password });

@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppModal, Button } from '@/components/ui';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { getAgentConfig, setAgentStatus } from '@/services/agent.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';

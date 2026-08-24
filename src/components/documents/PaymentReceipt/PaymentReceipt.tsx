@@ -1,8 +1,8 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, View } from 'react-native';
 
-import type { Sale } from '@/types/entities';
-import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
+import type { Sale } from '@/shared/types/entities';
+import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/shared/utils/format';
 import { colors } from '@/theme/colors';
 
 import { getDocumentCode, getReceiptItems, getReceiptPaymentMethodLabel, getReceiptTotals } from '../documentUtils';

@@ -8,9 +8,9 @@ import { AppModal, Button, ChoiceGroup, FormField } from '@/components/ui';
 import { createEvento, updateEvento } from '@/services/eventos.service';
 import { resolveImageUrlForPayload, uploadImage } from '@/services/uploads.service';
 import { colors } from '@/theme/theme';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { eventoSchema } from '@/validation/schemas';
-import type { EventType } from '@/types/entities';
+import type { EventType } from '@/shared/types/entities';
 
 type EventStatus = 'ATIVO' | 'INATIVO' | 'CANCELADO' | 'ENCERRADO';
 type LotForm = { nome: string; valor: string; quantidade: string; dataLimite: string; ativo: boolean };

@@ -6,12 +6,12 @@ import { ActionMenu, AppModal, Button, Card, ChoiceGroup, FloatingActionButton, 
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { colors } from '@/theme/theme';
-import { formatCurrencyBRL, formatDateTime } from '@/utils/format';
-import type { EventType } from '@/types/entities';
+import { formatCurrencyBRL, formatDateTime } from '@/shared/utils/format';
+import type { EventType } from '@/shared/types/entities';
 
 const tabs: { type: EventType; label: string; plural: string }[] = [
   { type: 'BAILE', label: 'Baile', plural: 'bailes' },

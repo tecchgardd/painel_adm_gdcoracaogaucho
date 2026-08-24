@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 import { AUTH_TOKEN_STORAGE_KEY, AUTH_USER_STORAGE_KEY } from '@/core/config/env';
-import type { SessionUser } from '@/types/entities';
+import type { SessionUser } from '@/shared/types/entities';
 
 export async function getAuthToken() {
   return Platform.OS === 'web'

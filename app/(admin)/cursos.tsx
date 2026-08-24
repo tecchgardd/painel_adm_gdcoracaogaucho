@@ -6,11 +6,11 @@ import { ActionMenu, AppModal, Button, FloatingActionButton, Header, ListCard, S
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listCursos } from '@/services/cursos.service';
 import { colors } from '@/theme/theme';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime } from '@/shared/utils/format';
 
 export default function Cursos() {
   const [selected, setSelected] = useState<any>(null);
