@@ -12,8 +12,7 @@ import type {
   AgentRule,
   AgentRuleCategory
 } from '@/types/agent';
-
-import { api, unwrapData } from './api';
+import { api, unwrapData } from '@/core/api/client';
 
 const LIST_LIMIT = 100;
 

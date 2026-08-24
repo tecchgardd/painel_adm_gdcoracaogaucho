@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from '@/core/api/client';
 
 export type PersonLookup = {
   success: boolean;

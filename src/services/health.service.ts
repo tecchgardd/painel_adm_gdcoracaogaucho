@@ -1,4 +1,4 @@
-import { api, unwrapData } from './api';
+import { api, unwrapData } from '@/core/api/client';
 
 export type IntegrationHealth = { status: string; stripeConfigured: boolean };
 

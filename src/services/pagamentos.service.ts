@@ -1,6 +1,5 @@
 import type { Pagamento } from '@/types/entities';
-
-import { api, unwrapData } from './api';
+import { api, unwrapData } from '@/core/api/client';
 
 export type PagamentoStatus = 'PENDENTE' | 'PROCESSANDO' | 'PAGO' | 'FALHOU' | 'CANCELADO' | 'EXPIRADO' | 'ESTORNADO' | 'PARCIALMENTE_ESTORNADO' | 'CONTESTADO' | 'CONTESTACAO_PERDIDA';
 export type PagamentoFilters = { page?: number; limit?: number; status?: PagamentoStatus; customerId?: string; search?: string };

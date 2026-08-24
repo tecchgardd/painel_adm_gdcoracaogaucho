@@ -1,6 +1,5 @@
 import type { Evento } from '@/types/entities';
-
-import { api, unwrapData } from './api';
+import { api, unwrapData } from '@/core/api/client';
 
 export async function listEventos(params?: { tipo?: 'BAILE' | 'CURSO' | 'EVENTO'; status?: string; search?: string }) {
   const response = await api.get('/admin/eventos', { params });

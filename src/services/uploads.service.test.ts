@@ -4,7 +4,7 @@ import { isLocalImageUri, resolveImageUrlForPayload, uploadImage } from './uploa
 
 const { post } = vi.hoisted(() => ({ post: vi.fn() }));
 
-vi.mock('./api', () => ({
+vi.mock('@/core/api/client', () => ({
   api: { post },
   unwrapData: <T>(payload: T) => payload
 }));

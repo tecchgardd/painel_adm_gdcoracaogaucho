@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { api } from './api';
+import { api } from '@/core/api/client';
+
 import { listSales } from './sales.service';
 
-vi.mock('./api', () => ({
+vi.mock('@/core/api/client', () => ({
   api: { get: vi.fn() },
   unwrapData: <T>(value: T) => value
 }));
