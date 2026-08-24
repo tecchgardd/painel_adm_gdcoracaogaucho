@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { clearAuthStorage, getStoredUser, saveAuthToken, saveStoredUser } from '@/core/storage/authStorage';
+import { clearAuthStorage, saveAuthToken, saveStoredUser } from '@/core/storage/authStorage';
 import { api, unwrapData } from '@/core/api/client';
 import type { AuthSession, SessionUser } from '@/shared/types/entities';
 
@@ -30,8 +30,6 @@ export async function getMe() {
   const session = await getSession();
   return session.user as SessionUser | undefined;
 }
-
-export { getStoredUser };
 
 export async function clearBusinessStorage() {
   await AsyncStorage.multiRemove([

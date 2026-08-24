@@ -21,6 +21,7 @@ export async function saveAuthToken(token?: string | null) {
   else await SecureStore.setItemAsync(AUTH_TOKEN_STORAGE_KEY, token);
 }
 
+// Perfil do usuário não é credencial sensível: usa AsyncStorage sempre, mesmo em nativo (só o token vai pro SecureStore).
 export async function getStoredUser(): Promise<SessionUser | null> {
   const raw = await AsyncStorage.getItem(AUTH_USER_STORAGE_KEY);
   return raw ? JSON.parse(raw) as SessionUser : null;

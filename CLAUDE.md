@@ -27,19 +27,20 @@ Painel administrativo (Expo/React Native + expo-router) do Coração Gaúcho, ro
 
 ## Architecture
 
-- Rotas em `app/`, roteamento por arquivo (expo-router). Grupo `app/(admin)/` contém as telas autenticadas, montadas como `Tabs` com `tabBarStyle: { display: 'none' }` (a navegação real é feita pelo menu em `components/navigation`, não pela tab bar nativa).
+- Rotas em `app/`, roteamento por arquivo (expo-router). Grupo `app/(admin)/` contém as telas autenticadas, montadas como `Tabs` com `tabBarStyle: { display: 'none' }` (a navegação real é feita pelo menu em `src/shared/components/navigation`, não pela tab bar nativa).
 - `app/(admin)/_layout.tsx` é o guard de autenticação e de role: no mount, chama `useAuthStore().loadSession()`; sem sessão válida redireciona para `/login`. Depois disso, restringe rotas por `role` (`ADMIN` | `STAFF` | `CHECKIN`) — ex.: `CHECKIN` só acessa `scanner`/`historico-validacoes`, `STAFF` não acessa `relatorios`. Ao adicionar uma tela nova em `(admin)/`, registrá-la na lista de `Tabs.Screen` desse layout.
-- `src/services/api.ts` é o client Axios único (`api`). Injeta o Bearer token automaticamente (SecureStore em Android/iOS, AsyncStorage na web) e trata 401 (limpa storage + redireciona para `/login`) e 403 (mensagem específica para origem não confiável no CORS). Todo novo `*.service.ts` deve importar `api` daqui, nunca instanciar outro client.
-- `src/services/*.service.ts` — um arquivo por domínio (vendas, pagamentos, eventos, pessoas, uploads, etc.), cada um encapsulando as chamadas Axios e o unwrap da resposta (`unwrapData`). Testes de service usam `vi.mock('./api')` e ficam ao lado do arquivo (`*.service.test.ts`).
-- `src/config/app.config.ts` resolve `API_URL` a partir de `EXPO_PUBLIC_API_URL`, com troca automática `localhost` ⇄ `10.0.2.2` para o emulador Android.
+- `src/core/api/client.ts` é o client Axios único (`api`). Injeta o Bearer token automaticamente e trata 401 (limpa storage + redireciona para `/login`) e 403 (mensagem específica para origem não confiável no CORS). Todo novo `*.service.ts` deve importar `api` daqui, nunca instanciar outro client.
+- `src/core/storage/authStorage.ts` é o único lugar que decide o backend de storage de auth (SecureStore em Android/iOS, AsyncStorage na web) para o token; era duplicado entre `api.ts` e `auth.service.ts` antes da reorganização, agora está consolidado aqui.
+- `src/services/*.service.ts` — um arquivo por domínio (vendas, pagamentos, eventos, pessoas, uploads, etc.), cada um encapsulando as chamadas Axios e o unwrap da resposta (`unwrapData`). Testes de service usam `vi.mock('@/core/api/client')` e ficam ao lado do arquivo (`*.service.test.ts`).
+- `src/core/config/env.ts` resolve `API_URL` a partir de `EXPO_PUBLIC_API_URL`, com troca automática `localhost` ⇄ `10.0.2.2` para o emulador Android.
 - `src/stores/auth.store.ts` (Zustand) é a única fonte de sessão/role no client — não duplicar estado de auth em componentes.
-- `src/hooks/useApiQuery.ts` é o hook padrão para chamadas de leitura (loading/error/refetch); trata 404 com array de fallback como lista vazia sem erro.
-- `src/components/crud/` — conjunto genérico (`CrudScreen`, `FormModal`, `DataCard`, `ConfirmModal`, `EmptyState`) usado pelas telas de cadastro simples; `ApiRecordScreen` é a variante que já integra com a API real via `useApiQuery` em vez de estado local.
-- `src/components/ui/` — primitivos compartilhados (`Screen`, `Header`, `SearchBar`, `FloatingActionButton`, etc.), reexportados por `@/components/ui`.
+- `src/shared/hooks/useApiQuery.ts` é o hook padrão para chamadas de leitura (loading/error/refetch); trata 404 com array de fallback como lista vazia sem erro.
+- `src/shared/components/crud/` — conjunto genérico (`CrudScreen`, `FormModal`, `DataCard`, `ApiRecordScreen`) usado pelas telas de cadastro simples; `ApiRecordScreen` é a variante que já integra com a API real via `useApiQuery` em vez de estado local. `ConfirmModal`, `EmptyState`, `ErrorState` e `LoadingState` ficam em `src/shared/components/feedback/`.
+- `src/shared/components/ui/` — primitivos compartilhados (`Screen`, `Header`, `SearchBar`, `FloatingActionButton`, etc.), reexportados pelo barrel `src/shared/components/ui/index.tsx` e importados como `@/shared/components/ui`.
 - `src/validation/schemas.ts` — schemas Zod compartilhados entre formulários.
-- `src/types/entities.ts` — tipos de domínio (Customer, EntityStatus, UserRole, etc.); campos costumam ter variante PT/EN (`nome`/`name`, `telefone`/`phone`) porque a API não normaliza sempre — checar ambos ao consumir.
+- `src/shared/types/entities.ts` — tipos de domínio (Customer, EntityStatus, UserRole, etc.); campos costumam ter variante PT/EN (`nome`/`name`, `telefone`/`phone`) porque a API não normaliza sempre — checar ambos ao consumir.
 - `src/theme/` — tokens de cor e tema, usados via `StyleSheet.create` (sem lib de CSS-in-JS).
-- `useResponsive` (`src/hooks/useResponsive.ts`) define o número de colunas por breakpoint; usado nas grids de `crud/`.
+- `useResponsive` (`src/shared/hooks/useResponsive.ts`) define o número de colunas por breakpoint; usado nas grids de `crud/`.
 
 ## Environment Variables
 
