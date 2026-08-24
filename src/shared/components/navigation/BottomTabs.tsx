@@ -3,7 +3,7 @@ import { router, usePathname } from 'expo-router';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { filterNavigationByRole, mobileTabs } from '@/navigation.config';
+import { filterNavigationByRole, mobileTabs } from '@/shared/components/navigation/navigation.config';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { AppModal, Button, Logo } from '@/components/ui';
+import { AppModal, Button, Logo } from '@/shared/components/ui';
 import { authenticateWithBiometrics, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled } from '@/services/biometric.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';

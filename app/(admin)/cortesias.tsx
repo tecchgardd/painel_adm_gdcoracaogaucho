@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { ActionMenu, Header, ListCard, Screen, SearchBar } from '@/components/ui';
+import { ActionMenu, Header, ListCard, Screen, SearchBar } from '@/shared/components/ui';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';

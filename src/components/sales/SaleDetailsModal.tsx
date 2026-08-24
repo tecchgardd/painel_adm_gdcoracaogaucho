@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { AppModal, StatusBadge } from '@/components/ui';
+import { AppModal, StatusBadge } from '@/shared/components/ui';
 import { colors } from '@/theme/colors';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { getSaleHistory } from '@/services/sales.service';

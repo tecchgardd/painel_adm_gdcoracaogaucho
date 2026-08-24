@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { AppModal, Button, FloatingActionButton, FormField, Header, Screen } from '@/components/ui';
+import { AppModal, Button, FloatingActionButton, FormField, Header, Screen } from '@/shared/components/ui';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';

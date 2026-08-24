@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AppModal, Button } from '@/components/ui';
+import { AppModal, Button } from '@/shared/components/ui';
 import { colors } from '@/theme/theme';
 
 export function ConfirmModal({ visible, title, onCancel, onConfirm }: { visible: boolean; title: string; onCancel: () => void; onConfirm: () => void }) {

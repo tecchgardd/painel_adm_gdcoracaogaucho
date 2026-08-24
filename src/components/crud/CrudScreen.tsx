@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { FloatingActionButton, Header, Screen, SearchBar } from '@/components/ui';
+import { FloatingActionButton, Header, Screen, SearchBar } from '@/shared/components/ui';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { CrudField, CrudRecord } from '@/shared/types';
 

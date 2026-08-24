@@ -4,7 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { ActionMenu, AppModal, Button, Screen, SearchBar } from '@/components/ui';
+import { ActionMenu, AppModal, Button, Screen, SearchBar } from '@/shared/components/ui';
 import { validarCodigoManual, validarQRCode } from '@/services/scanner.service';
 import type { ScannerResult } from '@/shared/types/entities';
 import { colors } from '@/theme/theme';

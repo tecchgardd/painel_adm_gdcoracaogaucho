@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { Button } from '@/components/ui';
+import { Button } from '@/shared/components/ui';
 import { colors } from '@/theme/colors';
 import type { Sale } from '@/shared/types/entities';
 

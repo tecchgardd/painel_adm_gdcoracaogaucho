@@ -3,7 +3,7 @@ import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { router, useLocalSearchParams } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, SearchBar, StatCard, StatusBadge } from '@/shared/components/ui';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AppModal, Button } from '@/components/ui';
+import { AppModal, Button } from '@/shared/components/ui';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';

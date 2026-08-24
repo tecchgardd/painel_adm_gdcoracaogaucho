@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ActionMenu, StatusBadge } from '@/components/ui';
+import { ActionMenu, StatusBadge } from '@/shared/components/ui';
 import { colors } from '@/theme/theme';
 import { CrudRecord } from '@/shared/types';
 

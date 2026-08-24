@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { AppModal, Button, ChoiceGroup, FormField } from '@/components/ui';
+import { AppModal, Button, ChoiceGroup, FormField } from '@/shared/components/ui';
 import { createEvento, updateEvento } from '@/services/eventos.service';
 import { resolveImageUrlForPayload, uploadImage } from '@/services/uploads.service';
 import { colors } from '@/theme/theme';

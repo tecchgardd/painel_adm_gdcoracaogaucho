@@ -9,7 +9,7 @@ import { QuickActionsRow } from '@/components/dashboard/QuickActionsRow';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';
-import { Screen } from '@/components/ui';
+import { Screen } from '@/shared/components/ui';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { getDashboard } from '@/services/dashboard.service';

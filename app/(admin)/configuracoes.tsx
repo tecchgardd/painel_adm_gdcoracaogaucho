@@ -1,4 +1,4 @@
-import { Header, Screen } from '@/components/ui';
+import { Header, Screen } from '@/shared/components/ui';
 import { EmptyState } from '@/components/crud/EmptyState';
 
 export default function Configuracoes() {

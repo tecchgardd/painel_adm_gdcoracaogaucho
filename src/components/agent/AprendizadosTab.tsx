@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, StatusBadge } from '@/components/ui';
+import { ActionMenu, AppModal, Button, ChoiceGroup, StatusBadge } from '@/shared/components/ui';
 import { EmptyState } from '@/components/crud/EmptyState';
 import { ErrorState } from '@/components/crud/ErrorState';
 import { LoadingState } from '@/components/crud/LoadingState';

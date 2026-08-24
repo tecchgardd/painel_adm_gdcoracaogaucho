@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppModal, Button, FormField } from '@/components/ui';
+import { AppModal, Button, FormField } from '@/shared/components/ui';
 import { CrudField, CrudRecord } from '@/shared/types';
 
 export function FormModal({
