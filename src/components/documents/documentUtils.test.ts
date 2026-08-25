@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Sale } from '@/types/entities';
+import type { Sale } from '@/shared/types/entities';
 
 import { getEventInfo, getReceiptTotals, getRegistrationFields } from './documentUtils';
 

@@ -11,9 +11,8 @@ import type {
   AgentRecordStatus,
   AgentRule,
   AgentRuleCategory
-} from '@/types/agent';
-
-import { api, unwrapData } from './api';
+} from '@/shared/types/agent';
+import { api, unwrapData } from '@/core/api/client';
 
 const LIST_LIMIT = 100;
 

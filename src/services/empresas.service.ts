@@ -1,4 +1,4 @@
-import { api, unwrapData } from './api';
+import { api, unwrapData } from '@/core/api/client';
 export type Empresa = { id: string; nome: string; imagemUrl: string; ativo: boolean; publicado: boolean; ordem: number; createdAt: string };
 export type EmpresaInput = { nome: string; imagem?: File; ativo?: boolean; publicado?: boolean; ordem?: number };
 function body(input: EmpresaInput) { const data = new FormData(); data.append('nome', input.nome); data.append('ativo', String(input.ativo ?? true)); data.append('publicado', String(input.publicado ?? true)); data.append('ordem', String(input.ordem ?? 0)); if (input.imagem) data.append('imagem', input.imagem); return data; }

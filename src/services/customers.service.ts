@@ -1,6 +1,5 @@
-import type { Customer } from '@/types/entities';
-
-import { api, unwrapData } from './api';
+import type { Customer } from '@/shared/types/entities';
+import { api, unwrapData } from '@/core/api/client';
 
 export async function listCustomers() {
   const response = await api.get('/admin/customers');

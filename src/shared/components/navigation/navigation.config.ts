@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import type { UserRole } from '@/types/entities';
+import type { UserRole } from '@/shared/types/entities';
 
 export type NavItem = {
   label: string;

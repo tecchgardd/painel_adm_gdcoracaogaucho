@@ -1,5 +1,5 @@
-import type { Sale, SaleStatus } from '@/types/entities';
-import { formatCurrencyBRL, maskCpf } from '@/utils/format';
+import type { Sale, SaleStatus } from '@/shared/types/entities';
+import { formatCurrencyBRL, maskCpf } from '@/shared/utils/format';
 
 export type ReceiptItem = {
   description: string;

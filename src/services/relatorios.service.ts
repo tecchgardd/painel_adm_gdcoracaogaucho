@@ -1,7 +1,6 @@
-import type { ReportCategory } from '@/types/entities';
-import { formatCurrencyBRL } from '@/utils/format';
-
-import { api, unwrapData } from './api';
+import type { ReportCategory } from '@/shared/types/entities';
+import { formatCurrencyBRL } from '@/shared/utils/format';
+import { api, unwrapData } from '@/core/api/client';
 
 export type ReportResult = ReportCategory & { error?: string };
 

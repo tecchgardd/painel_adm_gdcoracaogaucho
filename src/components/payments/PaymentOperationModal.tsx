@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { AppModal, Button, ChoiceGroup, FormField } from '@/components/ui';
+import { AppModal, Button, ChoiceGroup, FormField } from '@/shared/components/ui';
 import { editarPagamento, EditPaymentPayload, ExternalPaymentMethod, ManualPaymentPayload, substituirPorPagamentoExterno } from '@/services/pagamentos.service';
 import { colors, theme } from '@/theme/theme';
-import type { Pagamento } from '@/types/entities';
-import { formatCurrencyBRL, parseCurrencyToCents } from '@/utils/format';
+import type { Pagamento } from '@/shared/types/entities';
+import { formatCurrencyBRL, parseCurrencyToCents } from '@/shared/utils/format';
 
 type Mode = 'edit' | 'external';
 const methods: { value: ExternalPaymentMethod; label: string }[] = [

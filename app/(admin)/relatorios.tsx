@@ -4,12 +4,12 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { ReportSection } from '@/components/dashboard/ReportSection';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { Screen } from '@/components/ui';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { Screen } from '@/shared/components/ui';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { exportReport, getReports } from '@/services/relatorios.service';
 import { colors } from '@/theme/theme';
 

@@ -6,10 +6,10 @@ import { PDFDocument, StandardFonts, clip, closePath, degrees, endPath, lineTo, 
 import QRCode from 'qrcode';
 import { Linking, Platform } from 'react-native';
 
-import type { Sale } from '@/types/entities';
-import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
+import type { Sale } from '@/shared/types/entities';
+import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/shared/utils/format';
 import { getDocumentCode, getEventInfo, getReceiptItems, getReceiptPaymentMethodLabel, getReceiptTotals, getRegistrationFields } from '@/components/documents/documentUtils';
-import { encodeCode128B } from '@/utils/barcode';
+import { encodeCode128B } from '@/shared/utils/barcode';
 
 export type SaleDocumentKind = 'ticket' | 'receipt' | 'registration';
 

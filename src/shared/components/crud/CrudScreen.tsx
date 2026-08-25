@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { FloatingActionButton, Header, Screen, SearchBar } from '@/components/ui';
-import { useResponsive } from '@/hooks/useResponsive';
-import { CrudField, CrudRecord } from '@/types';
+import { ConfirmModal } from '@/shared/components/feedback/ConfirmModal';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { FloatingActionButton, Header, Screen, SearchBar } from '@/shared/components/ui';
+import { useResponsive } from '@/shared/hooks/useResponsive';
+import { CrudField, CrudRecord } from '@/shared/types';
 
 import { DataCard } from './DataCard';
-import { EmptyState } from './EmptyState';
 import { FormModal } from './FormModal';
-import { ConfirmModal } from './ConfirmModal';
 
 export function CrudScreen({ title, storageKey, fields, initialData = [] }: { title: string; storageKey: string; fields: CrudField[]; initialData?: CrudRecord[] }) {
   const [records, setRecords] = useState<CrudRecord[]>([]);

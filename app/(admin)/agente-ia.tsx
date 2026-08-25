@@ -6,7 +6,7 @@ import { AprendizadosTab } from '@/components/agent/AprendizadosTab';
 import { ConhecimentoTab } from '@/components/agent/ConhecimentoTab';
 import { PromptsTab } from '@/components/agent/PromptsTab';
 import { RegrasTab } from '@/components/agent/RegrasTab';
-import { Header, Screen } from '@/components/ui';
+import { Header, Screen } from '@/shared/components/ui';
 import { colors } from '@/theme/theme';
 
 type Tab = 'REGRAS' | 'PROMPTS' | 'CONHECIMENTO' | 'APRENDIZADOS';

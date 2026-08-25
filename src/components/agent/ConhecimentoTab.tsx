@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
-import { ApiRecordScreen, type ApiField } from '@/components/crud/ApiRecordScreen';
+import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
 import { createAgentKnowledge, deleteAgentKnowledge, listAgentKnowledge, updateAgentKnowledge, updateAgentKnowledgeStatus } from '@/services/agent.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { agentKnowledgeSchema } from '@/validation/schemas';

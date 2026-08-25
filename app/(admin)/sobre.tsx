@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Header, Logo, Screen } from '@/components/ui';
+import { Header, Logo, Screen } from '@/shared/components/ui';
 import { colors, theme } from '@/theme/theme';
 
 export default function Sobre() {

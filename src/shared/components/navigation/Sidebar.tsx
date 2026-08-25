@@ -2,7 +2,7 @@ import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { filterNavigationByRole, navigationItems } from '@/navigation.config';
+import { filterNavigationByRole, navigationItems } from '@/shared/components/navigation/navigation.config';
 import { logout } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/theme';

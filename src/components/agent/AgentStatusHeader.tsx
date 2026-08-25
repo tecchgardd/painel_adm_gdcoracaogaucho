@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { getAgentConfig } from '@/services/agent.service';
 import { colors, theme } from '@/theme/theme';
 

@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ActionMenu, StatusBadge } from '@/components/ui';
+import { ActionMenu, StatusBadge } from '@/shared/components/ui';
 import { colors } from '@/theme/theme';
-import { CrudRecord } from '@/types';
+import { CrudRecord } from '@/shared/types';
 
 export function DataCard({ record, onEdit, onDelete }: { record: CrudRecord; onEdit: () => void; onDelete: () => void }) {
   return <View style={styles.card}>

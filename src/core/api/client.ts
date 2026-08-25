@@ -1,13 +1,10 @@
 import { AxiosError, create, InternalAxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 import { router } from 'expo-router';
 
-import { API_URL, AUTH_TOKEN_STORAGE_KEY, AUTH_USER_STORAGE_KEY } from '@/config/app.config';
+import { API_URL } from '@/core/config/env';
+import { clearAuthStorage, getAuthToken } from '@/core/storage/authStorage';
 
 const DEFAULT_TIMEOUT = 15000;
-
 
 export function resolveApiUrl() {
   return API_URL;
@@ -29,9 +26,7 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     delete config.headers['Content-Type'];
   }
-  const token = Platform.OS === 'web'
-    ? await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
-    : await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
+  const token = await getAuthToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -70,23 +65,6 @@ api.interceptors.response.use(
     });
   }
 );
-
-export async function saveAuthToken(token?: string | null) {
-  if (!token) {
-    if (Platform.OS === 'web') await AsyncStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    else await SecureStore.deleteItemAsync(AUTH_TOKEN_STORAGE_KEY);
-    return;
-  }
-  if (Platform.OS === 'web') await AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
-  else await SecureStore.setItemAsync(AUTH_TOKEN_STORAGE_KEY, token);
-}
-
-export async function clearAuthStorage() {
-  await Promise.all([
-    saveAuthToken(null),
-    AsyncStorage.removeItem(AUTH_USER_STORAGE_KEY)
-  ]);
-}
 
 export function unwrapData<T>(payload: unknown): T {
   if (payload && typeof payload === 'object' && 'data' in payload) {

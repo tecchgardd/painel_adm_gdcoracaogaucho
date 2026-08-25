@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Header, ListCard, Screen, SearchBar } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { Header, ListCard, Screen, SearchBar } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { getHistoricoValidacoes } from '@/services/scanner.service';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime } from '@/shared/utils/format';
 
 export default function HistoricoValidacoes() {
   const [query, setQuery] = useState('');

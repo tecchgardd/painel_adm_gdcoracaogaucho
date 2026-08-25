@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { api } from './api';
+import { api } from '@/core/api/client';
+
 import {
   approveAgentLearningSuggestion,
   createAgentRule,
@@ -11,7 +12,7 @@ import {
   updateAgentRuleStatus
 } from './agent.service';
 
-vi.mock('./api', () => ({ api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }, unwrapData: (value: any) => value?.data ?? value }));
+vi.mock('@/core/api/client', () => ({ api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }, unwrapData: (value: any) => value?.data ?? value }));
 
 describe('contratos administrativos do Agente IA', () => {
   beforeEach(() => vi.clearAllMocks());

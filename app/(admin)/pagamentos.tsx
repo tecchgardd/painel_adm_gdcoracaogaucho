@@ -2,17 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, StatusBadge } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, StatusBadge } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { PaymentOperationModal } from '@/components/payments/PaymentOperationModal';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { cancelarPagamento, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/services/pagamentos.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors } from '@/theme/theme';
-import type { Pagamento } from '@/types/entities';
-import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyToCents } from '@/utils/format';
+import type { Pagamento } from '@/shared/types/entities';
+import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyToCents } from '@/shared/utils/format';
 
 const statuses: PagamentoStatus[] = ['PENDENTE', 'PROCESSANDO', 'PAGO', 'FALHOU', 'CANCELADO', 'EXPIRADO', 'ESTORNADO', 'PARCIALMENTE_ESTORNADO', 'CONTESTADO', 'CONTESTACAO_PERDIDA'];
 const noCancel = new Set(['PAGO', 'PARCIALMENTE_ESTORNADO', 'ESTORNADO', 'CONTESTADO', 'CONTESTACAO_PERDIDA']);

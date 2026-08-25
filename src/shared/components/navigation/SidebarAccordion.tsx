@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { NavItem } from '@/navigation.config';
+import { NavItem } from '@/shared/components/navigation/navigation.config';
 import { colors } from '@/theme/theme';
 
 export function SidebarAccordion({ item }: { item: NavItem }) {

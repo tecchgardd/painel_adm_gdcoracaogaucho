@@ -7,42 +7,41 @@ Não há backend neste repositório nem App Router/Server Components/Server Acti
 # Estrutura Modular
 
 - `app/` — rotas via expo-router (file-based). Grupo `app/(admin)/` são as telas autenticadas.
-- `src/components/` — `ui.tsx` (primitivos globais: `Screen`, `Header`, `SearchBar`, `FloatingActionButton`), `ui/` (componentes de UI globais maiores que merecem arquivo próprio, ex.: `AppModal`, `ErrorBoundary`), `crud/` (telas de cadastro genéricas), `navigation/`, `layout/`, e uma pasta por feature (`sales/`, `events/`, `payments/`, ...) para componentes específicos daquele domínio.
-- `src/services/` — um arquivo por domínio de API (`sales.service.ts`, `pagamentos.service.ts`, etc.), sempre importando o client único de `src/services/api.ts`.
+- `src/core/` — infraestrutura compartilhada: `api/client.ts` (client Axios único), `config/env.ts` (resolução de `API_URL` e chaves de storage), `storage/authStorage.ts` (backend de storage de auth, SecureStore vs AsyncStorage).
+- `src/shared/` — código compartilhado entre features: `components/ui/` (primitivos globais: `Screen`, `Header`, `SearchBar`, `FloatingActionButton`, ...), `components/crud/` (telas de cadastro genéricas: `CrudScreen`, `FormModal`, `DataCard`, `ApiRecordScreen`), `components/feedback/` (`ConfirmModal`, `EmptyState`, `ErrorState`, `LoadingState`), `components/navigation/`, `hooks/` (`useApiQuery`, `useResponsive`), `types/entities.ts`.
+- `src/components/` — `layout/` e uma pasta por feature (`sales/`, `events/`, `payments/`, ...) para componentes específicos daquele domínio (não movidos na reorganização).
+- `src/services/` — um arquivo por domínio de API (`sales.service.ts`, `pagamentos.service.ts`, etc.), sempre importando o client único de `src/core/api/client.ts`.
 - `src/stores/` — Zustand. Hoje só existe `auth.store.ts`; é a única fonte de sessão/role.
-- `src/hooks/` — hooks compartilhados (`useApiQuery`, `useResponsive`).
 - `src/validation/schemas.ts` — schemas Zod compartilhados entre formulários.
-- `src/types/` — tipos de domínio (`entities.ts`) e tipos de API (`api.ts`).
 - `src/theme/` — tokens de cor/tema.
-- `src/config/app.config.ts` — resolução de `API_URL` e chaves de storage.
 
 Business logic (chamadas de API, regras de validação, cálculo) fica em `services/`, `validation/` e `stores/` — nunca dentro de um componente de UI.
 
 # Roteamento (expo-router)
 
-- Rotas autenticadas ficam em `app/(admin)/`. Toda tela nova precisa ser registrada como `Tabs.Screen` em `app/(admin)/_layout.tsx` (a navegação real é feita pelo menu em `components/navigation`, a tab bar nativa fica oculta).
+- Rotas autenticadas ficam em `app/(admin)/`. Toda tela nova precisa ser registrada como `Tabs.Screen` em `app/(admin)/_layout.tsx` (a navegação real é feita pelo menu em `src/shared/components/navigation`, a tab bar nativa fica oculta).
 - `app/(admin)/_layout.tsx` é o guard de auth + role: chama `useAuthStore().loadSession()` no mount e redireciona pra `/login` sem sessão; depois restringe rotas por `role` (`ADMIN` | `STAFF` | `CHECKIN`). Ao adicionar uma rota nova com restrição de acesso, atualizar as listas `checkinAllowed`/`staffBlocked` desse arquivo.
 - Não criar rotas fora de `app/`; não recriar roteamento manual com estado.
 
 # Componentes: onde colocar
 
 1. **Específico de uma tela/feature** → pasta da feature em `src/components/<feature>/` (ex.: `components/sales/SaleDetailsModal.tsx`).
-2. **Reutilizável em múltiplas telas** → `src/components/ui/`. Só promover para lá quando já houver reuso real, não antecipar.
-3. **Cadastro simples (lista + form + delete)** → usar o conjunto genérico em `src/components/crud/` (`CrudScreen`, `FormModal`, `DataCard`, `ConfirmModal`, `EmptyState`). Se a tela já integra com a API real (não estado local), usar `ApiRecordScreen` em vez de `CrudScreen`.
+2. **Reutilizável em múltiplas telas** → `src/shared/components/ui/`. Só promover para lá quando já houver reuso real, não antecipar.
+3. **Cadastro simples (lista + form + delete)** → usar o conjunto genérico em `src/shared/components/crud/` (`CrudScreen`, `FormModal`, `DataCard`) e `src/shared/components/feedback/` (`ConfirmModal`, `EmptyState`). Se a tela já integra com a API real (não estado local), usar `ApiRecordScreen` em vez de `CrudScreen`.
 
 Manter componentes pequenos e com responsabilidade única. Preferir hooks (`useApiQuery`, hooks locais) a lógica de fetch/estado espalhada dentro do JSX.
 
 # TypeScript
 
 - Strict habilitado — não usar `any`; preferir `unknown` + type guard.
-- Cuidado com dualidade PT/EN nos tipos de domínio (`src/types/entities.ts`): campos como `nome`/`name`, `telefone`/`phone` coexistem porque a API não normaliza sempre — checar os dois antes de assumir qual existe.
+- Cuidado com dualidade PT/EN nos tipos de domínio (`src/shared/types/entities.ts`): campos como `nome`/`name`, `telefone`/`phone` coexistem porque a API não normaliza sempre — checar os dois antes de assumir qual existe.
 - Tipar props, retorno de service e payload de schema Zod (`z.infer<typeof schema>`).
 
 # Naming
 
 - Handlers prefixados com `handle`: `handleSubmit`, `handlePress`.
 - Booleans prefixados com verbo: `isLoading`, `hasError`, `canSubmit`.
-- Hooks prefixados com `use`: `useApiQuery`, `useResponsive`.
+- Hooks prefixados com `use`: `useApiQuery`, `useResponsive` (ambos em `src/shared/hooks/`).
 - Nomes de arquivo de componente em PascalCase; services/hooks/stores em camelCase com sufixo do papel (`*.service.ts`, `use*.ts`, `*.store.ts`).
 
 # Imports
@@ -52,7 +51,7 @@ Manter componentes pequenos e com responsabilidade única. Preferir hooks (`useA
 
 # Error Handling
 
-- A árvore de rotas raiz é protegida por `src/components/ui/ErrorBoundary.tsx` (montado em `app/_layout.tsx`), que captura erro de render e mostra um fallback em vez de tela branca. Não criar boundaries locais ad-hoc — só se uma tela específica precisar isolar a falha de um widget isolado (ex.: componente de terceiro).
+- A árvore de rotas raiz é protegida por `src/shared/components/ui/ErrorBoundary.tsx` (montado em `app/_layout.tsx`), que captura erro de render e mostra um fallback em vez de tela branca. Não criar boundaries locais ad-hoc — só se uma tela específica precisar isolar a falha de um widget isolado (ex.: componente de terceiro).
 - Erros de chamada de API (rejeições de `api.ts`) continuam tratados no padrão já existente: capturar `error.message` e renderizar inline (`<Text>`) na tela/modal — não é o Error Boundary que trata isso, ele é só para erro de render/JS não capturado.
 
 # Logging
@@ -65,7 +64,7 @@ Manter componentes pequenos e com responsabilidade única. Preferir hooks (`useA
 
 - Estilos via `StyleSheet.create` usando tokens de `src/theme/`, sem CSS-in-JS e sem estilo inline solto.
 - Evitar componentes monolíticos — quebrar telas grandes em subcomponentes da própria feature.
-- `useResponsive` (`numColumns` por breakpoint) é o padrão para grids responsivas (ver `crud/CrudScreen.tsx`); não reimplementar breakpoints manualmente.
+- `useResponsive` (`numColumns` por breakpoint) é o padrão para grids responsivas (ver `shared/components/crud/CrudScreen.tsx`); não reimplementar breakpoints manualmente.
 
 # Performance
 
@@ -79,7 +78,7 @@ Manter componentes pequenos e com responsabilidade única. Preferir hooks (`useA
 
 # Camada de Dados / API
 
-- `src/services/api.ts` é o único client Axios (`api`). Todo `*.service.ts` novo importa esse client — nunca instanciar outro Axios/fetch direto num componente.
+- `src/core/api/client.ts` é o único client Axios (`api`). Todo `*.service.ts` novo importa esse client — nunca instanciar outro Axios/fetch direto num componente.
 - Services encapsulam a chamada e o unwrap da resposta com `unwrapData<T>`.
 - Leitura de dados em telas usa `useApiQuery` (loading/error/refetch padronizados; 404 com `fallbackData` de array vira lista vazia sem erro) — não replicar esse padrão à mão com `useState`/`useEffect`.
 
@@ -87,12 +86,12 @@ Manter componentes pequenos e com responsabilidade única. Preferir hooks (`useA
 
 - Sessão/role vive só em `useAuthStore` (Zustand) — não duplicar estado de auth em componentes.
 - Login é via Better Auth no backend (`/api/auth/sign-in/email`); não existe fallback mock de admin no client.
-- Token: SecureStore em Android/iOS, AsyncStorage na web — sempre checar `Platform.OS` ao mexer em storage de auth.
-- 401 e 403 já são tratados centralmente nos interceptors de `api.ts` (limpa storage + redireciona `/login` no 401); não duplicar esse tratamento em cada service.
+- Token: SecureStore em Android/iOS, AsyncStorage na web — sempre checar `Platform.OS` ao mexer em storage de auth. Consolidado em `src/core/storage/authStorage.ts`.
+- 401 e 403 já são tratados centralmente nos interceptors de `src/core/api/client.ts` (limpa storage + redireciona `/login` no 401); não duplicar esse tratamento em cada service.
 
 # Testes
 
-- Vitest para unitário/integração. Testes de service ficam ao lado do arquivo (`*.service.test.ts`) e mockam o client com `vi.mock('./api')`.
+- Vitest para unitário/integração. Testes de service ficam ao lado do arquivo (`*.service.test.ts`) e mockam o client com `vi.mock('@/core/api/client')`.
 - Rodar um arquivo isolado com `npx vitest run <arquivo>` em vez da suíte inteira durante iteração.
 - E2E via Maestro, flows em `.maestro/*.yaml` (CLI standalone, não é dependência do `package.json`). Hoje só o fluxo de login (`.maestro/login.yaml`) está coberto; outros fluxos críticos (venda, checkin) devem ganhar flow próprio conforme a necessidade for surgindo — não é obrigatório cobrir tudo de uma vez.
 

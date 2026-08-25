@@ -3,9 +3,9 @@ import { Text, View, TouchableOpacity, StyleSheet, TextInput, Image, ImageSource
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useResponsive } from '@/hooks/useResponsive';
-import { Sidebar } from '@/components/navigation/Sidebar';
-import { BottomTabs } from '@/components/navigation/BottomTabs';
+import { useResponsive } from '@/shared/hooks/useResponsive';
+import { Sidebar } from '@/shared/components/navigation/Sidebar';
+import { BottomTabs } from '@/shared/components/navigation/BottomTabs';
 import { colors, theme } from '@/theme/theme';
 import { buttonTones, statusTones } from '@/theme/tones';
 
@@ -20,7 +20,7 @@ function blurActiveElement() {
 }
 
 export function Logo({ size = 92 }: { size?: number }) {
-  return <Image source={require('../../assets/logo-oficial.jpeg')} style={{ width: size, height: size, borderRadius: size / 2 }} resizeMode="cover" />;
+  return <Image source={require('../../../../assets/logo-oficial.jpeg')} style={{ width: size, height: size, borderRadius: size / 2 }} resizeMode="cover" />;
 }
 
 export function Avatar({ name, size = 44 }: { name?: string; size?: number }) {

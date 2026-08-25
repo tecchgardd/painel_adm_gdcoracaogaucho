@@ -1,15 +1,15 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, StatusBadge } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { ActionMenu, AppModal, Button, ChoiceGroup, StatusBadge } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { approveAgentLearningSuggestion, listAgentLearningSuggestions, rejectAgentLearningSuggestion } from '@/services/agent.service';
 import { colors, theme } from '@/theme/theme';
-import type { AgentLearningStatus, AgentLearningSuggestion } from '@/types/agent';
-import { formatDateTime } from '@/utils/format';
+import type { AgentLearningStatus, AgentLearningSuggestion } from '@/shared/types/agent';
+import { formatDateTime } from '@/shared/utils/format';
 
 export function AprendizadosTab() {
   const [status, setStatus] = useState<AgentLearningStatus | ''>('');

@@ -1,5 +1,5 @@
-import { Header, Screen } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
+import { Header, Screen } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
 
 export default function Configuracoes() {
   return <Screen variant="admin">

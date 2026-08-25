@@ -2,16 +2,16 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { EventFormModal } from '@/components/events/EventFormModal';
-import { ActionMenu, AppModal, Button, Card, ChoiceGroup, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { ActionMenu, AppModal, Button, Card, ChoiceGroup, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { colors } from '@/theme/theme';
-import { formatCurrencyBRL, formatDateTime } from '@/utils/format';
-import type { EventType } from '@/types/entities';
+import { formatCurrencyBRL, formatDateTime } from '@/shared/utils/format';
+import type { EventType } from '@/shared/types/entities';
 
 const tabs: { type: EventType; label: string; plural: string }[] = [
   { type: 'BAILE', label: 'Baile', plural: 'bailes' },

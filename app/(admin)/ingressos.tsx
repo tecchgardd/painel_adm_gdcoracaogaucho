@@ -2,17 +2,17 @@ import { useCallback, useMemo, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatCard, StatusBadge } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { gerarLinkPagamentoLote, gerarLoteIngressos, listLotesIngressos, registrarPagamentoLote } from '@/services/ingressos.service';
 import { findPersonByCpf } from '@/services/people.service';
 import { colors } from '@/theme/theme';
-import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/format';
+import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/shared/utils/format';
 
 type Origin = 'SEM_COBRANCA' | 'CORTESIA' | 'NOVA_VENDA' | 'VENDA_EXISTENTE' | 'PAGAMENTO_EXTERNO';
 type ExternalMethod = 'PIX_EXTERNO' | 'DINHEIRO' | 'CARTAO_EXTERNO';

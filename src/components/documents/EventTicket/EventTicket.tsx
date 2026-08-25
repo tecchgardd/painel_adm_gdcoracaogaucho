@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 
-import type { Sale } from '@/types/entities';
-import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/utils/format';
+import type { Sale } from '@/shared/types/entities';
+import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/shared/utils/format';
 
 import { getDocumentCode, getEventInfo } from '../documentUtils';
 import { DocumentQRCode } from '../DocumentQRCode';

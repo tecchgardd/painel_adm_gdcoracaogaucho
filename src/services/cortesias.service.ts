@@ -1,6 +1,5 @@
-import type { Cortesia } from '@/types/entities';
-
-import { api, unwrapData } from './api';
+import type { Cortesia } from '@/shared/types/entities';
+import { api, unwrapData } from '@/core/api/client';
 
 export async function listCortesias() {
   const response = await api.get('/admin/cortesias');

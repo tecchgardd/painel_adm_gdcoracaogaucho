@@ -1,5 +1,5 @@
-import { OptionGroupScreen } from '@/components/navigation/OptionGroupScreen';
-import { filterNavigationByRole, navigationItems } from '@/navigation.config';
+import { OptionGroupScreen } from '@/shared/components/navigation/OptionGroupScreen';
+import { filterNavigationByRole, navigationItems } from '@/shared/components/navigation/navigation.config';
 import { useAuthStore } from '@/stores/auth.store';
 
 export default function Cadastros() {

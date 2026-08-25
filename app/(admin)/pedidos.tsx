@@ -1,17 +1,17 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { createPedido, listPedidos, updatePedido } from '@/services/pedidos.service';
 import { createCustomer, findCustomerByCpf } from '@/services/customers.service';
 import { listEventos } from '@/services/eventos.service';
 import { colors } from '@/theme/theme';
-import { useResponsive } from '@/hooks/useResponsive';
-import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/utils/format';
+import { useResponsive } from '@/shared/hooks/useResponsive';
+import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/shared/utils/format';
 import { clienteSchema, pedidoEventoSchema, pedidoLojaSchema } from '@/validation/schemas';
 
 type PedidoTab = 'LOJA' | 'EVENTO';

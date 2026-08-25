@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { encodeCode128B } from '@/utils/barcode';
+import { encodeCode128B } from '@/shared/utils/barcode';
 
 export function DocumentBarcode({
   value,

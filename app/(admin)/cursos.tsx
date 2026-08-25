@@ -2,15 +2,15 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { EventFormModal } from '@/components/events/EventFormModal';
-import { ActionMenu, AppModal, Button, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { ActionMenu, AppModal, Button, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listCursos } from '@/services/cursos.service';
 import { colors } from '@/theme/theme';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime } from '@/shared/utils/format';
 
 export default function Cursos() {
   const [selected, setSelected] = useState<any>(null);

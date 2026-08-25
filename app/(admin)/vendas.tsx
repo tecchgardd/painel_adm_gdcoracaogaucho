@@ -3,22 +3,22 @@ import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { router, useLocalSearchParams } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, SearchBar, StatCard, StatusBadge } from '@/components/ui';
-import { EmptyState } from '@/components/crud/EmptyState';
-import { ErrorState } from '@/components/crud/ErrorState';
-import { LoadingState } from '@/components/crud/LoadingState';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, SearchBar, StatCard, StatusBadge } from '@/shared/components/ui';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { ErrorState } from '@/shared/components/feedback/ErrorState';
+import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { PaymentOperationModal } from '@/components/payments/PaymentOperationModal';
 import { SaleDetailsModal } from '@/components/sales/SaleDetailsModal';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useApiQuery } from '@/shared/hooks/useApiQuery';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listEventos } from '@/services/eventos.service';
 import { findPersonByCpf } from '@/services/people.service';
 import { gerarLinkPagamentoLote, gerarLoteIngressos } from '@/services/ingressos.service';
 import { getPagamento } from '@/services/pagamentos.service';
 import { createSale, generateSalePaymentLink, getSale, listSales } from '@/services/sales.service';
-import type { Pagamento, Sale } from '@/types/entities';
+import type { Pagamento, Sale } from '@/shared/types/entities';
 import { colors } from '@/theme/theme';
-import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyInput } from '@/utils/format';
+import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyInput } from '@/shared/utils/format';
 
 type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
 type OperationType = SaleType | 'LOTE';

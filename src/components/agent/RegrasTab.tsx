@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ApiRecordScreen, type ApiField } from '@/components/crud/ApiRecordScreen';
+import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
 import { createAgentRule, deleteAgentRule, listAgentRules, updateAgentRule, updateAgentRuleStatus } from '@/services/agent.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';

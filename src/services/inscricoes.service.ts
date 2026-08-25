@@ -1,6 +1,5 @@
-import type { Inscricao } from '@/types/entities';
-
-import { api, unwrapData } from './api';
+import type { Inscricao } from '@/shared/types/entities';
+import { api, unwrapData } from '@/core/api/client';
 
 function normalizeInscricao(inscricao: any): Inscricao {
   const customer = inscricao.customer ?? {};

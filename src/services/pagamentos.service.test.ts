@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { api } from './api';
+import { api } from '@/core/api/client';
+
 import { cancelarPagamento, listPagamentos, reembolsarPagamento } from './pagamentos.service';
 
-vi.mock('./api', () => ({ api: { get: vi.fn(), patch: vi.fn(), post: vi.fn() }, unwrapData: (value: any) => value?.data ?? value }));
+vi.mock('@/core/api/client', () => ({ api: { get: vi.fn(), patch: vi.fn(), post: vi.fn() }, unwrapData: (value: any) => value?.data ?? value }));
 
 describe('contratos administrativos de pagamentos', () => {
   beforeEach(() => vi.clearAllMocks());
