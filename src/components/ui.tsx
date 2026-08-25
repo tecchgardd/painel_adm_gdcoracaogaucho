@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   iconButton: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   fab: { width: 44, height: 44, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.red, borderWidth: 1, borderColor: colors.redDark },
   choiceGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  choiceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 14 },
+  choiceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 14, outlineStyle: 'none' as any },
   choiceChipActive: { backgroundColor: colors.red, borderColor: colors.red },
   choiceChipActiveGreen: { backgroundColor: colors.green, borderColor: colors.green },
   choiceChipText: { color: colors.muted, fontSize: 13, fontWeight: '800' },

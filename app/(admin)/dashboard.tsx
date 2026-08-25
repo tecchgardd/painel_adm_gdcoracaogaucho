@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { AgentTeaserCard } from '@/components/dashboard/AgentTeaserCard';
 import { DashboardSection } from '@/components/dashboard/DashboardSection';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { QuickActionsRow } from '@/components/dashboard/QuickActionsRow';
@@ -88,8 +87,6 @@ export default function Dashboard() {
           <Text style={styles.healthText}>Stripe {health?.stripeConfigured ? 'configurada' : 'não configurada'}</Text>
           <Text style={styles.healthHint}>Configuração não garante habilitação da conta para cobranças.</Text>
         </View>
-
-        <AgentTeaserCard />
 
         <QuickActionsRow />
 

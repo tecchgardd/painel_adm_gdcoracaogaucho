@@ -3,23 +3,19 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import { AgentStatusHeader } from '@/components/agent/AgentStatusHeader';
 import { AprendizadosTab } from '@/components/agent/AprendizadosTab';
-import { CanaisTab } from '@/components/agent/CanaisTab';
-import { ConfiguracoesTab } from '@/components/agent/ConfiguracoesTab';
 import { ConhecimentoTab } from '@/components/agent/ConhecimentoTab';
 import { PromptsTab } from '@/components/agent/PromptsTab';
 import { RegrasTab } from '@/components/agent/RegrasTab';
 import { Header, Screen } from '@/components/ui';
 import { colors } from '@/theme/theme';
 
-type Tab = 'REGRAS' | 'PROMPTS' | 'CONHECIMENTO' | 'APRENDIZADOS' | 'CANAIS' | 'CONFIGURACOES';
+type Tab = 'REGRAS' | 'PROMPTS' | 'CONHECIMENTO' | 'APRENDIZADOS';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'REGRAS', label: 'Regras' },
   { key: 'PROMPTS', label: 'Prompts' },
   { key: 'CONHECIMENTO', label: 'Conhecimento' },
-  { key: 'APRENDIZADOS', label: 'Aprendizados' },
-  { key: 'CANAIS', label: 'Canais' },
-  { key: 'CONFIGURACOES', label: 'Configurações' }
+  { key: 'APRENDIZADOS', label: 'Aprendizados' }
 ];
 
 export default function AgenteIa() {
@@ -37,14 +33,12 @@ export default function AgenteIa() {
     {tab === 'PROMPTS' ? <PromptsTab /> : null}
     {tab === 'CONHECIMENTO' ? <ConhecimentoTab /> : null}
     {tab === 'APRENDIZADOS' ? <AprendizadosTab /> : null}
-    {tab === 'CANAIS' ? <CanaisTab /> : null}
-    {tab === 'CONFIGURACOES' ? <ConfiguracoesTab /> : null}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
   tabs: { gap: 6, paddingBottom: 14 },
-  tab: { minHeight: 38, paddingHorizontal: 13, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  tab: { minHeight: 38, paddingHorizontal: 13, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, outlineStyle: 'none' as any },
   tabActive: { backgroundColor: colors.red },
   tabText: { color: colors.muted, fontSize: 12, fontWeight: '800' },
   tabTextActive: { color: '#fff' }
