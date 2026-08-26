@@ -1,0 +1,37 @@
+- generic [ref=f2e21]:
+  - generic [ref=f2e22]:
+    - generic [ref=f2e23]:
+      - generic [ref=f2e24]: Coração Gaúcho
+      - generic [ref=f2e25]: ADMIN
+    - generic [ref=f2e27]:
+      - button "Dashboard" [ref=f2e28] [cursor=pointer]:
+        - generic [ref=f2e29]: 󰚡
+      - button "Eventos" [ref=f2e32] [cursor=pointer]:
+        - generic [ref=f2e33]: 󰸘
+        - generic [ref=f2e35]: 󰅀
+      - button "Check-in" [ref=f2e37] [cursor=pointer]:
+        - generic [ref=f2e38]: 󰐳
+        - generic [ref=f2e40]: 󰅀
+      - button "Cadastros" [ref=f2e42] [cursor=pointer]:
+        - generic [ref=f2e43]: 󰭘
+        - generic [ref=f2e45]: 󰅀
+      - button "Vendas" [ref=f2e47] [cursor=pointer]:
+        - generic [ref=f2e48]: 󰄑
+        - generic [ref=f2e50]: 󰅀
+      - button "Relatórios" [ref=f2e51] [cursor=pointer]:
+        - generic [ref=f2e52]: 󰄨
+      - button "Fotos" [ref=f2e54] [cursor=pointer]:
+        - generic [ref=f2e55]: 󰋯
+      - button "Agente IA" [ref=f2e57] [cursor=pointer]:
+        - generic [ref=f2e58]: 󱙺
+    - button "Sair da conta" [ref=f2e60] [cursor=pointer]:
+      - generic [ref=f2e61]: 󰍃
+  - generic [ref=f2e65]:
+    - generic [ref=f2e66]:
+      - generic [ref=f2e67]: Pedidos da loja
+      - button "Novo pedido" [ref=f2e68] [cursor=pointer]:
+        - generic [ref=f2e69]: 󰐕
+    - generic [ref=f2e70]:
+      - generic [ref=f2e71]: 󰍉
+      - textbox "Filtrar por status, cliente, cpf, data" [ref=f2e72]
+    - generic "Nenhum pedido da loja encontrado." [ref=f2e73]: 󱘶

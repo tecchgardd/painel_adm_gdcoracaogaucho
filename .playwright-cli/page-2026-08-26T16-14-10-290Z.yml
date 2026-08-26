@@ -1,0 +1,28 @@
+- generic [ref=e25]:
+  - generic [ref=e26]:
+    - generic [ref=e29]: CORAÇÃO GAÚCHO
+    - generic [ref=e30]: TRADIÇÃO QUE NOS UNE
+  - generic [ref=e31]:
+    - generic [ref=e32]: Acessar plataforma
+    - generic [ref=e33]: E-mail
+    - generic [ref=e34]:
+      - generic [ref=e35]: 󰇰
+      - textbox "E-mail" [ref=e36]:
+        - /placeholder: seu@email.com
+        - text: admin@coraocaogaucho.com.br
+    - generic [ref=e37]: Senha
+    - generic [ref=e38]:
+      - generic [ref=e39]: 󰍁
+      - textbox "Senha" [ref=e40]:
+        - /placeholder: "********"
+        - text: ChangeMe123!
+      - button "Mostrar senha" [ref=e41] [cursor=pointer]:
+        - generic [ref=e42]: 󰛐
+    - generic [ref=e43]:
+      - checkbox "󰄱 Lembrar acesso" [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: 󰄱
+        - generic [ref=e46]: Lembrar acesso
+      - button "Esqueci minha senha" [ref=e47] [cursor=pointer]
+    - generic [ref=e49]:
+      - generic [active]: ENTRANDO...
+  - generic [ref=e52]: Versão 1.1.0

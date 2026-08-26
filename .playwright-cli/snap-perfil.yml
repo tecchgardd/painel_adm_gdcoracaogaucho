@@ -1,0 +1,40 @@
+- generic [ref=f3e21]:
+  - generic [ref=f3e22]:
+    - generic [ref=f3e23]:
+      - generic [ref=f3e24]: Coração Gaúcho
+      - generic [ref=f3e25]: ADMIN
+    - generic [ref=f3e27]:
+      - button "Dashboard" [ref=f3e28] [cursor=pointer]:
+        - generic [ref=f3e29]: 󰚡
+      - button "Eventos" [ref=f3e32] [cursor=pointer]:
+        - generic [ref=f3e33]: 󰸘
+        - generic [ref=f3e35]: 󰅀
+      - button "Check-in" [ref=f3e37] [cursor=pointer]:
+        - generic [ref=f3e38]: 󰐳
+        - generic [ref=f3e40]: 󰅀
+      - button "Cadastros" [ref=f3e42] [cursor=pointer]:
+        - generic [ref=f3e43]: 󰭘
+        - generic [ref=f3e45]: 󰅀
+      - button "Vendas" [ref=f3e47] [cursor=pointer]:
+        - generic [ref=f3e48]: 󰄑
+        - generic [ref=f3e50]: 󰅀
+      - button "Relatórios" [ref=f3e51] [cursor=pointer]:
+        - generic [ref=f3e52]: 󰄨
+      - button "Fotos" [ref=f3e54] [cursor=pointer]:
+        - generic [ref=f3e55]: 󰋯
+      - button "Agente IA" [ref=f3e57] [cursor=pointer]:
+        - generic [ref=f3e58]: 󱙺
+    - button "Sair da conta" [ref=f3e60] [cursor=pointer]:
+      - generic [ref=f3e61]: 󰍃
+  - generic [ref=f3e65]:
+    - generic [ref=f3e66]: Meu perfil
+    - generic [ref=f3e68]:
+      - generic [ref=f3e69]:
+        - generic [ref=f3e70]: Nome
+        - generic [ref=f3e71]: Administrador
+      - generic [ref=f3e72]:
+        - generic [ref=f3e73]: E-mail
+        - generic [ref=f3e74]: admin@coracaogaucho.com.br
+      - generic [ref=f3e75]:
+        - generic [ref=f3e76]: Cargo
+        - generic [ref=f3e77]: Administrador

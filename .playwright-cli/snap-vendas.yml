@@ -1,0 +1,108 @@
+- generic [ref=f7e21]:
+  - generic [ref=f7e22]:
+    - generic [ref=f7e23]:
+      - generic [ref=f7e24]: Coração Gaúcho
+      - generic [ref=f7e25]: ADMIN
+    - generic [ref=f7e27]:
+      - button "Dashboard" [ref=f7e28] [cursor=pointer]:
+        - generic [ref=f7e29]: 󰚡
+      - button "Eventos" [ref=f7e32] [cursor=pointer]:
+        - generic [ref=f7e33]: 󰸘
+        - generic [ref=f7e35]: 󰅀
+      - button "Check-in" [ref=f7e37] [cursor=pointer]:
+        - generic [ref=f7e38]: 󰐳
+        - generic [ref=f7e40]: 󰅀
+      - button "Cadastros" [ref=f7e42] [cursor=pointer]:
+        - generic [ref=f7e43]: 󰭘
+        - generic [ref=f7e45]: 󰅀
+      - button "Vendas" [ref=f7e47] [cursor=pointer]:
+        - generic [ref=f7e48]: 󰄑
+        - generic [ref=f7e50]: 󰅀
+      - button "Relatórios" [ref=f7e51] [cursor=pointer]:
+        - generic [ref=f7e52]: 󰄨
+      - button "Fotos" [ref=f7e54] [cursor=pointer]:
+        - generic [ref=f7e55]: 󰋯
+      - button "Agente IA" [ref=f7e57] [cursor=pointer]:
+        - generic [ref=f7e58]: 󱙺
+    - button "Sair da conta" [ref=f7e60] [cursor=pointer]:
+      - generic [ref=f7e61]: 󰍃
+  - generic [ref=f7e65]:
+    - generic [ref=f7e66]:
+      - generic [ref=f7e67]: Vendas
+      - button "Nova venda" [ref=f7e68] [cursor=pointer]:
+        - generic [ref=f7e69]: 󰐕
+    - generic [ref=f7e71]: Gerencie todas as vendas, inscrições e ingressos.
+    - generic [ref=f7e72]:
+      - generic [ref=f7e73] [cursor=pointer]:
+        - generic [ref=f7e75]: Total vendido
+        - generic [ref=f7e76]: R$ 31,00
+        - generic [ref=f7e77]: Ver detalhes
+      - generic [ref=f7e78] [cursor=pointer]:
+        - generic [ref=f7e80]: Vendas pagas
+        - generic [ref=f7e81]: "2"
+        - generic [ref=f7e82]: Ver detalhes
+      - generic [ref=f7e83] [cursor=pointer]:
+        - generic [ref=f7e85]: Pendentes
+        - generic [ref=f7e86]: "0"
+        - generic [ref=f7e87]: Ver detalhes
+      - generic [ref=f7e88] [cursor=pointer]:
+        - generic [ref=f7e90]: Cortesias
+        - generic [ref=f7e91]: "0"
+        - generic [ref=f7e92]: Ver detalhes
+    - generic [ref=f7e93]:
+      - generic [ref=f7e94]: 󰍉
+      - textbox "Pesquisar por CPF, nome ou código" [ref=f7e95]
+    - generic [ref=f7e97]:
+      - button "Todos" [ref=f7e98] [cursor=pointer]
+      - button "EVENTO" [ref=f7e100] [cursor=pointer]
+      - button "BAILE" [ref=f7e102] [cursor=pointer]
+      - button "CURSO" [ref=f7e104] [cursor=pointer]
+    - generic [ref=f7e107]:
+      - button "Todos" [ref=f7e108] [cursor=pointer]
+      - button "PENDENTE" [ref=f7e110] [cursor=pointer]
+      - button "PAGO" [ref=f7e112] [cursor=pointer]
+      - button "CANCELADO" [ref=f7e114] [cursor=pointer]
+      - button "CORTESIA" [ref=f7e116] [cursor=pointer]
+      - button "REEMBOLSADOS" [ref=f7e118] [cursor=pointer]
+      - button "REEMBOLSADOS" [ref=f7e120] [cursor=pointer]
+    - generic [ref=f7e122]:
+      - generic [ref=f7e123]:
+        - generic [ref=f7e124]: Venda
+        - generic [ref=f7e125]: Comprador
+        - generic [ref=f7e126]: Evento/Curso
+        - generic [ref=f7e127]: Qtd.
+        - generic [ref=f7e128]: Valor
+        - generic [ref=f7e129]: Pagamento
+        - generic [ref=f7e130]: Status
+        - generic [ref=f7e131]: Data da venda
+        - generic [ref=f7e132]: Ações
+      - generic [ref=f7e133] [cursor=pointer]:
+        - generic [ref=f7e134]: WPP-92EA56B292B3
+        - generic [ref=f7e135]:
+          - generic [ref=f7e136]: Gabriel Aluir da Rosa
+          - generic [ref=f7e137]: "***.***.799-**"
+        - generic [ref=f7e138]: BAILE DO ANO — FORMATURA 2026
+        - generic [ref=f7e139]: "1"
+        - generic [ref=f7e140]: R$ 1,00
+        - generic [ref=f7e141]: STRIPE
+        - 'generic "Status: PAGO" [ref=f7e143]': PAGO
+        - generic [ref=f7e145]: 09/08/2026 às 21:46
+        - button "Mais opções" [ref=f7e148]:
+          - generic [ref=f7e149]: 󰇙
+      - generic [ref=f7e150] [cursor=pointer]:
+        - generic [ref=f7e151]: WPP-1255A7E5EA2E
+        - generic [ref=f7e152]:
+          - generic [ref=f7e153]: Gabriel Aluir da Rosa
+          - generic [ref=f7e154]: "***.***.799-**"
+        - generic [ref=f7e155]: Curso de Danças
+        - generic [ref=f7e156]: "1"
+        - generic [ref=f7e157]: R$ 30,00
+        - generic [ref=f7e158]: STRIPE
+        - 'generic "Status: PAGO" [ref=f7e160]': PAGO
+        - generic [ref=f7e162]: 09/08/2026 às 20:36
+        - button "Mais opções" [ref=f7e165]:
+          - generic [ref=f7e166]: 󰇙
+    - generic [ref=f7e167]:
+      - generic [ref=f7e168] [cursor=pointer]: Anterior
+      - generic [ref=f7e170]: Página 1 de 1 · 2 resultado(s)
+      - generic [ref=f7e171] [cursor=pointer]: Próxima
