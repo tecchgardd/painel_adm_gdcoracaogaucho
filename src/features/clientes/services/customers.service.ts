@@ -1,9 +1,17 @@
 import type { Customer } from '@/shared/types/entities';
 import { api, unwrapData } from '@/core/api/client';
 
-export async function listCustomers() {
-  const response = await api.get('/admin/customers');
-  return unwrapData<Customer[]>(response.data);
+export type CustomerFilters = {
+  /** `aluno` = com inscrição em curso; `comprador` = com compra de ingresso. */
+  tipo?: 'aluno' | 'comprador';
+  search?: string;
+  status?: 'ATIVO' | 'INATIVO';
+};
+
+export async function listCustomers(filters: CustomerFilters = {}) {
+  const response = await api.get('/admin/customers', { params: filters });
+  const value = unwrapData<Customer[] | { data?: Customer[] }>(response.data);
+  return Array.isArray(value) ? value : value?.data ?? [];
 }
 
 export async function findCustomerByCpf(cpf: string) {

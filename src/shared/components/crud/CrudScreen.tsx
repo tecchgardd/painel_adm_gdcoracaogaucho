@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { ConfirmModal } from '@/shared/components/feedback/ConfirmModal';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { FloatingActionButton, Header, Screen, SearchBar } from '@/shared/components/ui';
+import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { CrudField, CrudRecord } from '@/shared/types';
 
@@ -16,7 +17,7 @@ export function CrudScreen({ title, storageKey, fields, initialData = [] }: { ti
   const [editing, setEditing] = useState<Partial<CrudRecord> | null>(null);
   const [deleting, setDeleting] = useState<CrudRecord | null>(null);
   const { numColumns } = useResponsive();
-  const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
+  const gridCell = gridCellStyle(numColumns);
 
   useEffect(() => {
     setRecords([]);
@@ -61,7 +62,7 @@ export function CrudScreen({ title, storageKey, fields, initialData = [] }: { ti
     <Header title={title} right={<FloatingActionButton onPress={openNew} />} />
     <SearchBar value={query} onChangeText={setQuery} placeholder={`Pesquisar ${title.toLowerCase()}`} />
     {filtered.length ? <View style={styles.grid}>
-      {filtered.map((record) => <View key={record.id} style={{ width: itemWidth }}>
+      {filtered.map((record) => <View key={record.id} style={gridCell}>
         <DataCard record={record} onEdit={() => setEditing(record)} onDelete={() => setDeleting(record)} />
       </View>)}
     </View> : <EmptyState />}
@@ -71,5 +72,5 @@ export function CrudScreen({ title, storageKey, fields, initialData = [] }: { ti
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 }
+  grid: gridContainer
 });

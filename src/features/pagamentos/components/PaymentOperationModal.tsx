@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { AppModal, Button, ChoiceGroup, FormField } from '@/shared/components/ui';
-import { editarPagamento, EditPaymentPayload, ExternalPaymentMethod, ManualPaymentPayload, substituirPorPagamentoExterno } from '@/services/pagamentos.service';
+import { editarPagamento, EditPaymentPayload, ExternalPaymentMethod, ManualPaymentPayload, substituirPorPagamentoExterno } from '@/features/pagamentos/services/pagamentos.service';
 import { colors, theme } from '@/theme/theme';
 import type { Pagamento } from '@/shared/types/entities';
 import { formatCurrencyBRL, parseCurrencyToCents } from '@/shared/utils/format';
@@ -86,7 +86,7 @@ export function PaymentOperationModal({
     <View style={styles.summary}><Text style={styles.summaryLabel}>PAGAMENTO</Text><Text style={styles.summaryValue}>#{payment?.id} · {payment?.nomeCustomer ?? payment?.customer?.nome ?? '-'}</Text><Text style={styles.summaryMeta}>{payment?.evento?.nome ?? '-'} · {formatCurrencyBRL(Number(payment?.amount ?? 0) / 100)}</Text></View>
     <Text style={styles.label}>Forma de pagamento</Text>
     <ChoiceGroup options={methods.map((item) => ({ value: item.value, label: item.label }))} value={method} onChange={(value) => setMethod(value as ExternalPaymentMethod)} />
-    {mode === 'edit' ? <><Text style={styles.label}>Status</Text><ChoiceGroup options={statuses.map((item) => ({ value: item, label: item.replaceAll('_', ' ') }))} value={status} onChange={(value) => setStatus(value as EditPaymentPayload['status'])} /></> : null}
+    {mode === 'edit' ? <><Text style={styles.label}>Status</Text><ChoiceGroup options={statuses.map((item) => ({ value: item, label: item.charAt(0) + item.slice(1).toLowerCase().replaceAll('_', ' ') }))} value={status} onChange={(value) => setStatus(value as EditPaymentPayload['status'])} /></> : null}
     <View style={styles.twoColumns}><View style={styles.column}><FormField label="Valor pago" value={value} onChangeText={setValue} keyboardType="decimal-pad" /></View><View style={styles.column}><FormField label="Data e hora do pagamento" value={paidAt} onChangeText={setPaidAt} placeholder="AAAA-MM-DDTHH:mm" /></View></View>
     <FormField label="Referência / Comprovante" value={reference} onChangeText={setReference} placeholder="Código, PIX ou comprovante" />
     <FormField label="Observação" value={observation} onChangeText={setObservation} multiline />
@@ -107,21 +107,21 @@ export function PaymentOperationModal({
 
 const styles = StyleSheet.create({
   warning: { borderWidth: 1, borderColor: colors.info, backgroundColor: colors.infoBg, borderRadius: theme.radius.md, padding: 14, marginBottom: 14 },
-  warningText: { color: colors.infoText, fontSize: 13, lineHeight: 20, textAlign: 'center' },
-  summary: { borderRadius: theme.radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14 },
-  summaryLabel: { color: colors.red, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
-  summaryValue: { color: colors.text, fontSize: 15, fontWeight: '900', marginTop: 5 },
+  warningText: { color: colors.infoText, fontSize: 13, lineHeight: 20, fontFamily: theme.font.regular },
+  summary: { borderRadius: theme.radius.md, backgroundColor: colors.cardAlt, borderWidth: 1, borderColor: colors.borderSoft, padding: 14, marginBottom: 6 },
+  summaryLabel: { color: colors.subtle, fontSize: 11, fontFamily: theme.font.medium, letterSpacing: 0.6 },
+  summaryValue: { color: colors.text, fontSize: 15, fontFamily: theme.font.semiBold, marginTop: 4 },
   summaryMeta: { color: colors.muted, fontSize: 12, marginTop: 4 },
-  label: { color: colors.text, fontSize: 12, fontWeight: '900', marginTop: 12, marginBottom: 8 },
+  label: { color: colors.muted, fontSize: 12, fontFamily: theme.font.medium, marginTop: 14, marginBottom: 8 },
   twoColumns: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   column: { flex: 1, minWidth: 210 },
   confirm: { minHeight: 54, borderRadius: theme.radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, marginTop: 16, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   confirmActive: { borderColor: colors.green, backgroundColor: colors.green + '22' },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { backgroundColor: colors.green, borderColor: colors.green },
-  check: { color: '#fff', fontWeight: '900' },
-  confirmText: { color: colors.text, fontWeight: '700', flex: 1 },
-  error: { color: colors.red, fontWeight: '800', marginTop: 12 },
+  check: { color: '#fff', fontFamily: theme.font.bold },
+  confirmText: { color: colors.text, fontFamily: theme.font.medium, flex: 1 },
+  error: { color: colors.red, fontFamily: theme.font.semiBold, marginTop: 12 },
   footer: { flexDirection: 'row', gap: 10 },
   footerButton: { flex: 1, minWidth: 130 }
 });

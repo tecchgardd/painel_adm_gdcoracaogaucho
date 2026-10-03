@@ -1,6 +1,5 @@
 import type { Curso } from '@/shared/types';
-
-import { createEvento, deleteEvento, getEvento, listEventos, updateEvento } from './eventos.service';
+import { createEvento, deleteEvento, getEvento, listEventos, updateEvento } from '@/features/eventos/services/eventos.service';
 
 function normalizeCurso(evento: any): Curso {
   return {

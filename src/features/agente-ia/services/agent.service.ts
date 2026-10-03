@@ -11,7 +11,7 @@ import type {
   AgentRecordStatus,
   AgentRule,
   AgentRuleCategory
-} from '@/shared/types/agent';
+} from '@/features/agente-ia/types';
 import { api, unwrapData } from '@/core/api/client';
 
 const LIST_LIMIT = 100;

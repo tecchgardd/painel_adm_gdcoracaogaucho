@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FormField, Header, Screen, StatusBadge } from '@/shared/components/ui';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FilterBar, FormField, Header, InfoList, InfoRow, Pagination, Screen, StatusBadge } from '@/shared/components/ui';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
-import { PaymentOperationModal } from '@/components/payments/PaymentOperationModal';
+import { PaymentOperationModal } from '@/features/pagamentos/components/PaymentOperationModal';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
-import { cancelarPagamento, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/services/pagamentos.service';
+import { cancelarPagamento, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/features/pagamentos/services/pagamentos.service';
 import { useAuthStore } from '@/stores/auth.store';
-import { colors } from '@/theme/theme';
+import { colors, theme } from '@/theme/theme';
 import type { Pagamento } from '@/shared/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyToCents } from '@/shared/utils/format';
 
@@ -29,12 +29,29 @@ const safeError = (error: unknown, fallback: string) => {
   return value.message && !/prisma|stripe.*(key|secret)|stack|sql/i.test(value.message) ? value.message : fallback;
 };
 
+const paymentStatusLabels: Record<string, string> = {
+  CONTESTACAO_PERDIDA: 'Contestação perdida',
+  PARCIALMENTE_ESTORNADO: 'Estorno parcial'
+};
+
 export default function Pagamentos() {
   const params = useLocalSearchParams<{ pagamentoId?: string; acao?: string }>();
   const role = useAuthStore((state) => state.role);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<PagamentoStatus | undefined>();
+  const [searchInput, setSearchInput] = useState('');
   const [customerId, setCustomerId] = useState('');
+
+  // Busca com atraso: consulta a API quando a pessoa para de digitar.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchInput.trim();
+      if (next === customerId) return;
+      setCustomerId(next);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [customerId, searchInput]);
   const [selected, setSelected] = useState<Pagamento | null>(null);
   const [operation, setOperation] = useState<'cancel' | 'refund' | null>(null);
   const [formPayment, setFormPayment] = useState<Pagamento | null>(null);
@@ -94,16 +111,18 @@ export default function Pagamentos() {
   }, [params.acao, params.pagamentoId]);
 
   return <Screen variant="admin">
-    <Header title="Pagamentos" />
-    <Text style={styles.meta}>Cobranças de cursos, ingressos, lotes, painel e WhatsApp em um só lugar.</Text>
-    <View style={styles.filters}>
-      <ChoiceGroup
-        options={[{ value: '', label: 'TODOS' }, ...statuses.map((item) => ({ value: item, label: item.replaceAll('_', ' ') }))]}
-        value={status ?? ''}
-        onChange={(value) => { setStatus((value || undefined) as PagamentoStatus | undefined); setPage(1); }}
-      />
-    </View>
-    <FormField label="Pesquisar cobranças e movimentações" value={customerId} onChangeText={(v) => { setCustomerId(v); setPage(1); }} placeholder="CPF, nome, venda, curso, evento ou baile" />
+    <Header title="Pagamentos" subtitle="Cobranças de cursos, ingressos, lotes, painel e WhatsApp em um só lugar." />
+    <FilterBar
+      search={{ value: searchInput, onChange: setSearchInput, placeholder: 'Buscar por CPF, nome, venda, curso ou evento' }}
+      filters={[{
+        key: 'status',
+        label: 'Status',
+        value: status ?? 'TODOS',
+        allValue: 'TODOS',
+        options: [{ value: 'TODOS', label: 'Todos' }, ...statuses.map((item) => ({ value: item, label: paymentStatusLabels[item] ?? item.charAt(0) + item.slice(1).toLowerCase().replaceAll('_', ' ') }))],
+        onChange: (value) => { setStatus(value === 'TODOS' ? undefined : value as PagamentoStatus); setPage(1); }
+      }]}
+    />
     {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
     {loading ? <LoadingState label="Carregando pagamentos..." /> : null}
     {error ? <ErrorState message={error} onRetry={refetch} /> : null}
@@ -115,18 +134,19 @@ export default function Pagamentos() {
       if (role !== 'CHECKIN' && (payment.allowedActions?.manualSettlement || payment.allowedActions?.replaceWithExternal || !noCancel.has(String(payment.status)))) actions.unshift({ label: payment.provider === 'STRIPE' ? 'Substituir por pagamento externo' : 'Dar baixa manual', icon: 'cash-check' as const, onPress: () => openForm(payment, 'external') });
       if (role === 'ADMIN' && canRefund.has(String(payment.status))) actions.push({ label: 'Reembolsar', icon: 'cash-refund' as const, onPress: async () => { await openDetails(payment); setOperation('refund'); } });
       return <View key={payment.id} style={styles.row}>
-        <TouchableOpacity style={styles.card} onPress={() => openDetails(payment)}>
+        <TouchableOpacity style={styles.cardBody} onPress={() => openDetails(payment)} accessibilityRole="button">
           <View style={styles.cardHeader}><Text style={styles.title}>{person?.nome ?? person?.name ?? `Pagamento ${payment.id}`}</Text><StatusBadge status={String(payment.status ?? 'PENDENTE')} /></View>
           <Text style={styles.meta}>Venda {String(payment.pedido?.code ?? payment.pedido?.id ?? '-')} · CPF: {maskCpf(person?.cpf ?? payment.cpfCustomer)}</Text>
           <Text style={styles.meta}>{(payment.evento ?? payment.curso)?.nome ?? 'Evento/curso não informado'} · Pedido {String(payment.pedido?.id ?? '-')}</Text>
           <Text style={styles.value}>{formatCurrencyBRL(amount(payment) / 100)} <Text style={styles.meta}>· reembolsado {formatCurrencyBRL(refunded(payment) / 100)}</Text></Text>
           <Text style={styles.meta}>{payment.origem ?? '-'} · criado {formatDateTime(payment.createdAt)} · pago {formatDateTime(payment.paidAt)} · reembolso {formatDateTime(payment.refundedAt)}</Text>
           {payment.disputeStatus ? <Text style={styles.dispute}>Contestação: {payment.disputeStatus}</Text> : null}
-        </TouchableOpacity><ActionMenu actions={actions} />
+        </TouchableOpacity>
+        <ActionMenu variant="ghost" actions={actions} />
       </View>;
     })}</View>
     {!loading && !error && !payments.length ? <EmptyState title="Nenhum pagamento encontrado." /> : null}
-    <View style={styles.pagination}><Button title="Anterior" tone="dark" onPress={page > 1 ? () => setPage(page - 1) : undefined} /><Text style={styles.page}>Página {page} de {totalPages}</Text><Button title="Próxima" tone="dark" onPress={page < totalPages ? () => setPage(page + 1) : undefined} /></View>
+    {!loading && !error ? <Pagination page={page} totalPages={totalPages} total={data?.total} onChange={setPage} /> : null}
 
     <AppModal visible={!!selected && !operation} onClose={() => setSelected(null)} position="center" title="Detalhes do pagamento">
       {selected ? <Details payment={selected} balance={balance} /> : null}
@@ -142,7 +162,7 @@ export default function Pagamentos() {
       await refetch();
       setNotice('Pagamento e venda relacionada foram atualizados.');
     }} />
-    <AppModal visible={operation === 'cancel'} onClose={() => !busy && setOperation(null)} position="center" title="Confirmar cancelamento">
+    <AppModal visible={operation === 'cancel'} onClose={() => !busy && setOperation(null)} position="center" size="sm" title="Confirmar cancelamento">
       <Text style={styles.warning}>Esta ação pode cancelar a Checkout Session ou o PaymentIntent. Use reembolso se o pagamento já foi confirmado.</Text>
       <FormField label="Motivo administrativo (mínimo 3 caracteres)" value={reason} onChangeText={setReason} multiline />
       <Button title={busy ? 'Cancelando...' : 'Confirmar cancelamento'} tone="red" onPress={!busy && reason.trim().length >= 3 ? submitCancel : undefined} />
@@ -161,7 +181,7 @@ export default function Pagamentos() {
       <Text style={styles.label}>Motivo Stripe</Text>
       <View style={styles.filters}>
         <ChoiceGroup
-          options={(['requested_by_customer', 'duplicate', 'fraudulent'] as const).map((v) => ({ value: v, label: v }))}
+          options={(['requested_by_customer', 'duplicate', 'fraudulent'] as const).map((v) => ({ value: v, label: { requested_by_customer: 'Pedido do cliente', duplicate: 'Cobrança duplicada', fraudulent: 'Fraude' }[v] }))}
           value={stripeReason}
           onChange={(value) => setStripeReason(value as StripeRefundReason)}
         />
@@ -172,40 +192,43 @@ export default function Pagamentos() {
   </Screen>;
 }
 
-function Detail({ label, value }: { label: string; value?: unknown }) { return <View style={styles.detail}><Text style={styles.label}>{label}</Text><Text selectable style={styles.detailValue}>{value == null || value === '' ? '-' : String(value)}</Text></View>; }
+function Detail({ label, value }: { label: string; value?: unknown }) { return <InfoRow label={label} value={value == null || value === '' || value === '-' ? undefined : String(value)} />; }
 function Details({ payment, balance }: { payment: Pagamento; balance: number }) {
   const person = customer(payment); const disputed = ['CONTESTADO', 'CONTESTACAO_PERDIDA'].includes(String(payment.status));
   return <View style={styles.details}>
     {disputed ? <View style={[styles.alert, payment.status === 'CONTESTACAO_PERDIDA' && styles.alertLost]}><Text style={styles.alertTitle}>{payment.status === 'CONTESTACAO_PERDIDA' ? 'Contestação perdida' : 'Situação financeira sob análise'}</Text><Text style={styles.meta}>O ingresso não é excluído automaticamente. Status anterior: {payment.statusBeforeDispute ?? '-'}</Text></View> : null}
-    <Detail label="Pedido" value={payment.pedido?.code ?? payment.pedido?.id} /><Detail label="Cliente" value={`${person?.nome ?? person?.name ?? payment.nomeCustomer ?? '-'} · ${maskCpf(person?.cpf ?? payment.cpfCustomer)}`} /><Detail label="Evento/curso" value={(payment.evento ?? payment.curso)?.nome} />
-    <Detail label="Valor original" value={formatCurrencyBRL(amount(payment) / 100)} /><Detail label="Valor reembolsado" value={formatCurrencyBRL(refunded(payment) / 100)} /><Detail label="Saldo reembolsável" value={formatCurrencyBRL(balance / 100)} />
-    <Detail label="Moeda" value={payment.moeda ?? 'BRL'} /><Detail label="Status" value={payment.status} /><Detail label="Origem" value={payment.origem} />
-    <Detail label="Checkout criado em" value={formatDateTime(payment.checkoutCreatedAt ?? payment.createdAt)} /><Detail label="Expiração" value={formatDateTime(payment.expiresAt)} /><Detail label="Confirmado em" value={formatDateTime(payment.paidAt)} /><Detail label="Reembolso em" value={formatDateTime(payment.refundedAt)} />
-    <Detail label="Checkout Session" value={payment.stripeCheckoutSessionId} /><Detail label="PaymentIntent" value={payment.stripePaymentIntentId} /><Detail label="Charge" value={payment.stripeChargeId} /><Detail label="Refund" value={payment.stripeRefundId} /><Detail label="Dispute" value={payment.stripeDisputeId} />
-    <Detail label="Status da contestação" value={payment.disputeStatus} /><Detail label="Valor contestado" value={payment.disputedAmount == null ? '-' : formatCurrencyBRL(payment.disputedAmount / 100)} />
+    <Text style={styles.groupTitle}>Venda</Text>
+    <InfoList><Detail label="Pedido" value={payment.pedido?.code ?? payment.pedido?.id} /><Detail label="Cliente" value={`${person?.nome ?? person?.name ?? payment.nomeCustomer ?? '-'} · ${maskCpf(person?.cpf ?? payment.cpfCustomer)}`} /><Detail label="Evento/curso" value={(payment.evento ?? payment.curso)?.nome} /></InfoList>
+    <Text style={styles.groupTitle}>Valores</Text>
+    <InfoList><Detail label="Valor original" value={formatCurrencyBRL(amount(payment) / 100)} /><Detail label="Valor reembolsado" value={formatCurrencyBRL(refunded(payment) / 100)} /><Detail label="Saldo reembolsável" value={formatCurrencyBRL(balance / 100)} /></InfoList>
+    <Text style={styles.groupTitle}>Situação</Text>
+    <InfoList><Detail label="Moeda" value={payment.moeda ?? 'BRL'} /><Detail label="Status" value={payment.status} /><Detail label="Origem" value={payment.origem} /></InfoList>
+    <Text style={styles.groupTitle}>Datas</Text>
+    <InfoList><Detail label="Checkout criado em" value={formatDateTime(payment.checkoutCreatedAt ?? payment.createdAt)} /><Detail label="Expiração" value={formatDateTime(payment.expiresAt)} /><Detail label="Confirmado em" value={formatDateTime(payment.paidAt)} /><Detail label="Reembolso em" value={formatDateTime(payment.refundedAt)} /></InfoList>
+    <Text style={styles.groupTitle}>Stripe</Text>
+    <InfoList><Detail label="Checkout Session" value={payment.stripeCheckoutSessionId} /><Detail label="PaymentIntent" value={payment.stripePaymentIntentId} /><Detail label="Charge" value={payment.stripeChargeId} /><Detail label="Refund" value={payment.stripeRefundId} /><Detail label="Dispute" value={payment.stripeDisputeId} /></InfoList>
+    <Text style={styles.groupTitle}>Contestação</Text>
+    <InfoList><Detail label="Status da contestação" value={payment.disputeStatus} /><Detail label="Valor contestado" value={payment.disputedAmount == null ? '-' : formatCurrencyBRL(payment.disputedAmount / 100)} /></InfoList>
   </View>;
 }
 
 const styles = StyleSheet.create({
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginVertical: 10 },
   list: { gap: 10, marginTop: 12 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  card: { flex: 1, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 14, padding: 13 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.dark, borderRadius: theme.radius.lg, padding: 14, paddingRight: 8 },
+  cardBody: { flex: 1, minWidth: 0, gap: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  title: { color: colors.text, fontSize: 15, fontWeight: '900', flex: 1 },
+  title: { color: colors.text, fontSize: 15, fontFamily: theme.font.semiBold, flex: 1 },
   meta: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  value: { color: colors.text, fontWeight: '900', marginTop: 5 },
-  dispute: { color: '#FF8A50', fontWeight: '900', marginTop: 5 },
-  notice: { color: colors.yellow, fontWeight: '800', marginTop: 10 },
-  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginVertical: 18 },
-  page: { color: colors.muted, fontWeight: '800' },
+  value: { color: colors.text, fontSize: 16, fontFamily: theme.font.semiBold, marginTop: 6 },
+  dispute: { color: '#FF8A50', fontFamily: theme.font.bold, marginTop: 5 },
+  notice: { color: colors.yellow, fontFamily: theme.font.semiBold, marginTop: 10 },
   footer: { gap: 10, marginTop: 18 },
   warning: { color: colors.yellow, lineHeight: 20, marginBottom: 6 },
-  label: { color: colors.muted, fontSize: 11, fontWeight: '800' },
+  label: { color: colors.muted, fontSize: 11, fontFamily: theme.font.semiBold },
   details: { gap: 8 },
-  detail: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 7 },
-  detailValue: { color: colors.text, fontWeight: '700', marginTop: 3 },
+  groupTitle: { color: colors.subtle, fontSize: 11, fontFamily: theme.font.medium, letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 10 },
   alert: { padding: 12, borderRadius: 12, backgroundColor: '#3A2512', borderWidth: 1, borderColor: '#D84B20' },
   alertLost: { backgroundColor: '#351010', borderColor: '#8B1010' },
-  alertTitle: { color: colors.text, fontWeight: '900', marginBottom: 4 }
+  alertTitle: { color: colors.text, fontFamily: theme.font.bold, marginBottom: 4 }
 });

@@ -2,17 +2,17 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
-import { createAgentRule, deleteAgentRule, listAgentRules, updateAgentRule, updateAgentRuleStatus } from '@/services/agent.service';
+import { createAgentRule, deleteAgentRule, listAgentRules, updateAgentRule, updateAgentRuleStatus } from '@/features/agente-ia/services/agent.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 import { agentRuleSchema } from '@/validation/schemas';
 
 const fields: ApiField[] = [
-  { key: 'name', label: 'Nome', placeholder: 'Nome da regra' },
+  { key: 'name', label: 'Nome', placeholder: 'Nome da regra', required: true },
   { key: 'description', label: 'Descrição', placeholder: 'Descrição opcional', multiline: true },
-  { key: 'category', label: 'Categoria', options: ['GERAL', 'VENDAS', 'INSCRICAO', 'ATENDIMENTO', 'PAGAMENTO'] },
+  { key: 'category', label: 'Categoria', options: ['GERAL', 'VENDAS', 'INSCRICAO', 'ATENDIMENTO', 'PAGAMENTO'], optionLabels: { GERAL: 'Geral', VENDAS: 'Vendas', INSCRICAO: 'Inscrição', ATENDIMENTO: 'Atendimento', PAGAMENTO: 'Pagamento' } },
   { key: 'content', label: 'Conteúdo aplicado pela IA', placeholder: 'Texto da regra', multiline: true },
-  { key: 'priority', label: 'Prioridade (menor numero = mais prioritario)', placeholder: '5', keyboardType: 'numeric' },
+  { key: 'priority', label: 'Prioridade (menor número = mais prioritária)', placeholder: '5', keyboardType: 'numeric' },
   { key: 'status', label: 'Status', options: ['ATIVO', 'INATIVO'] }
 ];
 
@@ -56,6 +56,6 @@ export function RegrasTab() {
 
 const styles = StyleSheet.create({
   help: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: theme.radius.lg, padding: 14, marginBottom: 16 },
-  helpTitle: { color: colors.text, fontWeight: '900', fontSize: 14, marginBottom: 6 },
+  helpTitle: { color: colors.text, fontFamily: theme.font.bold, fontSize: 14, marginBottom: 6 },
   helpText: { color: colors.muted, lineHeight: 19, fontSize: 12 }
 });

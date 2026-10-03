@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "br.com.coracaogaucho.admin",
-        "buildNumber": "2",
+      "buildNumber": "2",
       "config": {
         "usesNonExemptEncryption": false
       }
@@ -81,7 +81,8 @@
         {
           "faceIDPermission": "Permita que o Coração Gaúcho use a biometria para entrar."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "owner": "techgards-team"
   }

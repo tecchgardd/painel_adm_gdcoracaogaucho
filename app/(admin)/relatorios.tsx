@@ -2,16 +2,16 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { MetricCard } from '@/components/dashboard/MetricCard';
-import { ReportSection } from '@/components/dashboard/ReportSection';
+import { MetricCard } from '@/features/dashboard/components/MetricCard';
+import { ReportSection } from '@/features/dashboard/components/ReportSection';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { Screen } from '@/shared/components/ui';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
-import { exportReport, getReports } from '@/services/relatorios.service';
-import { colors } from '@/theme/theme';
+import { exportReport, getReports } from '@/features/relatorios/services/relatorios.service';
+import { colors, theme } from '@/theme/theme';
 
 const periods = ['Hoje', 'Semana', 'Mês', 'Ano', 'Personalizado'] as const;
 type Period = typeof periods[number];
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '900',
+    fontFamily: theme.font.bold,
     letterSpacing: 0,
     ...webNoSelect
   },
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   exportText: {
     color: colors.muted,
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: theme.font.bold,
     ...webNoSelect
   },
   periods: {
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   periodText: {
     color: colors.muted,
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: theme.font.bold,
     ...webNoSelect
   },
   periodTextActive: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   categoryError: {
     color: colors.red,
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: theme.font.semiBold,
     lineHeight: 18
   }
 });

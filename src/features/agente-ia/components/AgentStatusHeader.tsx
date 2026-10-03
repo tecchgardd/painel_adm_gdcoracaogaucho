@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
-import { getAgentConfig } from '@/services/agent.service';
+import { getAgentConfig } from '@/features/agente-ia/services/agent.service';
 import { colors, theme } from '@/theme/theme';
 
 export function AgentStatusHeader() {
@@ -28,5 +28,5 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: theme.radius.md, borderWidth: 1 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  pillText: { fontSize: 12, fontWeight: '900', letterSpacing: 0.5 }
+  pillText: { fontSize: 12, fontFamily: theme.font.bold, letterSpacing: 0.5 }
 });

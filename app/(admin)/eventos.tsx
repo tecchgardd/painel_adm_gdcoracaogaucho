@@ -1,15 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { EventFormModal } from '@/components/events/EventFormModal';
-import { ActionMenu, AppModal, Button, Card, ChoiceGroup, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { EventFormModal } from '@/features/eventos/components/EventFormModal';
+import { ActionMenu, AppModal, Button, Card, FloatingActionButton, Header, ListCard, Screen, FilterBar, StatusBadge } from '@/shared/components/ui';
+import { EVENTO_SITUACOES, matchSituacao } from '@/shared/utils/situacao';
+import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
-import { listEventos } from '@/services/eventos.service';
-import { colors } from '@/theme/theme';
+import { listEventos } from '@/features/eventos/services/eventos.service';
+import { colors, theme } from '@/theme/theme';
 import { formatCurrencyBRL, formatDateTime } from '@/shared/utils/format';
 import type { EventType } from '@/shared/types/entities';
 
@@ -25,8 +27,9 @@ export default function Eventos() {
   const [editing, setEditing] = useState<any>(null);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
+  const [situacao, setSituacao] = useState('TODAS');
   const { numColumns } = useResponsive();
-  const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
+  const gridCell = gridCellStyle(numColumns);
   const activeTab = tabs.find((tab) => tab.type === activeType) ?? tabs[0];
   const queryEventos = useCallback(() => listEventos({ tipo: activeType }) as any, [activeType]);
   const { data: apiEventos, loading, error, refetch } = useApiQuery(queryEventos, { fallbackData: [] });
@@ -39,6 +42,7 @@ export default function Eventos() {
   const filtered = eventos.filter((evento: any) =>
     `${evento.nome} ${evento.data} ${evento.local} ${evento.cidade ?? ''} ${evento.status}`.toLowerCase().includes(query.toLowerCase())
   );
+  const visiveis = filtered.filter((item: any) => matchSituacao(item.status, situacao));
 
   function changeType(type: EventType) {
     setActiveType(type);
@@ -55,33 +59,34 @@ export default function Eventos() {
   return (
     <Screen variant="admin">
       <Header title="Eventos" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel={`Novo ${activeTab.label.toLowerCase()}`} />} />
-      <View style={styles.tabs}>
-        <ChoiceGroup options={tabs.map((tab) => ({ value: tab.type, label: tab.label }))} value={activeType} onChange={(value) => changeType(value as EventType)} />
-      </View>
-      <SearchBar value={query} onChangeText={setQuery} placeholder={`Pesquisar ${activeTab.plural}`} />
+      <FilterBar
+        search={{ value: query, onChange: setQuery, placeholder: `Buscar ${activeTab.plural} por nome, local ou data` }}
+        filters={[
+          { key: 'tipo', label: 'Tipo', value: activeType, options: tabs.map((tab) => ({ value: tab.type, label: tab.label })), onChange: (value) => changeType(value as EventType) },
+          { key: 'situacao', label: 'Situação', value: situacao, allValue: 'TODAS', options: EVENTO_SITUACOES, onChange: setSituacao }
+        ]}
+      />
       {loading ? <LoadingState label={`Carregando ${activeTab.plural}...`} /> : null}
       {error ? <ErrorState message={error} onRetry={refetch} /> : null}
 
       {!error && <View style={styles.grid}>
-        {filtered.map((evento: any) => (
-          <View key={evento.id} style={[styles.row, { width: itemWidth }]}>
-            <View style={styles.rowCard}>
-              <ListCard
+        {visiveis.map((evento: any) => (
+          <View key={evento.id} style={gridCell}>
+            <ListCard
                 title={evento.nome ?? `${activeTab.label} sem nome`}
                 subtitle={`${formatDateTime(evento.data ?? evento.horario)}\n${[evento.local, evento.cidade].filter(Boolean).join(' - ')}`}
                 status={evento.status}
                 onPress={() => setSelected(evento)}
-              />
-            </View>
-            <ActionMenu actions={[
+            actions={<ActionMenu variant="ghost" actions={[
               { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => setSelected(evento) },
               { label: `Editar ${activeTab.label.toLowerCase()}`, icon: 'pencil-outline', onPress: () => setEditing(evento) },
               { label: activeType === 'CURSO' ? 'Encerrar curso' : 'Cancelar evento', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...evento, status: activeType === 'CURSO' ? 'ENCERRADO' : 'CANCELADO' }) }
-            ]} />
+            ]} />}
+          />
           </View>
         ))}
       </View>}
-      {!loading && !error && !filtered.length ? <EmptyState /> : null}
+      {!loading && !error && !visiveis.length ? <EmptyState /> : null}
 
       <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? activeTab.label}>
         {selected ? <>
@@ -107,14 +112,11 @@ export default function Eventos() {
 }
 
 const styles = StyleSheet.create({
-  tabs: { marginBottom: 14 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  rowCard: { flex: 1 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
-  sub: { color: colors.text, marginTop: 8, lineHeight: 20 },
-  stats: { flexDirection: 'row', gap: 8, marginVertical: 18 },
-  mini: { flex: 1, padding: 12 },
-  miniLabel: { color: colors.muted, fontSize: 11 },
-  miniValue: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 6 }
+  grid: gridContainer,
+  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 6 },
+  sub: { color: colors.muted, fontSize: 14, lineHeight: 21, fontFamily: theme.font.regular, marginTop: 6 },
+  stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginVertical: 20 },
+  mini: { flexGrow: 1, flexBasis: 120, padding: 14, backgroundColor: colors.cardAlt, borderColor: colors.borderSoft },
+  miniLabel: { color: colors.muted, fontSize: 12, fontFamily: theme.font.regular },
+  miniValue: { color: colors.text, fontSize: 18, fontFamily: theme.font.semiBold, marginTop: 4 }
 });

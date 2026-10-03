@@ -4,7 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Header, Screen } from '@/shared/components/ui';
 import { NavItem } from '@/shared/components/navigation/navigation.config';
-import { colors } from '@/theme/theme';
+import { colors, theme } from '@/theme/theme';
 
 export function OptionGroupScreen({ title, items }: { title: string; items: NavItem[] }) {
   return <Screen variant="admin">
@@ -27,5 +27,5 @@ export function OptionGroupScreen({ title, items }: { title: string; items: NavI
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: { minHeight: 104, width: '100%', maxWidth: 260, flexGrow: 1, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, padding: 16, justifyContent: 'space-between' },
-  title: { color: colors.text, fontSize: 16, fontWeight: '900' }
+  title: { color: colors.text, fontSize: 16, fontFamily: theme.font.bold }
 });

@@ -106,6 +106,8 @@ export const padrinhoSchema = z.object({
 });
 
 export const alunoSchema = z.object({
+  /** Pessoa já cadastrada (Pessoas); sem ele, a API cria/associa pelo CPF. */
+  customerId: optionalString,
   nome: requiredString,
   cpf: cpfString,
   telefone: requiredString,

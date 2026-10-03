@@ -4,7 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Header, Screen } from '@/shared/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
-import { colors } from '@/theme/theme';
+import { colors, theme } from '@/theme/theme';
 
 type ManagementItem = {
   label: string;
@@ -17,7 +17,6 @@ type ManagementItem = {
 const quickActions: ManagementItem[] = [
   { label: 'Nova venda', subtitle: 'Evento, baile ou curso', icon: 'cash-register', path: '/vendas' },
   { label: 'Nova inscrição', subtitle: 'Venda de curso para um aluno', icon: 'account-school-outline', path: '/vendas?tipo=CURSO' },
-  { label: 'Gerar lote', subtitle: 'Aluno + evento ou baile', icon: 'ticket-confirmation-outline', path: '/vendas?tipo=LOTE' },
   { label: 'Dar baixa', subtitle: 'Pagamentos pendentes', icon: 'cash-check', path: '/pagamentos' }
 ];
 
@@ -25,14 +24,17 @@ const sections: { title: string; items: ManagementItem[] }[] = [
   {
     title: 'COMERCIAL',
     items: [
-      { label: 'Vendas', subtitle: 'Eventos, bailes e cursos', icon: 'cart-outline', path: '/vendas' },
+      { label: 'Vendas', subtitle: 'Ingressos e inscrições', icon: 'cart-outline', path: '/vendas' },
+      { label: 'Ingressos', subtitle: 'Portadores, códigos e check-in', icon: 'ticket-outline', path: '/ingressos' },
+      { label: 'Inscrições', subtitle: 'Alunos, turmas e pares', icon: 'school-outline', path: '/alunos' },
       { label: 'Pagamentos', subtitle: 'Cobranças e movimentações', icon: 'cash-multiple', path: '/pagamentos' },
+      { label: 'Cortesias', subtitle: 'Gratuidades com motivo', icon: 'ticket-percent-outline', path: '/cortesias' }
     ]
   },
   {
     title: 'CADASTROS',
     items: [
-      { label: 'Alunos', subtitle: 'Pessoas e dados cadastrais', icon: 'account-group-outline', path: '/alunos' },
+      { label: 'Pessoas', subtitle: 'Clientes e alunos, com histórico', icon: 'account-group-outline', path: '/clientes' },
       { label: 'Eventos e bailes', subtitle: 'Agenda e capacidade', icon: 'calendar-star', path: '/eventos' },
       { label: 'Cursos e turmas', subtitle: 'Cursos e inscrições', icon: 'school-outline', path: '/cursos' },
       { label: 'Empresas', subtitle: 'Parceiros e apoiadores', icon: 'office-building-outline', path: '/empresas' },
@@ -45,8 +47,9 @@ const sections: { title: string; items: ManagementItem[] }[] = [
     items: [
       { label: 'Usuários e permissões', subtitle: 'Acessos administrativos', icon: 'account-key-outline', path: '/colaboradores', adminOnly: true },
       { label: 'Agente IA', subtitle: 'Regras, prompts e conhecimento da IA', icon: 'robot-outline', path: '/agente-ia' },
-      { label: 'Histórico de ações', subtitle: 'Validações e auditoria', icon: 'history', path: '/historico-validacoes' },
-      { label: 'Relatórios', subtitle: 'Indicadores operacionais', icon: 'chart-box-outline', path: '/relatorios' }
+      { label: 'Registro de atividades', subtitle: 'Quem fez o quê e quando', icon: 'clipboard-text-clock-outline', path: '/registros', adminOnly: true },
+      { label: 'Histórico de validações', subtitle: 'Check-ins realizados', icon: 'history', path: '/historico-validacoes' },
+      { label: 'Relatórios', subtitle: 'Indicadores operacionais', icon: 'chart-box-outline', path: '/relatorios', adminOnly: true }
     ]
   }
 ];
@@ -55,8 +58,7 @@ export default function Gestao() {
   const role = useAuthStore((state) => state.role);
   const allowed = (item: ManagementItem) => !item.adminOnly || role === 'ADMIN';
   return <Screen variant="admin">
-    <Header title="Gestão" />
-    <Text style={styles.lead}>Central operacional de vendas, inscrições, lotes e pagamentos.</Text>
+    <Header title="Gestão" subtitle="Central operacional de vendas, inscrições, lotes e pagamentos." />
     <Text style={styles.sectionTitle}>AÇÕES RÁPIDAS</Text>
     <View style={styles.quickGrid}>{quickActions.filter(allowed).map((item) => <ManagementCard key={item.label} item={item} quick />)}</View>
     {sections.map((section) => <View key={section.title} style={styles.section}>
@@ -81,9 +83,8 @@ function ManagementCard({ item, quick = false }: { item: ManagementItem; quick?:
 }
 
 const styles = StyleSheet.create({
-  lead: { color: colors.muted, lineHeight: 20, marginBottom: 18 },
   section: { marginTop: 22 },
-  sectionTitle: { color: colors.muted, fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: 10 },
+  sectionTitle: { color: colors.muted, fontSize: 12, fontFamily: theme.font.bold, letterSpacing: 1, marginBottom: 10 },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   card: { minHeight: 82, width: '100%', maxWidth: 360, flexGrow: 1, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -91,6 +92,6 @@ const styles = StyleSheet.create({
   iconBox: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A1515' },
   quickIcon: { backgroundColor: colors.red },
   cardCopy: { flex: 1, minWidth: 0 },
-  title: { color: colors.text, fontSize: 15, fontWeight: '900' },
+  title: { color: colors.text, fontSize: 15, fontFamily: theme.font.bold },
   subtitle: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 3 }
 });

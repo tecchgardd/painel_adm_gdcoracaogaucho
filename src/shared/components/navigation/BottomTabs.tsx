@@ -9,7 +9,7 @@ import { colors, theme } from '@/theme/theme';
 
 const activeGroups: Record<string, string[]> = {
   '/eventos': ['/eventos', '/bailes', '/cursos'],
-  '/gestao': ['/gestao', '/cadastros', '/vendas', '/colaboradores', '/clientes', '/alunos', '/empresas', '/pedidos', '/pagamentos', '/cortesias', '/ingressos', '/relatorios', '/fotos', '/configuracoes']
+  '/gestao': ['/gestao', '/cadastros', '/vendas', '/colaboradores', '/clientes', '/alunos', '/empresas', '/pagamentos', '/cortesias', '/ingressos', '/relatorios', '/fotos', '/configuracoes']
 };
 
 function isActive(pathname: string, path?: string) {

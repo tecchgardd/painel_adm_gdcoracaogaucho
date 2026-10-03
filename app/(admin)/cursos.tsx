@@ -1,15 +1,17 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { EventFormModal } from '@/components/events/EventFormModal';
-import { ActionMenu, AppModal, Button, FloatingActionButton, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { EventFormModal } from '@/features/eventos/components/EventFormModal';
+import { ActionMenu, AppModal, Button, FloatingActionButton, Header, ListCard, Screen, FilterBar, StatusBadge } from '@/shared/components/ui';
+import { EVENTO_SITUACOES, matchSituacao } from '@/shared/utils/situacao';
+import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
-import { listCursos } from '@/services/cursos.service';
-import { colors } from '@/theme/theme';
+import { listCursos } from '@/features/cursos/services/cursos.service';
+import { colors, theme } from '@/theme/theme';
 import { formatDateTime } from '@/shared/utils/format';
 
 export default function Cursos() {
@@ -17,14 +19,16 @@ export default function Cursos() {
   const [editing, setEditing] = useState<any>(null);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
+  const [situacao, setSituacao] = useState('TODAS');
   const { numColumns } = useResponsive();
-  const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
+  const gridCell = gridCellStyle(numColumns);
   const queryCursos = useCallback(() => listCursos(), []);
   const { data: apiCursos, loading, error, refetch } = useApiQuery(queryCursos, { fallbackData: [] });
   const cursos = apiCursos ?? [];
   const filtered = cursos.filter((curso: any) =>
     `${curso.nome} ${curso.cidade} ${curso.horario} ${curso.professor} ${curso.status}`.toLowerCase().includes(query.toLowerCase())
   );
+  const visiveis = filtered.filter((item: any) => matchSituacao(item.status, situacao));
 
   function onSaved() {
     refetch();
@@ -33,30 +37,31 @@ export default function Cursos() {
   return (
     <Screen>
       <Header title="Cursos" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel="Novo curso" />} />
-      <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar cursos" />
+      <FilterBar
+        search={{ value: query, onChange: setQuery, placeholder: 'Buscar cursos por nome, local ou data' }}
+        filters={[{ key: 'situacao', label: 'Situação', value: situacao, allValue: 'TODAS', options: EVENTO_SITUACOES, onChange: setSituacao }]}
+      />
       {loading ? <LoadingState label="Carregando cursos..." /> : null}
       {error ? <ErrorState message={error} onRetry={refetch} /> : null}
 
       {!error && <View style={styles.grid}>
-        {filtered.map((curso: any) => (
-          <View key={curso.id} style={[styles.row, { width: itemWidth }]}>
-            <View style={styles.rowCard}>
-              <ListCard
+        {visiveis.map((curso: any) => (
+          <View key={curso.id} style={gridCell}>
+            <ListCard
                 title={curso.nome}
                 subtitle={`${curso.cidade || curso.local || 'Sem cidade'} - ${formatDateTime(curso.horario || curso.data)}\n${curso.inscritos ?? 0}/${curso.capacidade ?? 0} inscritos`}
                 status={curso.status}
                 onPress={() => setSelected(curso)}
-              />
-            </View>
-            <ActionMenu actions={[
+            actions={<ActionMenu variant="ghost" actions={[
               { label: 'Ver inscritos', icon: 'account-group-outline', onPress: () => setSelected(curso) },
               { label: 'Editar curso', icon: 'pencil-outline', onPress: () => setEditing(curso) },
               { label: 'Encerrar curso', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...curso, status: 'ENCERRADO' }) }
-            ]} />
+            ]} />}
+          />
           </View>
         ))}
       </View>}
-      {!loading && !error && !filtered.length ? <EmptyState /> : null}
+      {!loading && !error && !visiveis.length ? <EmptyState /> : null}
 
       <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? 'Curso'}>
         {selected ? <>
@@ -76,11 +81,9 @@ export default function Cursos() {
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  rowCard: { flex: 1 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
-  sub: { color: colors.text, marginTop: 8 },
-  section: { color: colors.text, fontSize: 18, fontWeight: '900', marginVertical: 18 },
-  hint: { color: colors.muted, fontWeight: '800', marginTop: 8 }
+  grid: gridContainer,
+  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 6 },
+  sub: { color: colors.muted, fontSize: 14, lineHeight: 21, fontFamily: theme.font.regular, marginTop: 6 },
+  section: { color: colors.text, fontSize: 18, fontFamily: theme.font.bold, marginVertical: 18 },
+  hint: { color: colors.muted, fontFamily: theme.font.semiBold, marginTop: 8 }
 });

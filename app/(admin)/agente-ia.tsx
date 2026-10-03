@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AgentStatusHeader } from '@/components/agent/AgentStatusHeader';
-import { AprendizadosTab } from '@/components/agent/AprendizadosTab';
-import { ConhecimentoTab } from '@/components/agent/ConhecimentoTab';
-import { PromptsTab } from '@/components/agent/PromptsTab';
-import { RegrasTab } from '@/components/agent/RegrasTab';
-import { Header, Screen } from '@/shared/components/ui';
-import { colors } from '@/theme/theme';
+import { AgentStatusHeader } from '@/features/agente-ia/components/AgentStatusHeader';
+import { AprendizadosTab } from '@/features/agente-ia/components/AprendizadosTab';
+import { ConhecimentoTab } from '@/features/agente-ia/components/ConhecimentoTab';
+import { PromptsTab } from '@/features/agente-ia/components/PromptsTab';
+import { RegrasTab } from '@/features/agente-ia/components/RegrasTab';
+import { ChoiceGroup, Header, Screen } from '@/shared/components/ui';
 
 type Tab = 'REGRAS' | 'PROMPTS' | 'CONHECIMENTO' | 'APRENDIZADOS';
 
@@ -22,13 +21,11 @@ export default function AgenteIa() {
   const [tab, setTab] = useState<Tab>('REGRAS');
 
   return <Screen variant="admin">
-    <Header title="Agente IA" />
+    <Header title="Agente IA" subtitle="Regras, prompts e conhecimento que orientam o atendimento automático." />
     <AgentStatusHeader />
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-      {TABS.map((item) => <TouchableOpacity key={item.key} style={[styles.tab, tab === item.key && styles.tabActive]} onPress={() => setTab(item.key)}>
-        <Text style={[styles.tabText, tab === item.key && styles.tabTextActive]}>{item.label}</Text>
-      </TouchableOpacity>)}
-    </ScrollView>
+    <View style={styles.tabs}>
+      <ChoiceGroup options={TABS.map((item) => ({ value: item.key, label: item.label }))} value={tab} onChange={(value) => setTab(value as Tab)} />
+    </View>
     {tab === 'REGRAS' ? <RegrasTab /> : null}
     {tab === 'PROMPTS' ? <PromptsTab /> : null}
     {tab === 'CONHECIMENTO' ? <ConhecimentoTab /> : null}
@@ -37,9 +34,5 @@ export default function AgenteIa() {
 }
 
 const styles = StyleSheet.create({
-  tabs: { gap: 6, paddingBottom: 14 },
-  tab: { minHeight: 38, paddingHorizontal: 13, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, outlineStyle: 'none' as any },
-  tabActive: { backgroundColor: colors.red },
-  tabText: { color: colors.muted, fontSize: 12, fontWeight: '800' },
-  tabTextActive: { color: '#fff' }
+  tabs: { marginTop: 4, marginBottom: 16 }
 });

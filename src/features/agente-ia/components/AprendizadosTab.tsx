@@ -6,9 +6,9 @@ import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
-import { approveAgentLearningSuggestion, listAgentLearningSuggestions, rejectAgentLearningSuggestion } from '@/services/agent.service';
+import { approveAgentLearningSuggestion, listAgentLearningSuggestions, rejectAgentLearningSuggestion } from '@/features/agente-ia/services/agent.service';
 import { colors, theme } from '@/theme/theme';
-import type { AgentLearningStatus, AgentLearningSuggestion } from '@/shared/types/agent';
+import type { AgentLearningStatus, AgentLearningSuggestion } from '@/features/agente-ia/types';
 import { formatDateTime } from '@/shared/utils/format';
 
 export function AprendizadosTab() {
@@ -89,12 +89,12 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   card: { flex: 1, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: theme.radius.lg, padding: 13 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  title: { color: colors.text, fontSize: 15, fontWeight: '900', flex: 1 },
+  title: { color: colors.text, fontSize: 15, fontFamily: theme.font.bold, flex: 1 },
   meta: { color: colors.muted, fontSize: 12, marginTop: 4 },
   detailHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 },
-  detailLabel: { color: colors.muted, fontSize: 12, fontWeight: '800', marginTop: 10 },
-  detailValue: { color: colors.text, fontSize: 15, fontWeight: '700', marginTop: 4, lineHeight: 21 },
+  detailLabel: { color: colors.muted, fontSize: 12, fontFamily: theme.font.semiBold, marginTop: 10 },
+  detailValue: { color: colors.text, fontSize: 15, fontFamily: theme.font.semiBold, marginTop: 4, lineHeight: 21 },
   footer: { flexDirection: 'row', gap: 10, marginTop: 18 },
   footerItem: { flex: 1 },
-  error: { color: colors.red, fontWeight: '800', marginTop: 10 }
+  error: { color: colors.red, fontFamily: theme.font.semiBold, marginTop: 10 }
 });

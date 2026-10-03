@@ -19,7 +19,7 @@ export function ErrorState({ message, onRetry, title = 'Não foi possível carre
 
 const styles = StyleSheet.create({
   box: { borderRadius: theme.radius.lg, borderWidth: 1, borderColor: '#5A2A2A', backgroundColor: '#241414', padding: 14, gap: 4 },
-  title: { color: colors.text, fontWeight: '900', fontSize: 14 },
+  title: { color: colors.text, fontFamily: theme.font.bold, fontSize: 14 },
   message: { color: colors.muted, lineHeight: 20 },
-  retry: { color: colors.red, fontWeight: '900', marginTop: 6 }
+  retry: { color: colors.red, fontFamily: theme.font.bold, marginTop: 6 }
 });

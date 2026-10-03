@@ -5,9 +5,9 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { AppModal, Button, ChoiceGroup, FormField } from '@/shared/components/ui';
-import { createEvento, updateEvento } from '@/services/eventos.service';
-import { resolveImageUrlForPayload, uploadImage } from '@/services/uploads.service';
-import { colors } from '@/theme/theme';
+import { createEvento, updateEvento } from '@/features/eventos/services/eventos.service';
+import { resolveImageUrlForPayload, uploadImage } from '@/shared/services/uploads.service';
+import { colors, theme } from '@/theme/theme';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { eventoSchema } from '@/validation/schemas';
 import type { EventType } from '@/shared/types/entities';
@@ -296,6 +296,7 @@ export function EventFormModal({
       visible={visible}
       onClose={onClose}
       position="center"
+      size="lg"
       title={title}
       footer={<View style={styles.footer}>
         <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={onClose} /></View>
@@ -332,7 +333,7 @@ export function EventFormModal({
       <SectionCard number={1} title="Informações gerais" icon="file-document-outline">
       <FormField label={copy.nameLabel} value={form.nome} onChangeText={(value) => patch('nome', value)} placeholder={copy.namePlaceholder} />
       {fieldErrors.nome ? <Text style={styles.fieldError}>{fieldErrors.nome}</Text> : null}
-      <FormField label="Local" value={form.local} onChangeText={(value) => patch('local', value)} placeholder="CTG ou endereco" />
+      <FormField label="Local" value={form.local} onChangeText={(value) => patch('local', value)} placeholder="CTG ou endereço" />
       {fieldErrors.local ? <Text style={styles.fieldError}>{fieldErrors.local}</Text> : null}
       <FormField label="Cidade" value={form.cidade} onChangeText={(value) => patch('cidade', value)} placeholder="Porto Alegre" />
       </SectionCard>
@@ -434,7 +435,7 @@ export function EventFormModal({
         <FormField label="Professor/instrutor" value={form.professor} onChangeText={(value) => patch('professor', value)} placeholder="Nome do professor" />
         {fieldErrors.professor ? <Text style={styles.fieldError}>{fieldErrors.professor}</Text> : null}
         <DateTimeField label="Data limite de inscrição" value={form.dataLimiteInscricao} onChange={(value) => patch('dataLimiteInscricao', value)} />
-        <FormField label="Informacoes extras" value={form.informacoesExtras} onChangeText={(value) => patch('informacoesExtras', value)} placeholder="Requisitos, nivel, par opcional..." multiline />
+        <FormField label="Informações extras" value={form.informacoesExtras} onChangeText={(value) => patch('informacoesExtras', value)} placeholder="Requisitos, nivel, par opcional..." multiline />
       </> : null}
 
       <FormField label={copy.notesLabel} value={form.observacao} onChangeText={(value) => patch('observacao', value)} placeholder="Informações para o público" multiline />
@@ -446,49 +447,49 @@ const styles = StyleSheet.create({
   heroBanner: { width: '100%', aspectRatio: 2.35, minHeight: 138, maxHeight: 250, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.black, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
   heroEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.cardAlt },
-  heroEmptyText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
+  heroEmptyText: { color: colors.muted, fontSize: 13, fontFamily: theme.font.semiBold },
   heroAction: { position: 'absolute', right: 12, bottom: 12, minHeight: 42, borderRadius: 12, borderWidth: 1, borderColor: '#777', backgroundColor: 'rgba(12,12,16,.82)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroActionText: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  heroActionText: { color: '#fff', fontSize: 13, fontFamily: theme.font.bold },
   eventSummary: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.dark, padding: 16, marginTop: 12 },
   summaryStatus: { alignSelf: 'flex-start', minHeight: 25, borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  summaryStatusText: { fontSize: 11, fontWeight: '900' },
-  summaryTitle: { color: colors.text, fontSize: 20, lineHeight: 26, fontWeight: '900', marginTop: 12 },
+  summaryStatusText: { fontSize: 11, fontFamily: theme.font.bold },
+  summaryTitle: { color: colors.text, fontSize: 20, lineHeight: 26, fontFamily: theme.font.bold, marginTop: 12 },
   summaryMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
   metaItem: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  summaryMetaText: { color: colors.text, fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  summaryMetaText: { color: colors.text, fontSize: 12, fontFamily: theme.font.semiBold, flexShrink: 1 },
   sectionCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.dark, padding: 14, marginTop: 12 },
   sectionHeader: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 10 },
   sectionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
-  sectionHeading: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '900' },
+  sectionHeading: { flex: 1, color: colors.text, fontSize: 16, fontFamily: theme.font.bold },
   sectionDivider: { height: 1, backgroundColor: colors.border, marginTop: 8, marginBottom: 2 },
-  error: { color: colors.red, fontWeight: '800', marginTop: 8 },
-  fieldError: { color: colors.red, fontSize: 12, fontWeight: '700', marginTop: 5 },
+  error: { color: colors.red, fontFamily: theme.font.semiBold, marginTop: 8 },
+  fieldError: { color: colors.red, fontSize: 12, fontFamily: theme.font.semiBold, marginTop: 5 },
   inline: { flexDirection: 'row', gap: 10 },
   stack: { flexDirection: 'column' },
   inlineItem: { flex: 1 },
-  label: { color: colors.text, fontSize: 13, fontWeight: '900', marginTop: 14, marginBottom: 8 },
+  label: { color: colors.text, fontSize: 13, fontFamily: theme.font.bold, marginTop: 14, marginBottom: 8 },
   hint: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   bannerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 8 },
   bannerRowMobile: { alignItems: 'stretch', flexDirection: 'column' },
   bannerCopy: { flex: 1 },
   uploadButton: { minHeight: 40, borderRadius: 12, backgroundColor: colors.red, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
   uploadButtonMobile: { width: '100%', minHeight: 46, justifyContent: 'center' },
-  uploadText: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  uploadText: { color: '#fff', fontSize: 12, fontFamily: theme.font.bold },
   preview: { width: 150, height: 78, borderRadius: 12, marginTop: 12, backgroundColor: colors.card },
   removeBanner: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8 },
-  removeBannerText: { color: colors.red, fontSize: 12, fontWeight: '900' },
+  removeBannerText: { color: colors.red, fontSize: 12, fontFamily: theme.font.bold },
   dateField: { alignSelf: 'flex-start', maxWidth: '100%', minWidth: 0, marginTop: 12, overflow: 'hidden' },
   dateActions: { width: '100%', maxWidth: '100%', minWidth: 0, flexDirection: 'row', gap: 8 },
   dateButton: { flex: 1, minWidth: 0, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   timeButton: { minWidth: 116, minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   timeButtonMobile: { minWidth: 0, width: '100%' },
-  dateButtonText: { flexShrink: 1, color: colors.text, fontSize: 13, fontWeight: '800' },
-  sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 18 },
+  dateButtonText: { flexShrink: 1, color: colors.text, fontSize: 13, fontFamily: theme.font.semiBold },
+  sectionTitle: { color: colors.text, fontSize: 16, fontFamily: theme.font.bold, marginTop: 18 },
   lotCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 12, marginTop: 10 },
   lotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  lotTitle: { color: colors.text, fontWeight: '900' },
+  lotTitle: { color: colors.text, fontFamily: theme.font.bold },
   addLot: { minHeight: 42, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 },
-  addLotText: { color: colors.red, fontWeight: '900' },
+  addLotText: { color: colors.red, fontFamily: theme.font.bold },
   footer: { flexDirection: 'row', gap: 10 },
   footerItem: { flex: 1 }
 });

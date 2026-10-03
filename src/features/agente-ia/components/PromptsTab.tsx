@@ -2,17 +2,17 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
-import { createAgentPrompt, deleteAgentPrompt, listAgentPrompts, updateAgentPrompt, updateAgentPromptStatus } from '@/services/agent.service';
+import { createAgentPrompt, deleteAgentPrompt, listAgentPrompts, updateAgentPrompt, updateAgentPromptStatus } from '@/features/agente-ia/services/agent.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 import { agentPromptSchema } from '@/validation/schemas';
 
 const fields: ApiField[] = [
-  { key: 'name', label: 'Nome', placeholder: 'Nome do prompt' },
+  { key: 'name', label: 'Nome', placeholder: 'Nome do prompt', required: true },
   { key: 'description', label: 'Descrição', placeholder: 'Descrição opcional', multiline: true },
   { key: 'content', label: 'Conteúdo/instruções', placeholder: 'Instruções detalhadas do prompt', multiline: true },
   { key: 'tone', label: 'Tom de voz', placeholder: 'Ex: Acolhedor, gaúcho e profissional' },
-  { key: 'scope', label: 'Aplicação', options: ['GENERAL', 'VENDAS', 'INSCRICAO'] },
+  { key: 'scope', label: 'Aplicação', options: ['GENERAL', 'VENDAS', 'INSCRICAO'], optionLabels: { GENERAL: 'Geral', VENDAS: 'Vendas', INSCRICAO: 'Inscrição' } },
   { key: 'status', label: 'Status', options: ['ATIVO', 'INATIVO'] },
   { key: 'version', label: 'Versão', readOnly: true }
 ];
@@ -57,6 +57,6 @@ export function PromptsTab() {
 
 const styles = StyleSheet.create({
   help: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: theme.radius.lg, padding: 14, marginBottom: 16 },
-  helpTitle: { color: colors.text, fontWeight: '900', fontSize: 14, marginBottom: 6 },
+  helpTitle: { color: colors.text, fontFamily: theme.font.bold, fontSize: 14, marginBottom: 6 },
   helpText: { color: colors.muted, lineHeight: 19, fontSize: 12 }
 });

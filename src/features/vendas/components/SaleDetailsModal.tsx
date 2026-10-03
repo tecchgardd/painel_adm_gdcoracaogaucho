@@ -1,17 +1,17 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useState } from 'react';
 import type { ComponentProps } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { AppModal, StatusBadge } from '@/shared/components/ui';
-import { colors } from '@/theme/colors';
+import { AppModal, ChoiceGroup, StatusBadge } from '@/shared/components/ui';
+import { colors, theme } from '@/theme/theme';
 import { useResponsive } from '@/shared/hooks/useResponsive';
-import { getSaleHistory } from '@/services/sales.service';
+import { getSaleHistory } from '@/features/vendas/services/sales.service';
 import type { Pagamento, PaymentHistory, Sale } from '@/shared/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/shared/utils/format';
-import { DocumentPreviewModal } from '@/components/documents/DocumentPreviewModal';
-import type { DocumentKind } from '@/components/documents/DocumentPreviewModal';
-import { getEventInfo } from '@/components/documents/documentUtils';
+import { DocumentPreviewModal } from '@/features/documentos/components/DocumentPreviewModal';
+import type { DocumentKind } from '@/features/documentos/components/DocumentPreviewModal';
+import { getEventInfo } from '@/features/documentos/utils/documentUtils';
 
 type Tab = 'RESUMO' | 'ITENS' | 'PAGAMENTO' | 'DOCUMENTOS' | 'HISTORICO';
 
@@ -48,22 +48,18 @@ export function SaleDetailsModal({
   if (!sale || !eventInfo) return null;
 
   return (
-    <AppModal visible={!!sale} onClose={onClose} position="center" title={`Venda ${sale.codigo}`}>
+    <AppModal visible={!!sale} onClose={onClose} position="center" size="lg" title={`Venda ${sale.codigo}`} subtitle={sale.eventoNome ?? undefined}>
       <View style={styles.titleRow}>
-        <View>
-          <Text style={styles.eyebrow}>GESTÃO DA VENDA</Text>
-          <Text style={styles.title}>{sale.eventoNome ?? 'Venda'}</Text>
-        </View>
         <StatusBadge status={sale.status} />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-        {(['RESUMO', 'ITENS', 'PAGAMENTO', 'DOCUMENTOS', 'HISTORICO'] as Tab[]).map((item) => (
-          <TouchableOpacity key={item} style={[styles.tab, tab === item && styles.tabActive]} onPress={() => setTab(item)}>
-            <Text style={[styles.tabText, tab === item && styles.tabTextActive]}>{item === 'DOCUMENTOS' ? 'Docs' : item === 'HISTORICO' ? 'Histórico' : item[0] + item.slice(1).toLowerCase()}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.tabs}>
+        <ChoiceGroup
+          options={([['RESUMO', 'Resumo'], ['ITENS', 'Itens'], ['PAGAMENTO', 'Pagamento'], ['DOCUMENTOS', 'Documentos'], ['HISTORICO', 'Histórico']] as [Tab, string][]).map(([value, label]) => ({ value, label }))}
+          value={tab}
+          onChange={(value) => setTab(value as Tab)}
+        />
+      </View>
 
       {tab === 'RESUMO' ? (
         <View style={styles.panel}>
@@ -222,35 +218,29 @@ function Technical({ payment }: { payment: Pagamento }) {
 }
 
 const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 },
-  eyebrow: { color: colors.red, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
-  title: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 3 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   tabs: { gap: 6, paddingBottom: 14 },
-  tab: { minHeight: 38, paddingHorizontal: 13, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-  tabActive: { backgroundColor: colors.red },
-  tabText: { color: colors.muted, fontSize: 12, fontWeight: '800' },
-  tabTextActive: { color: '#fff' },
   stack: { gap: 12 },
   panel: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 5 },
   info: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   infoBody: { flex: 1, paddingVertical: 10 },
-  label: { color: colors.muted, fontSize: 11, fontWeight: '700' },
-  infoValue: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 3 },
+  label: { color: colors.muted, fontSize: 11, fontFamily: theme.font.semiBold },
+  infoValue: { color: colors.text, fontSize: 15, fontFamily: theme.font.semiBold, marginTop: 3 },
   muted: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  cardTitle: { color: colors.text, fontWeight: '900', fontSize: 14 },
+  cardTitle: { color: colors.text, fontFamily: theme.font.bold, fontSize: 14 },
   empty: { minHeight: 90, alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, padding: 16 },
   actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionGridMobile: { flexDirection: 'column' },
   action: { flex: 1, minWidth: 150, minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 12 },
   actionDanger: { borderColor: colors.red, backgroundColor: '#261313' },
-  actionText: { color: colors.text, fontWeight: '800', fontSize: 13, textAlign: 'center' },
+  actionText: { color: colors.text, fontFamily: theme.font.semiBold, fontSize: 13, textAlign: 'center' },
   technicalHeader: { minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   docLinks: { gap: 10 },
   docLink: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 14 },
-  docLinkText: { flex: 1, color: colors.text, fontWeight: '800', fontSize: 14 },
+  docLinkText: { flex: 1, color: colors.text, fontFamily: theme.font.semiBold, fontSize: 14 },
   timeline: { gap: 0 },
   historyItem: { flexDirection: 'row', gap: 12, minHeight: 76 },
   historyDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.red, marginTop: 5 },
   historyBody: { flex: 1, borderLeftWidth: 1, borderLeftColor: colors.border, paddingLeft: 14, paddingBottom: 18 },
-  historyStatus: { color: colors.yellow, fontSize: 12, fontWeight: '800', marginTop: 4 }
+  historyStatus: { color: colors.yellow, fontSize: 12, fontFamily: theme.font.semiBold, marginTop: 4 }
 });

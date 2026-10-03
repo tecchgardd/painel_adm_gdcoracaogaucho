@@ -5,6 +5,9 @@ export type ColaboradorPayload = {
   nome?: string;
   cpf?: string;
   email?: string;
+  username?: string;
+  /** null remove a foto; undefined mantém a atual. */
+  fotoUrl?: string | null;
   role?: 'ADMIN' | 'STAFF';
   status?: 'ATIVO' | 'INATIVO';
   password?: string;

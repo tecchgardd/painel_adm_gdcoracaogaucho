@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth.store';
 
 const hidden = { href: null };
 const checkinAllowed = ['/scanner', '/historico-validacoes', '/menu', '/perfil', '/ajuda', '/sobre'];
-const staffBlocked = ['/relatorios'];
+const staffBlocked = ['/relatorios', '/registros'];
 
 export default function AdminTabs() {
   const pathname = usePathname();
@@ -53,6 +53,6 @@ export default function AdminTabs() {
     <Tabs.Screen name="scanner" options={{ href: '/scanner' }} />
     <Tabs.Screen name="eventos" options={{ href: '/eventos' }} />
     <Tabs.Screen name="gestao" options={{ href: '/gestao' }} />
-    {['menu','bailes','cursos','cadastros','clientes','pedidos','ingressos','vendas','colaboradores','alunos','pagamentos','cortesias','historico-validacoes','relatorios','fotos','configuracoes','empresas','agente-ia','perfil','ajuda','sobre'].map((name) => <Tabs.Screen key={name} name={name} options={hidden} />)}
+    {['menu','bailes','cursos','cadastros','clientes','pedidos','ingressos','vendas','colaboradores','alunos','pagamentos','cortesias','historico-validacoes','relatorios','fotos','configuracoes','empresas','agente-ia','registros','perfil','ajuda','sobre'].map((name) => <Tabs.Screen key={name} name={name} options={hidden} />)}
   </Tabs>;
 }

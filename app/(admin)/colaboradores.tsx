@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { ActionMenu, AppModal, Avatar, Button, ChoiceGroup, FloatingActionButton, FormField, FormRow, FormSection, Header, InfoList, InfoRow, FilterBar, ListCard, Screen, StatusBadge } from '@/shared/components/ui';
+import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
@@ -13,81 +14,32 @@ import {
   deleteColaborador,
   listColaboradores,
   resetColaboradorPassword,
-  updateColaborador,
-  type ColaboradorPayload
-} from '@/services/colaboradores.service';
-import { colors } from '@/theme/theme';
+  updateColaborador
+} from '@/features/colaboradores/services/colaboradores.service';
+import { ColaboradorPhotoField } from '@/features/colaboradores/components/ColaboradorPhotoField';
+import {
+  buildColaboradorPayload,
+  colaboradorPhoto,
+  colaboradorUsername,
+  emptyColaboradorForm,
+  normalizeUsername,
+  suggestUsername,
+  toColaboradorForm,
+  validateColaborador,
+  type ColaboradorFormState
+} from '@/features/colaboradores/utils/colaboradorForm';
+import { formatDateTime } from '@/shared/utils/format';
+import { colors, theme } from '@/theme/theme';
 import type { Colaborador } from '@/shared/types/entities';
 
-type FormState = {
-  id?: string;
-  nome: string;
-  cpf: string;
-  email: string;
-  role: 'STAFF' | 'ADMIN';
-  status: 'ATIVO' | 'INATIVO';
-  password: string;
-  generateTemporaryPassword: boolean;
-  mustChangePassword: boolean;
+const optionLabels: Record<string, string> = {
+  STAFF: 'Atendimento',
+  ADMIN: 'Administrador',
+  ATIVO: 'Ativo',
+  INATIVO: 'Inativo',
+  TEMPORARIA: 'Gerar senha temporária',
+  MANUAL: 'Definir manualmente'
 };
-
-const emptyForm: FormState = {
-  nome: '',
-  cpf: '',
-  email: '',
-  role: 'STAFF',
-  status: 'ATIVO',
-  password: '',
-  generateTemporaryPassword: true,
-  mustChangePassword: true
-};
-
-function normalizeCpf(value?: string) {
-  return String(value ?? '').replace(/\D/g, '');
-}
-
-function toForm(colaborador?: Colaborador): FormState {
-  if (!colaborador) return emptyForm;
-  return {
-    id: String(colaborador.id),
-    nome: colaborador.nome ?? colaborador.name ?? '',
-    cpf: colaborador.cpf ?? '',
-    email: colaborador.email ?? colaborador.user?.email ?? '',
-    role: colaborador.role === 'ADMIN' ? 'ADMIN' : 'STAFF',
-    status: colaborador.status === 'INATIVO' ? 'INATIVO' : 'ATIVO',
-    password: '',
-    generateTemporaryPassword: true,
-    mustChangePassword: colaborador.user?.mustChangePassword ?? true
-  };
-}
-
-function validate(form: FormState) {
-  const errors: Record<string, string> = {};
-  if (form.nome.trim().length < 2) errors.nome = 'Informe o nome completo.';
-  if (normalizeCpf(form.cpf).length !== 11) errors.cpf = 'Informe um CPF válido.';
-  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) errors.email = 'Informe um email de login válido.';
-  if (!['STAFF', 'ADMIN'].includes(form.role)) errors.role = 'Selecione STAFF ou ADMIN.';
-  if (!form.id && !form.generateTemporaryPassword && form.password.length < 8) errors.password = 'A senha manual deve ter pelo menos 8 caracteres.';
-  return errors;
-}
-
-function buildPayload(form: FormState): ColaboradorPayload {
-  const payload: ColaboradorPayload = {
-    nome: form.nome.trim(),
-    cpf: normalizeCpf(form.cpf),
-    email: form.email.trim().toLowerCase(),
-    role: form.role,
-    status: form.status
-  };
-
-  if (!form.id) {
-    payload.generateTemporaryPassword = form.generateTemporaryPassword;
-    payload.mustChangePassword = form.mustChangePassword;
-    if (!form.generateTemporaryPassword) payload.password = form.password;
-  }
-
-  return payload;
-}
 
 function OptionGroup<T extends string>({
   label,
@@ -102,15 +54,18 @@ function OptionGroup<T extends string>({
 }) {
   return <View style={styles.fieldBlock}>
     <Text style={styles.fieldLabel}>{label}</Text>
-    <ChoiceGroup options={options.map((option) => ({ value: option, label: option }))} value={value} onChange={(next) => onChange(next as T)} />
+    <ChoiceGroup options={options.map((option) => ({ value: option, label: optionLabels[option] ?? option }))} value={value} onChange={(next) => onChange(next as T)} />
   </View>;
 }
 
 export default function Colaboradores() {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Colaborador | null>(null);
-  const [editing, setEditing] = useState<FormState | null>(null);
+  const [editing, setEditing] = useState<ColaboradorFormState | null>(null);
   const [deleting, setDeleting] = useState<Colaborador | null>(null);
+  const [toggling, setToggling] = useState<Colaborador | null>(null);
+  const [roleFilter, setRoleFilter] = useState('TODOS');
+  const [statusFilter, setStatusFilter] = useState('ATIVO');
   const [saving, setSaving] = useState(false);
   const [resettingId, setResettingId] = useState<string | null>(null);
   const [temporaryPassword, setTemporaryPassword] = useState('');
@@ -118,36 +73,38 @@ export default function Colaboradores() {
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { numColumns } = useResponsive();
-  const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
+  const gridCell = gridCellStyle(numColumns);
   const queryColaboradores = useCallback(() => listColaboradores(), []);
   const { data, loading, error, refetch } = useApiQuery(queryColaboradores, { fallbackData: [] });
   const colaboradores = useMemo(() => data ?? [], [data]);
   const filtered = useMemo(() => colaboradores.filter((colaborador: Colaborador) =>
-    `${colaborador.nome ?? ''} ${colaborador.cpf ?? ''} ${colaborador.email ?? ''} ${colaborador.role ?? ''} ${colaborador.status ?? ''}`
+    (roleFilter === 'TODOS' || String(colaborador.role ?? '').toUpperCase() === roleFilter)
+    && (statusFilter === 'TODOS' || String(colaborador.status ?? 'ATIVO').toUpperCase() === statusFilter)
+    && `${colaborador.nome ?? ''} ${colaborador.cpf ?? ''} ${colaborador.email ?? ''} ${colaboradorUsername(colaborador) ?? ''}`
       .toLowerCase()
       .includes(query.toLowerCase())
-  ), [colaboradores, query]);
+  ), [colaboradores, query, roleFilter, statusFilter]);
 
   function openNew() {
-    setEditing({ ...emptyForm });
+    setEditing({ ...emptyColaboradorForm });
     setFormError('');
     setFieldErrors({});
   }
 
   function openEdit(colaborador: Colaborador) {
-    setEditing(toForm(colaborador));
+    setEditing(toColaboradorForm(colaborador));
     setSelected(null);
     setFormError('');
     setFieldErrors({});
   }
 
-  function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
+  function patch<K extends keyof ColaboradorFormState>(key: K, value: ColaboradorFormState[K]) {
     setEditing((current) => current ? { ...current, [key]: value } : current);
   }
 
   async function save() {
     if (!editing) return;
-    const errors = validate(editing);
+    const errors = validateColaborador(editing);
     setFieldErrors(errors);
     setFormError('');
     if (Object.keys(errors).length) return;
@@ -155,9 +112,9 @@ export default function Colaboradores() {
     setSaving(true);
     try {
       if (editing.id) {
-        await updateColaborador(editing.id, buildPayload(editing));
+        await updateColaborador(editing.id, buildColaboradorPayload(editing));
       } else {
-        const response = await createColaborador(buildPayload(editing));
+        const response = await createColaborador(buildColaboradorPayload(editing));
         if (response.temporaryPassword) setTemporaryPassword(response.temporaryPassword);
       }
       setEditing(null);
@@ -184,6 +141,20 @@ export default function Colaboradores() {
     }
   }
 
+  /** Desativar preserva o histórico (Registro de atividades, vendas feitas); o acesso é bloqueado. */
+  async function confirmToggle() {
+    if (!toggling) return;
+    const ativo = String(toggling.status ?? 'ATIVO').toUpperCase() !== 'INATIVO';
+    try {
+      await updateColaborador(String(toggling.id), { status: ativo ? 'INATIVO' : 'ATIVO' });
+      setToggling(null);
+      refetch();
+    } catch (toggleError) {
+      setFormError((toggleError as { message?: string })?.message ?? 'Não foi possível alterar o acesso.');
+      setToggling(null);
+    }
+  }
+
   async function confirmDelete() {
     if (!deleting) return;
     try {
@@ -206,38 +177,72 @@ export default function Colaboradores() {
   }
 
   return <Screen variant="admin">
-    <Header title="Colaboradores" right={<FloatingActionButton onPress={openNew} accessibilityLabel="Novo colaborador" />} />
-    <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar colaboradores" />
+    <Header title="Colaboradores" subtitle="Equipe com acesso ao painel. Desative quem saiu: o histórico do que a pessoa fez é preservado." right={<FloatingActionButton onPress={openNew} accessibilityLabel="Novo colaborador" />} />
+    <FilterBar
+      search={{ value: query, onChange: setQuery, placeholder: 'Buscar por nome, usuário, e-mail ou CPF' }}
+      filters={[
+        { key: 'role', label: 'Acesso', value: roleFilter, allValue: 'TODOS', options: [{ value: 'TODOS', label: 'Todos' }, { value: 'ADMIN', label: 'Administrador' }, { value: 'STAFF', label: 'Atendimento' }], onChange: setRoleFilter },
+        { key: 'status', label: 'Situação', value: statusFilter, allValue: 'ATIVO', options: [{ value: 'ATIVO', label: 'Ativos' }, { value: 'INATIVO', label: 'Desativados' }, { value: 'TODOS', label: 'Todos' }], onChange: setStatusFilter }
+      ]}
+    />
     {formError ? <Text style={styles.formError}>{formError}</Text> : null}
     {loading ? <LoadingState label="Carregando colaboradores..." /> : null}
     {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error && <View style={styles.grid}>
       {filtered.map((colaborador: Colaborador) => {
         const title = colaborador.nome ?? colaborador.name ?? 'Colaborador sem nome';
-        const subtitle = `${colaborador.cpf ?? '-'}\n${colaborador.email ?? colaborador.user?.email ?? '-'} | ${colaborador.role ?? '-'}`;
-        return <View key={String(colaborador.id)} style={[styles.row, { width: itemWidth }]}>
-          <View style={styles.rowCard}>
-            <ListCard title={title} subtitle={subtitle} status={colaborador.status} onPress={() => setSelected(colaborador)} />
-          </View>
-          <ActionMenu actions={[
+        const username = colaboradorUsername(colaborador);
+        const photo = colaboradorPhoto(colaborador);
+        const subtitle = `${username ? `@${username} · ` : ''}${colaborador.email ?? colaborador.user?.email ?? '-'}\n${colaborador.role ? optionLabels[colaborador.role] ?? colaborador.role : '-'}`;
+        return <View key={String(colaborador.id)} style={gridCell}>
+          <ListCard title={title} subtitle={subtitle} status={colaborador.status} image={photo ? { uri: photo } : undefined} onPress={() => setSelected(colaborador)}
+            actions={<ActionMenu variant="ghost" actions={[
             { label: 'Ver colaborador', icon: 'account-eye-outline', onPress: () => setSelected(colaborador) },
             { label: 'Editar acesso', icon: 'pencil-outline', onPress: () => openEdit(colaborador) },
             { label: resettingId === String(colaborador.id) ? 'Resetando...' : 'Resetar senha', icon: 'lock-reset', onPress: () => resetPassword(colaborador) },
-            { label: 'Remover colaborador', icon: 'delete-outline', tone: 'danger', onPress: () => setDeleting(colaborador) }
-          ]} />
+            String(colaborador.status ?? 'ATIVO').toUpperCase() === 'INATIVO'
+              ? { label: 'Reativar acesso', icon: 'account-check-outline', onPress: () => setToggling(colaborador) }
+              : { label: 'Desativar acesso', icon: 'account-cancel-outline', tone: 'danger', onPress: () => setToggling(colaborador) },
+            { label: 'Excluir definitivamente', icon: 'delete-outline', tone: 'danger', onPress: () => setDeleting(colaborador) }
+          ]} />}
+          />
         </View>;
       })}
     </View>}
-    {!loading && !error && !filtered.length ? <EmptyState title="Nenhum colaborador encontrado." /> : null}
+    {!loading && !error && !filtered.length ? <EmptyState icon="account-search-outline" title="Nenhum colaborador encontrado" subtitle={statusFilter === 'ATIVO' ? 'Desativados ficam no filtro "Situação".' : undefined} /> : null}
+    <AppModal
+      visible={!!toggling}
+      onClose={() => setToggling(null)}
+      title={String(toggling?.status ?? 'ATIVO').toUpperCase() === 'INATIVO' ? 'Reativar acesso' : 'Desativar acesso'}
+      size="sm"
+      footer={<View style={styles.footer}>
+        <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={() => setToggling(null)} /></View>
+        <View style={styles.footerItem}><Button title={String(toggling?.status ?? 'ATIVO').toUpperCase() === 'INATIVO' ? 'Reativar' : 'Desativar'} tone="red" onPress={confirmToggle} /></View>
+      </View>}
+    >
+      <Text style={styles.detail}>{String(toggling?.status ?? 'ATIVO').toUpperCase() === 'INATIVO'
+        ? `${toggling?.nome ?? 'O colaborador'} volta a entrar no painel com o mesmo usuário.`
+        : `${toggling?.nome ?? 'O colaborador'} deixa de entrar no painel. O histórico do que fez (vendas, check-ins, registros) continua disponível.`}</Text>
+    </AppModal>
 
     <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected?.nome ?? 'Colaborador'}>
       {selected ? <>
-        {selected.status ? <View style={styles.sheetHeader}><StatusBadge status={selected.status} /></View> : null}
-        <Text style={styles.detail}>CPF: {selected.cpf ?? '-'}</Text>
-        <Text style={styles.detail}>Email de login: {selected.email ?? selected.user?.email ?? '-'}</Text>
-        <Text style={styles.detail}>Tipo de acesso: {selected.role ?? '-'}</Text>
-        <Text style={styles.detail}>Usuário vinculado: {selected.userId ?? selected.user?.id ?? '-'}</Text>
-        <Button title="Editar acesso" tone="green" onPress={() => openEdit(selected)} />
+        <View style={styles.profileHeader}>
+          {colaboradorPhoto(selected) ? <Image source={{ uri: colaboradorPhoto(selected) }} style={styles.profilePhoto} /> : <Avatar name={selected.nome} size={64} />}
+          <View style={styles.profileCopy}>
+            {colaboradorUsername(selected) ? <Text style={styles.profileUsername}>@{colaboradorUsername(selected)}</Text> : null}
+            {selected.status ? <StatusBadge status={selected.status} /> : null}
+          </View>
+        </View>
+        <InfoList>
+          <InfoRow label="CPF" value={selected.cpf} />
+          <InfoRow label="Usuário de login" value={colaboradorUsername(selected)} />
+          <InfoRow label="E-mail de login" value={selected.email ?? selected.user?.email} />
+          <InfoRow label="Tipo de acesso" value={selected.role ? optionLabels[selected.role] ?? selected.role : undefined} />
+          <InfoRow label="Usuário vinculado" value={selected.userId ?? selected.user?.id} />
+          {(selected as any).ultimoAcesso ? <InfoRow label="Último acesso" value={formatDateTime((selected as any).ultimoAcesso)} /> : null}
+        </InfoList>
+        <View style={styles.detailAction}><Button title="Editar acesso" tone="green" onPress={() => openEdit(selected)} /></View>
       </> : null}
     </AppModal>
 
@@ -252,15 +257,42 @@ export default function Colaboradores() {
     >
       {editing ? <>
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-        <FormField label="Nome completo" value={editing.nome} onChangeText={(value) => patch('nome', value)} />
-        {fieldErrors.nome ? <Text style={styles.fieldError}>{fieldErrors.nome}</Text> : null}
-        <FormField label="CPF" value={editing.cpf} onChangeText={(value) => patch('cpf', value)} keyboardType="numeric" placeholder="000.000.000-00" />
-        {fieldErrors.cpf ? <Text style={styles.fieldError}>{fieldErrors.cpf}</Text> : null}
+        <FormSection first title="Dados pessoais">
+          <ColaboradorPhotoField
+            nome={editing.nome}
+            value={editing.fotoUrl}
+            onChange={(url) => setEditing((current) => current ? { ...current, fotoUrl: url, fotoRemovida: false } : current)}
+            onRemove={() => setEditing((current) => current ? { ...current, fotoUrl: '', fotoRemovida: true } : current)}
+          />
+          <FormRow>
+            <FormField
+              required
+              label="Nome completo"
+              value={editing.nome}
+              onChangeText={(value) => patch('nome', value)}
+              onBlur={() => { if (!editing.username) patch('username', suggestUsername(editing.nome)); }}
+              placeholder="Nome e sobrenome"
+              error={fieldErrors.nome}
+            />
+            <FormField required label="CPF" value={editing.cpf} onChangeText={(value) => patch('cpf', value)} keyboardType="numeric" placeholder="000.000.000-00" error={fieldErrors.cpf} />
+          </FormRow>
+        </FormSection>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Acesso ao sistema</Text>
-          <FormField label="Email de login" value={editing.email} onChangeText={(value) => patch('email', value)} keyboardType="email-address" autoCapitalize="none" />
-          {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
+        <FormSection title="Acesso ao sistema" description="Define como o colaborador entra no painel e o que pode ver.">
+          <FormRow>
+            <FormField
+              required
+              label="Usuário"
+              value={editing.username}
+              onChangeText={(value) => patch('username', normalizeUsername(value))}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="maria.fernandes"
+              hint="O colaborador entra com o usuário ou o e-mail, mais a senha."
+              error={fieldErrors.username}
+            />
+            <FormField required label="E-mail de login" value={editing.email} onChangeText={(value) => patch('email', value)} keyboardType="email-address" autoCapitalize="none" placeholder="nome@email.com" error={fieldErrors.email} />
+          </FormRow>
           <OptionGroup label="Tipo de acesso" value={editing.role} options={['STAFF', 'ADMIN']} onChange={(value) => patch('role', value)} />
           {fieldErrors.role ? <Text style={styles.fieldError}>{fieldErrors.role}</Text> : null}
           <OptionGroup label="Status" value={editing.status} options={['ATIVO', 'INATIVO']} onChange={(value) => patch('status', value)} />
@@ -284,11 +316,11 @@ export default function Colaboradores() {
             <MaterialCommunityIcons name="link-variant" color={colors.green} size={22} />
             <Text style={styles.lockedText}>Usuário vinculado obrigatório. Use “Resetar senha” para gerar uma nova senha temporária.</Text>
           </View>}
-        </View>
+        </FormSection>
       </> : null}
     </AppModal>
 
-    <AppModal visible={!!temporaryPassword} onClose={() => { setTemporaryPassword(''); setCopyMessage(''); }} title="Senha temporária">
+    <AppModal visible={!!temporaryPassword} onClose={() => { setTemporaryPassword(''); setCopyMessage(''); }} title="Senha temporária" size="sm">
       <Text style={styles.detail}>Esta senha será exibida apenas uma vez.</Text>
       <View style={styles.passwordBox}><Text selectable style={styles.passwordText}>{temporaryPassword}</Text></View>
       {copyMessage ? <Text style={styles.state}>{copyMessage}</Text> : null}
@@ -298,36 +330,38 @@ export default function Colaboradores() {
     <AppModal
       visible={!!deleting}
       onClose={() => setDeleting(null)}
-      title="Confirmar remoção"
+      title="Excluir colaborador"
+      size="sm"
       footer={<View style={styles.footer}>
         <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={() => setDeleting(null)} /></View>
-        <View style={styles.footerItem}><Button title="Remover" tone="red" onPress={confirmDelete} /></View>
+        <View style={styles.footerItem}><Button title="Excluir" tone="red" onPress={confirmDelete} /></View>
       </View>}
     >
-      <Text style={styles.detail}>Ao remover o colaborador, o usuário de acesso vinculado também será removido.</Text>
+      <Text style={styles.detail}>Excluir apaga o colaborador e o usuário de acesso. Para quem só saiu da equipe, prefira “Desativar acesso”, que preserva o histórico.</Text>
     </AppModal>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  rowCard: { flex: 1 },
+  grid: gridContainer,
   state: { color: colors.muted, textAlign: 'center', marginVertical: 16 },
-  formError: { color: colors.red, fontWeight: '700', marginBottom: 10 },
+  formError: { color: colors.red, fontFamily: theme.font.semiBold, marginBottom: 10 },
   fieldError: { color: colors.red, marginTop: -8, marginBottom: 10, fontSize: 12 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 12 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
+  profilePhoto: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.card },
+  profileCopy: { flex: 1, minWidth: 0, gap: 6 },
+  profileUsername: { color: colors.muted, fontSize: 14, fontFamily: theme.font.medium },
+  detailAction: { marginTop: 16 },
   detail: { color: colors.text, lineHeight: 22, marginBottom: 8 },
-  section: { borderTopWidth: 1, borderColor: colors.border, marginTop: 12, paddingTop: 14 },
-  sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '800', marginBottom: 10 },
-  fieldBlock: { marginBottom: 12 },
-  fieldLabel: { color: colors.text, fontWeight: '700', marginBottom: 8 },
+  fieldBlock: { marginTop: 14 },
+  fieldLabel: { color: colors.muted, fontSize: 12, fontFamily: theme.font.medium, marginBottom: 8 },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 },
-  checkText: { color: colors.text, fontWeight: '700', flex: 1 },
+  checkText: { color: colors.text, fontFamily: theme.font.semiBold, flex: 1 },
   lockedBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#17351D', borderWidth: 1, borderColor: colors.green, borderRadius: 12, padding: 12, marginTop: 4 },
   lockedText: { color: colors.text, flex: 1, lineHeight: 20 },
   passwordBox: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.green, borderRadius: 12, padding: 14, marginVertical: 12 },
-  passwordText: { color: colors.text, fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  passwordText: { color: colors.text, fontSize: 18, fontFamily: theme.font.semiBold, textAlign: 'center' },
   footer: { flexDirection: 'row', gap: 10 },
   footerItem: { flex: 1 }
 });

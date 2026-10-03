@@ -5,7 +5,6 @@ import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { AppModal, Avatar, Button, Screen } from '@/shared/components/ui';
-import { setBiometricEnabled } from '@/services/biometric.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 import type { UserRole } from '@/shared/types/entities';
@@ -32,6 +31,7 @@ const menuItems: MenuItem[] = [
   { title: 'Configurações', subtitle: 'Preferências do painel', icon: 'cog-outline', path: '/configuracoes', roles: ['ADMIN', 'STAFF'] },
   { title: 'Empresas', subtitle: 'Cadastro de patrocinadores e apoiadores', icon: 'office-building-outline', path: '/empresas', roles: ['ADMIN', 'STAFF'] },
   { title: 'Relatórios', subtitle: 'Indicadores completos e exportações', icon: 'chart-bar', path: '/relatorios', roles: ['ADMIN'] },
+  { title: 'Registro de atividades', subtitle: 'Quem fez o quê e quando na plataforma', icon: 'clipboard-text-clock-outline', path: '/registros', roles: ['ADMIN'] },
   { title: 'Fotos', subtitle: 'Uploads em lote e galeria Cloudinary', icon: 'image-multiple-outline', path: '/fotos', roles: ['ADMIN', 'STAFF'] },
   { title: 'Ajuda', subtitle: 'Suporte e dúvidas sobre o painel', icon: 'help-circle-outline', path: '/ajuda' },
   { title: 'Sobre o app', subtitle: 'Versão e créditos', icon: 'information-outline', path: '/sobre' },
@@ -55,7 +55,6 @@ export default function Menu() {
 
   async function handleLogout() {
     setConfirmLogout(false);
-    await setBiometricEnabled(false);
     await logout();
     router.replace('/login');
   }
@@ -107,6 +106,7 @@ export default function Menu() {
         onClose={() => setConfirmLogout(false)}
         position="center"
         title="Sair da conta"
+        size="sm"
         footer={<View style={styles.footerRow}>
           <View style={styles.half}><Button title="Cancelar" tone="dark" onPress={() => setConfirmLogout(false)} /></View>
           <View style={styles.half}><Button title="Sair" onPress={handleLogout} /></View>

@@ -1,15 +1,16 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, FormRow, FormSection, Header, InfoList, InfoRow, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
-import { createPedido, listPedidos, updatePedido } from '@/services/pedidos.service';
-import { createCustomer, findCustomerByCpf } from '@/services/customers.service';
-import { listEventos } from '@/services/eventos.service';
-import { colors } from '@/theme/theme';
+import { createPedido, listPedidos, updatePedido } from '@/features/pedidos/services/pedidos.service';
+import { createCustomer, findCustomerByCpf } from '@/features/clientes/services/customers.service';
+import { listEventos } from '@/features/eventos/services/eventos.service';
+import { colors, theme } from '@/theme/theme';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { formatCurrencyBRL, formatDateTime, parseCurrencyInput } from '@/shared/utils/format';
 import { clienteSchema, pedidoEventoSchema, pedidoLojaSchema } from '@/validation/schemas';
@@ -29,7 +30,7 @@ export default function Pedidos() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const { numColumns } = useResponsive();
-  const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
+  const gridCell = gridCellStyle(numColumns);
   const queryPedidos = useCallback(() => listPedidos({ type: 'STORE' }), []);
   const { data: apiPedidos, loading, error, refetch } = useApiQuery(queryPedidos, { fallbackData: [] });
   const queryEventos = useCallback(() => listEventos(), []);
@@ -40,6 +41,7 @@ export default function Pedidos() {
   );
 
   const title = activeTab === 'LOJA' ? 'Pedidos da loja' : 'Pedidos de eventos';
+  const singular = activeTab === 'LOJA' ? 'pedido da loja' : 'pedido de evento';
 
   function openNew() {
     setEditing(activeTab === 'LOJA' ? emptyLoja : emptyEvento);
@@ -123,33 +125,34 @@ export default function Pedidos() {
   const eventFilters = ['status', 'cliente', 'cpf', 'data'];
 
   return <Screen variant="admin">
-    <Header title="Pedidos da loja" right={<FloatingActionButton onPress={openNew} accessibilityLabel="Novo pedido" />} />
+    <Header title={title} right={<FloatingActionButton onPress={openNew} accessibilityLabel="Novo pedido" />} />
     <SearchBar value={query} onChangeText={setQuery} placeholder={`Filtrar por ${eventFilters.join(', ')}`} />
     {loading ? <LoadingState label="Carregando pedidos..." /> : null}
     {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error && <View style={styles.grid}>
-      {filtered.map((pedido: any) => <View key={pedido.id} style={[styles.row, { width: itemWidth }]}>
-        <View style={styles.rowCard}>
-          <ListCard title={`${pedido.id ?? '-'} - ${pedido.cliente ?? 'Cliente não informado'}`} subtitle={`${formatDateTime(pedido.data)}\n${formatCurrencyBRL(pedido.total ?? 0)}${pedido.eventoNome ? ` - ${pedido.eventoNome}` : ''}`} status={pedido.status} onPress={() => setSelected(pedido)} />
-        </View>
-        <ActionMenu actions={[
+      {filtered.map((pedido: any) => <View key={pedido.id} style={gridCell}>
+        <ListCard title={`${pedido.id ?? '-'} - ${pedido.cliente ?? 'Cliente não informado'}`} subtitle={`${formatDateTime(pedido.data)}\n${formatCurrencyBRL(pedido.total ?? 0)}${pedido.eventoNome ? ` - ${pedido.eventoNome}` : ''}`} status={pedido.status} onPress={() => setSelected(pedido)}
+            actions={<ActionMenu variant="ghost" actions={[
           { label: 'Ver pedido', icon: 'receipt-text-outline', onPress: () => setSelected(pedido) },
           { label: 'Editar pedido', icon: 'pencil-outline', onPress: () => setEditing(pedido) },
           { label: 'Cancelar pedido', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...pedido, status: 'CANCELADO' }) }
-        ]} />
+        ]} />}
+          />
       </View>)}
     </View>}
-    {!loading && !error && !filtered.length ? <EmptyState title="Nenhum pedido da loja encontrado." /> : null}
+    {!loading && !error && !filtered.length ? <EmptyState title={`Nenhum ${singular} encontrado.`} /> : null}
 
-    <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected ? `Pedido ${selected.id}` : 'Pedido'}>
+    <AppModal visible={!!selected} onClose={() => setSelected(null)} title={selected ? `Pedido ${selected.id}` : 'Pedido'} subtitle={selected?.data ? formatDateTime(selected.data) : undefined}>
       {selected ? <>
         <View style={styles.sheetHeader}><StatusBadge status={selected.status} /></View>
-        <Text style={styles.detail}>Tipo: {(selected.tipo ?? 'LOJA') === 'EVENTO' ? 'Evento' : 'Loja'}</Text>
-        <Text style={styles.detail}>Cliente: {selected.cliente}</Text>
-        <Text style={styles.detail}>CPF: {selected.cpf ?? '-'}</Text>
-        {selected.eventoNome ? <Text style={styles.detail}>Evento: {selected.eventoNome}</Text> : null}
-        {selected.cortesia ? <Text style={styles.detail}>Cortesia: {selected.motivoCortesia} - {selected.responsavelCortesia}</Text> : null}
-        <Text style={styles.total}>Total: {formatCurrencyBRL(selected.total ?? 0)}</Text>
+        <InfoList>
+          <InfoRow label="Tipo" value={(selected.tipo ?? 'LOJA') === 'EVENTO' ? 'Evento' : 'Loja'} />
+          <InfoRow label="Cliente" value={selected.cliente} />
+          <InfoRow label="CPF" value={selected.cpf} />
+          {selected.eventoNome ? <InfoRow label="Evento" value={selected.eventoNome} /> : null}
+          {selected.cortesia ? <InfoRow label="Cortesia" value={[selected.motivoCortesia, selected.responsavelCortesia].filter(Boolean).join(' · ')} /> : null}
+          <InfoRow strong label="Total" value={formatCurrencyBRL(selected.total ?? 0)} />
+        </InfoList>
       </> : null}
     </AppModal>
 
@@ -157,88 +160,109 @@ export default function Pedidos() {
       visible={!!editing}
       onClose={() => setEditing(null)}
       position="center"
-      title={editing?.id ? `Editar ${title.toLowerCase()}` : `Novo ${title.toLowerCase()}`}
+      title={editing?.id ? `Editar ${singular}` : `Novo ${singular}`}
       footer={<View style={styles.footer}>
         <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={() => setEditing(null)} /></View>
         <View style={styles.footerItem}><Button title={saving ? 'Salvando...' : 'Salvar'} tone="green" onPress={saving ? undefined : save} /></View>
       </View>}
     >
       {editing ? <>
-        <FormField label="CPF" value={editing.cpf ?? ''} onChangeText={lookupCustomer} keyboardType="numeric" placeholder="000.000.000-00" />
-        {fieldErrors.cpf ? <Text style={styles.fieldError}>{fieldErrors.cpf}</Text> : null}
-        {customerMessage ? <Text style={styles.hint}>{customerMessage}</Text> : null}
-        {customerMessage.includes('não encontrado') ? <Button title="Cadastro rápido" tone="dark" onPress={() => setQuickCustomer({ cpf: editing.cpf, nome: editing.cliente ?? '', telefone: editing.telefone ?? '' })} /> : null}
-        <FormField label="Cliente" value={editing.cliente ?? ''} onChangeText={(value) => patch('cliente', value)} />
-        <FormField label="Telefone" value={editing.telefone ?? ''} onChangeText={(value) => patch('telefone', value)} keyboardType="phone-pad" />
+        <FormSection first title="Cliente" description="Informe o CPF para buscar um cliente já cadastrado.">
+          <FormField required label="CPF" value={editing.cpf ?? ''} onChangeText={lookupCustomer} keyboardType="numeric" placeholder="000.000.000-00" error={fieldErrors.cpf} />
+          {customerMessage ? <Text style={styles.hint}>{customerMessage}</Text> : null}
+          {customerMessage.includes('não encontrado') ? <View style={styles.quickButton}><Button title="Cadastro rápido" tone="dark" onPress={() => setQuickCustomer({ cpf: editing.cpf, nome: editing.cliente ?? '', telefone: editing.telefone ?? '' })} /></View> : null}
+          <FormRow>
+            <FormField label="Nome do cliente" value={editing.cliente ?? ''} onChangeText={(value) => patch('cliente', value)} />
+            <FormField label="Telefone" value={editing.telefone ?? ''} onChangeText={(value) => patch('telefone', value)} keyboardType="phone-pad" placeholder="(51) 99999-9999" />
+          </FormRow>
+        </FormSection>
         {activeTab === 'LOJA' ? <>
-          <FormField label="Produtos" value={editing.produtos ?? editing.itens?.[0]?.nome ?? ''} onChangeText={(value) => patch('produtos', value)} />
-          <View style={styles.inline}>
-            <View style={styles.inlineItem}><FormField label="Quantidade" value={String(editing.quantidade ?? '')} onChangeText={(value) => patch('quantidade', value)} keyboardType="numeric" /></View>
-            <View style={styles.inlineItem}><FormField label="Valor unitario" value={String(editing.valorUnitario ?? '')} onChangeText={(value) => patch('valorUnitario', value)} keyboardType="decimal-pad" /></View>
-          </View>
-          <FormField label="Forma de pagamento" value={editing.formaPagamento ?? ''} onChangeText={(value) => patch('formaPagamento', value)} />
-          <FormField label="Entrega/retirada" value={editing.entregaRetirada ?? ''} onChangeText={(value) => patch('entregaRetirada', value)} />
-          <FormField label="Endereco, se entrega" value={editing.enderecoEntrega ?? ''} onChangeText={(value) => patch('enderecoEntrega', value)} multiline />
+          <FormSection title="Produtos">
+            <FormField label="Produtos" value={editing.produtos ?? editing.itens?.[0]?.nome ?? ''} onChangeText={(value) => patch('produtos', value)} placeholder="Ex.: Camiseta oficial" />
+            <FormRow>
+              <FormField label="Quantidade" value={String(editing.quantidade ?? '')} onChangeText={(value) => patch('quantidade', value)} keyboardType="numeric" placeholder="1" />
+              <FormField label="Valor unitário" value={String(editing.valorUnitario ?? '')} onChangeText={(value) => patch('valorUnitario', value)} keyboardType="decimal-pad" placeholder="0,00" />
+            </FormRow>
+          </FormSection>
+          <FormSection title="Pagamento e entrega">
+            <FormRow>
+              <FormField label="Forma de pagamento" value={editing.formaPagamento ?? ''} onChangeText={(value) => patch('formaPagamento', value)} placeholder="Pix, dinheiro, cartão..." />
+              <FormField label="Entrega/retirada" value={editing.entregaRetirada ?? ''} onChangeText={(value) => patch('entregaRetirada', value)} />
+            </FormRow>
+            <FormField label="Endereço de entrega" hint="Só se for entrega." value={editing.enderecoEntrega ?? ''} onChangeText={(value) => patch('enderecoEntrega', value)} multiline />
+          </FormSection>
         </> : <>
-          <FormField label="Evento selecionado (ID)" value={String(editing.eventoId ?? '')} onChangeText={(value) => patch('eventoId', value)} placeholder="ID do evento" />
-          <Text style={styles.choiceLabel}>Tipo do evento</Text>
-          <ChoiceGroup
-            options={['BAILE', 'CURSO', 'EVENTO'].map((option) => ({ value: option, label: option }))}
-            value={editing.eventoTipo ?? 'BAILE'}
-            onChange={(value) => patch('eventoTipo', value)}
-          />
-          <FormField label="Ingressos/lotes" value={editing.lote ?? ''} onChangeText={(value) => patch('lote', value)} />
-          <View style={styles.inline}>
-            <View style={styles.inlineItem}><FormField label="Quantidade" value={String(editing.quantidade ?? '')} onChangeText={(value) => patch('quantidade', value)} keyboardType="numeric" /></View>
-            <View style={styles.inlineItem}><FormField label="Valor" value={String(editing.valor ?? '')} onChangeText={(value) => patch('valor', value)} keyboardType="decimal-pad" /></View>
-          </View>
-          <Text style={styles.choiceLabel}>Cortesia</Text>
-          <ChoiceGroup
-            options={[{ value: 'NAO', label: 'NAO' }, { value: 'SIM', label: 'SIM' }]}
-            value={editing.cortesia ? 'SIM' : 'NAO'}
-            onChange={(value) => patch('cortesia', value === 'SIM')}
-          />
-          {editing.cortesia ? <>
-            <FormField label="Motivo da cortesia" value={editing.motivoCortesia ?? ''} onChangeText={(value) => patch('motivoCortesia', value)} multiline />
-            <FormField label="Responsavel pela cortesia" value={editing.responsavelCortesia ?? ''} onChangeText={(value) => patch('responsavelCortesia', value)} />
-          </> : null}
-          <FormField label="Status do pagamento" value={editing.statusPagamento ?? ''} onChangeText={(value) => patch('statusPagamento', value)} />
+          <FormSection title="Evento">
+            <FormField label="Evento selecionado (ID)" value={String(editing.eventoId ?? '')} onChangeText={(value) => patch('eventoId', value)} placeholder="ID do evento" />
+            <Text style={styles.choiceLabel}>Tipo do evento</Text>
+            <ChoiceGroup
+              options={[['BAILE', 'Baile'], ['CURSO', 'Curso'], ['EVENTO', 'Evento']].map(([value, label]) => ({ value, label }))}
+              value={editing.eventoTipo ?? 'BAILE'}
+              onChange={(value) => patch('eventoTipo', value)}
+            />
+            <FormField label="Ingressos/lotes" value={editing.lote ?? ''} onChangeText={(value) => patch('lote', value)} />
+            <FormRow>
+              <FormField label="Quantidade" value={String(editing.quantidade ?? '')} onChangeText={(value) => patch('quantidade', value)} keyboardType="numeric" placeholder="1" />
+              <FormField label="Valor" value={String(editing.valor ?? '')} onChangeText={(value) => patch('valor', value)} keyboardType="decimal-pad" placeholder="0,00" />
+            </FormRow>
+          </FormSection>
+          <FormSection title="Cortesia">
+            <ChoiceGroup
+              options={[{ value: 'NAO', label: 'Não' }, { value: 'SIM', label: 'Sim' }]}
+              value={editing.cortesia ? 'SIM' : 'NAO'}
+              onChange={(value) => patch('cortesia', value === 'SIM')}
+            />
+            {editing.cortesia ? <>
+              <FormField label="Motivo da cortesia" value={editing.motivoCortesia ?? ''} onChangeText={(value) => patch('motivoCortesia', value)} multiline />
+              <FormField label="Responsável pela cortesia" value={editing.responsavelCortesia ?? ''} onChangeText={(value) => patch('responsavelCortesia', value)} />
+            </> : null}
+          </FormSection>
         </>}
-        <FormField label="Status do pedido" value={editing.status ?? ''} onChangeText={(value) => patch('status', value)} />
-        {Object.values(fieldErrors).length ? <Text style={styles.fieldError}>Revise os campos obrigatorios antes de salvar.</Text> : null}
+        <FormSection title="Status">
+          <FormRow>
+            {activeTab !== 'LOJA' ? <FormField label="Status do pagamento" value={editing.statusPagamento ?? ''} onChangeText={(value) => patch('statusPagamento', value)} /> : null}
+            <FormField label="Status do pedido" value={editing.status ?? ''} onChangeText={(value) => patch('status', value)} />
+          </FormRow>
+        </FormSection>
+        {Object.values(fieldErrors).length ? <Text style={styles.fieldError}>Revise os campos obrigatórios antes de salvar.</Text> : null}
       </> : null}
     </AppModal>
 
-    <AppModal visible={!!quickCustomer} onClose={() => setQuickCustomer(null)} title="Cadastro rapido" footer={<View style={styles.footer}>
+    <AppModal visible={!!quickCustomer} onClose={() => setQuickCustomer(null)} title="Cadastro rápido" subtitle="Cliente não encontrado: cadastre e continue o pedido." footer={<View style={styles.footer}>
       <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={() => setQuickCustomer(null)} /></View>
       <View style={styles.footerItem}><Button title="Salvar cliente" tone="green" onPress={saveQuickCustomer} /></View>
     </View>}>
       {quickCustomer ? <>
-        <FormField label="Nome completo" value={quickCustomer.nome ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, nome: value })} />
-        <FormField label="CPF" value={quickCustomer.cpf ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, cpf: value })} keyboardType="numeric" />
-        <FormField label="Telefone" value={quickCustomer.telefone ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, telefone: value })} keyboardType="phone-pad" />
-        <FormField label="Rua" value={quickCustomer.rua ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, rua: value })} />
-        <FormField label="Numero" value={quickCustomer.numero ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, numero: value })} />
-        <FormField label="Bairro" value={quickCustomer.bairro ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, bairro: value })} />
-        <FormField label="Cidade" value={quickCustomer.cidade ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, cidade: value })} />
-        <FormField label="Estado" value={quickCustomer.estado ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, estado: value })} />
+        <FormSection first title="Dados pessoais">
+          <FormField required label="Nome completo" value={quickCustomer.nome ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, nome: value })} />
+          <FormRow>
+            <FormField required label="CPF" value={quickCustomer.cpf ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, cpf: value })} keyboardType="numeric" placeholder="000.000.000-00" />
+            <FormField label="Telefone" value={quickCustomer.telefone ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, telefone: value })} keyboardType="phone-pad" placeholder="(51) 99999-9999" />
+          </FormRow>
+        </FormSection>
+        <FormSection title="Endereço">
+          <FormField label="Rua" value={quickCustomer.rua ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, rua: value })} />
+          <FormRow>
+            <FormField label="Número" value={quickCustomer.numero ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, numero: value })} />
+            <FormField label="Bairro" value={quickCustomer.bairro ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, bairro: value })} />
+          </FormRow>
+          <FormRow>
+            <FormField label="Cidade" value={quickCustomer.cidade ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, cidade: value })} />
+            <FormField label="Estado" value={quickCustomer.estado ?? ''} onChangeText={(value) => setQuickCustomer({ ...quickCustomer, estado: value })} placeholder="RS" />
+          </FormRow>
+        </FormSection>
       </> : null}
     </AppModal>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  rowCard: { flex: 1 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
-  detail: { color: colors.text, marginTop: 8, lineHeight: 20 },
-  total: { color: colors.text, fontSize: 18, fontWeight: '900', marginTop: 18 },
+  grid: gridContainer,
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   footer: { flexDirection: 'row', gap: 10 },
   footerItem: { flex: 1 },
-  inline: { flexDirection: 'row', gap: 10 },
-  inlineItem: { flex: 1 },
-  fieldError: { color: colors.red, fontSize: 12, fontWeight: '700', marginTop: 5 },
-  hint: { color: colors.muted, fontWeight: '700', marginTop: 8 },
-  choiceLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginTop: 14, marginBottom: 8 }
+  fieldError: { color: colors.red, fontSize: 12, fontFamily: theme.font.semiBold, marginTop: 5 },
+  hint: { color: colors.muted, fontSize: 12, fontFamily: theme.font.regular, marginTop: 6 },
+  quickButton: { marginTop: 8 },
+  choiceLabel: { color: colors.muted, fontSize: 12, fontFamily: theme.font.medium, marginTop: 14, marginBottom: 8 }
 });

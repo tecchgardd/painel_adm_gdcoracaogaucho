@@ -8,7 +8,8 @@ export function ConfirmModal({ visible, title, onCancel, onConfirm }: { visible:
     visible={visible}
     onClose={onCancel}
     position="center"
-    title="Confirmar exclusao"
+    title="Confirmar exclusão"
+    size="sm"
     footer={<View style={styles.row}>
       <View style={styles.half}><Button title="Cancelar" tone="dark" onPress={onCancel} /></View>
       <View style={styles.half}><Button title="Excluir" onPress={onConfirm} /></View>

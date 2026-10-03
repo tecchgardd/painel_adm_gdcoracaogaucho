@@ -5,9 +5,10 @@ import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { ActionMenu, AppModal, Button, Screen, SearchBar } from '@/shared/components/ui';
-import { validarCodigoManual, validarQRCode } from '@/services/scanner.service';
+import { validarCodigoManual, validarQRCode } from '@/features/scanner/services/scanner.service';
 import type { ScannerResult } from '@/shared/types/entities';
-import { colors } from '@/theme/theme';
+import { normalizeCodigo } from '@/shared/utils/codigo';
+import { colors, theme } from '@/theme/theme';
 
 export default function Scanner() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -50,11 +51,9 @@ export default function Scanner() {
     setModal(true);
   }
 
-  if (!permission?.granted) {
-    return <Screen><View style={styles.center}><Text style={styles.title}>Permissão da câmera</Text><Text style={styles.text}>Libere a câmera para validar QR Codes.</Text><Button title="Permitir câmera" onPress={requestPermission} /></View></Screen>;
-  }
-
+  // Sem câmera (ex.: desktop) a tela continua útil: digitação manual e histórico ficam disponíveis.
   return <Screen>
+    <View style={styles.column}>
     <View style={styles.header}>
       <Text style={styles.headerText}>Scanner QR Code</Text>
       <ActionMenu actions={[
@@ -63,8 +62,13 @@ export default function Scanner() {
         { label: torchEnabled ? 'Desligar flash' : 'Ligar flash', icon: 'flash', onPress: () => setTorchEnabled((value) => !value) }
       ]} />
     </View>
-    <SearchBar value={query} onChangeText={setQuery} placeholder="Código do ingresso" />
-    <View style={styles.cameraWrap}><CameraView style={StyleSheet.absoluteFill} facing="back" enableTorch={torchEnabled} barcodeScannerSettings={{ barcodeTypes: ['qr'] }} onBarcodeScanned={modal || loading ? undefined : ({ data }) => validate(data)} /><View style={styles.corner} /><View style={styles.line} /></View>
+    <SearchBar value={query} onChangeText={(value) => setQuery(normalizeCodigo(value))} placeholder="Código do ingresso (até 8 caracteres)" />
+    {permission?.granted ? <View style={styles.cameraWrap}><CameraView style={StyleSheet.absoluteFill} facing="back" enableTorch={torchEnabled} barcodeScannerSettings={{ barcodeTypes: ['qr'] }} onBarcodeScanned={modal || loading ? undefined : ({ data }) => validate(data)} /><View style={styles.corner} /><View style={styles.line} /></View> : <View style={[styles.cameraWrap, styles.permission]}>
+      <View style={styles.permissionIcon}><MaterialCommunityIcons name="camera-outline" size={28} color={colors.red} /></View>
+      <Text style={styles.title}>Permissão da câmera</Text>
+      <Text style={styles.text}>Libere a câmera para ler QR Codes, ou use “Digitar código” abaixo.</Text>
+      <View style={styles.permissionButton}><Button title="Permitir câmera" onPress={requestPermission} /></View>
+    </View>}
     <Text style={styles.instruction}>Aponte a câmera para o QR Code para validar o ingresso</Text>
     <View style={styles.row}><View style={styles.buttonHalf}><Button title="Histórico" tone="dark" onPress={() => router.push('/historico-validacoes')} /></View><View style={styles.buttonHalf}><Button title="Digitar código" tone="dark" onPress={openManual} /></View></View>
     <AppModal
@@ -72,6 +76,7 @@ export default function Scanner() {
       onClose={closeResult}
       position="center"
       title="Validar ingresso"
+      size="sm"
       footer={<View style={styles.row}>
         <View style={styles.buttonHalf}><Button title="Fechar" tone="dark" onPress={closeResult} /></View>
         <View style={styles.buttonHalf}><Button title={loading ? 'Validando...' : 'Validar código'} tone="green" disabled={!query.trim() || loading} onPress={() => validate(query, true)} /></View>
@@ -81,28 +86,32 @@ export default function Scanner() {
           <MaterialCommunityIcons name={result?.status === 'VALIDO' ? 'check-circle' : 'alert-circle'} color={result?.status === 'VALIDO' ? colors.green : colors.yellow} size={76} />
           <Text style={[styles.valid, result?.status !== 'VALIDO' && styles.warning]}>{loading ? 'Validando...' : result?.status ?? 'Digite ou leia um código'}</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <SearchBar value={query} onChangeText={setQuery} placeholder="Código do ingresso" />
+          <SearchBar value={query} onChangeText={(value) => setQuery(normalizeCodigo(value))} placeholder="Código do ingresso (até 8 caracteres)" />
           <Text style={styles.info}>Status possíveis: VÁLIDO, JÁ_UTILIZADO, CANCELADO, NÃO_ENCONTRADO, EVENTO_EXPIRADO</Text>
           {result?.message ? <Text style={styles.code}>{result.message}</Text> : null}
         </View>
     </AppModal>
+    </View>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  headerText: { color: colors.text, fontSize: 20, fontWeight: '900' },
+  headerText: { color: colors.text, fontSize: 20, fontFamily: theme.font.bold },
   cameraWrap: { height: 380, borderRadius: 22, overflow: 'hidden', marginTop: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt },
   corner: { position: 'absolute', inset: 38, borderWidth: 4, borderColor: colors.red, borderRadius: 18 },
   line: { position: 'absolute', left: 30, right: 30, top: '50%', height: 2, backgroundColor: colors.red },
   instruction: { color: colors.text, textAlign: 'center', marginTop: 22, lineHeight: 22 },
   row: { flexDirection: 'row', gap: 12, marginTop: 20 },
   buttonHalf: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center' },
-  title: { color: colors.text, fontSize: 24, fontWeight: '900' },
-  text: { color: colors.muted, marginVertical: 12 },
+  column: { width: '100%', maxWidth: 560, alignSelf: 'center' },
+  permission: { alignItems: 'center', justifyContent: 'center', padding: 24, gap: 6 },
+  permissionIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.redSoft, marginBottom: 6 },
+  permissionButton: { width: '100%', maxWidth: 260, marginTop: 6 },
+  title: { color: colors.text, fontSize: 18, fontFamily: theme.font.semiBold, textAlign: 'center' },
+  text: { color: colors.muted, textAlign: 'center', lineHeight: 20, fontFamily: theme.font.regular, marginBottom: 6 },
   modalBody: { alignItems: 'center' },
-  valid: { color: colors.green, fontSize: 25, fontWeight: '900', marginTop: 12 },
+  valid: { color: colors.green, fontSize: 25, fontFamily: theme.font.bold, marginTop: 12 },
   warning: { color: colors.yellow, textAlign: 'center' },
   error: { color: colors.red, marginTop: 10, textAlign: 'center', lineHeight: 20 },
   info: { color: colors.muted, marginTop: 8 },

@@ -2,14 +2,14 @@ import { useMemo } from 'react';
 import { View } from 'react-native';
 
 import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
-import { createAgentKnowledge, deleteAgentKnowledge, listAgentKnowledge, updateAgentKnowledge, updateAgentKnowledgeStatus } from '@/services/agent.service';
+import { createAgentKnowledge, deleteAgentKnowledge, listAgentKnowledge, updateAgentKnowledge, updateAgentKnowledgeStatus } from '@/features/agente-ia/services/agent.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { agentKnowledgeSchema } from '@/validation/schemas';
 
 const fields: ApiField[] = [
-  { key: 'title', label: 'Título', placeholder: 'Título do item' },
+  { key: 'title', label: 'Título', placeholder: 'Título do item', required: true },
   { key: 'content', label: 'Conteúdo', placeholder: 'Conteúdo que a IA pode consultar', multiline: true },
-  { key: 'type', label: 'Tipo', options: ['FAQ', 'POLICY', 'EVENT', 'COURSE', 'PAYMENT', 'TICKET', 'OTHER'] },
+  { key: 'type', label: 'Tipo', options: ['FAQ', 'POLICY', 'EVENT', 'COURSE', 'PAYMENT', 'TICKET', 'OTHER'], optionLabels: { FAQ: 'Pergunta frequente', POLICY: 'Política', EVENT: 'Evento', COURSE: 'Curso', PAYMENT: 'Pagamento', TICKET: 'Ingresso', OTHER: 'Outro' } },
   { key: 'source', label: 'Origem', placeholder: 'Link ou origem (opcional)' },
   { key: 'status', label: 'Status', options: ['ATIVO', 'INATIVO'] },
   { key: 'approvedById', label: 'Aprovado por (ID do colaborador)', readOnly: true }

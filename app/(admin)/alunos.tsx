@@ -1,17 +1,23 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { ActionMenu, AppModal, Button, ChoiceGroup, FloatingActionButton, FormField, Header, ListCard, Screen, SearchBar, StatusBadge } from '@/shared/components/ui';
+import { ActionMenu, AppModal, Button, ChoiceGroup, FilterBar, FloatingActionButton, FormField, FormRow, FormSection, Header, ListCard, Screen, StatusBadge } from '@/shared/components/ui';
+import { getCustomer } from '@/features/clientes/services/customers.service';
+import { listEventos } from '@/features/eventos/services/eventos.service';
+import { findPersonByCpf } from '@/features/pessoas/services/people.service';
+import { maskCpf } from '@/shared/utils/format';
+import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
 import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
-import { buscarEnderecoPorCep } from '@/services/cep.service';
-import { createInscricao, listInscricoes, updateInscricao } from '@/services/inscricoes.service';
+import { buscarEnderecoPorCep } from '@/shared/services/cep.service';
+import { createInscricao, listInscricoes, updateInscricao } from '@/features/alunos/services/inscricoes.service';
 import { alunoSchema } from '@/validation/schemas';
-import { colors } from '@/theme/theme';
+import { colors, theme } from '@/theme/theme';
 
 const emptyAluno = {
   status: 'PENDENTE',
@@ -22,22 +28,87 @@ const emptyAluno = {
   adicionais: []
 };
 
+const STATUS_OPTIONS = [
+  { value: 'TODOS', label: 'Todos' },
+  { value: 'PENDENTE', label: 'Pendentes' },
+  { value: 'CONFIRMADO', label: 'Confirmadas' },
+  { value: 'ATIVO', label: 'Ativas' },
+  { value: 'CANCELADO', label: 'Canceladas' }
+];
+
+/** Campos da pessoa que pré-preenchem a inscrição (vindos de Pessoas ou da busca por CPF). */
+function dadosDaPessoa(pessoa: any) {
+  return {
+    customerId: pessoa?.id != null ? String(pessoa.id) : undefined,
+    nome: pessoa?.nome ?? pessoa?.name ?? '',
+    cpf: pessoa?.cpf ?? '',
+    telefone: pessoa?.telefone ?? pessoa?.phone ?? '',
+    email: pessoa?.email ?? '',
+    cep: pessoa?.cep ?? '',
+    rua: pessoa?.rua ?? '',
+    numero: pessoa?.numero ?? '',
+    bairro: pessoa?.bairro ?? '',
+    cidade: pessoa?.cidade ?? '',
+    estado: pessoa?.estado ?? '',
+    complemento: pessoa?.complemento ?? ''
+  };
+}
+
 export default function Alunos() {
+  const params = useLocalSearchParams<{ pessoa?: string }>();
+  const [statusFilter, setStatusFilter] = useState('TODOS');
+  const [cursoFilter, setCursoFilter] = useState('TODOS');
+  const [pessoaHint, setPessoaHint] = useState('');
+  const queryCursos = useCallback(() => listEventos({ status: 'ATIVO' }), []);
+  const { data: eventosData } = useApiQuery(queryCursos, { fallbackData: [] });
+  const cursos = useMemo(() => (eventosData ?? []).filter((evento: any) => evento.tipo === 'CURSO'), [eventosData]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [errorForm, setErrorForm] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const { numColumns, width } = useResponsive();
-  const compact = width < 420;
-  const itemWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48.5%' : '32%';
+  const { numColumns } = useResponsive();
+  const gridCell = gridCellStyle(numColumns);
   const queryAlunos = useCallback(() => listInscricoes(), []);
   const { data, loading, error, refetch } = useApiQuery(queryAlunos, { fallbackData: [] });
   const alunos = useMemo(() => data ?? [], [data]);
   const filtered = useMemo(() => alunos.filter((aluno: any) =>
-    `${aluno.nome} ${aluno.cpf} ${aluno.telefone} ${aluno.cursoId} ${aluno.status}`.toLowerCase().includes(query.toLowerCase())
-  ), [alunos, query]);
+    (statusFilter === 'TODOS' || String(aluno.status).toUpperCase() === statusFilter)
+    && (cursoFilter === 'TODOS' || String(aluno.cursoId) === cursoFilter)
+    && `${aluno.nome} ${aluno.cpf} ${aluno.telefone} ${aluno.courseId ?? ''}`.toLowerCase().includes(query.toLowerCase())
+  ), [alunos, cursoFilter, query, statusFilter]);
+
+  // Veio da ficha da pessoa ("Inscrever em curso"): abre a inscrição já preenchida com o cadastro dela.
+  useEffect(() => {
+    if (!params.pessoa) return;
+    let active = true;
+    getCustomer(String(params.pessoa)).then((pessoa) => {
+      if (!active) return;
+      setEditing({ ...emptyAluno, ...dadosDaPessoa(pessoa) });
+      setPessoaHint(`Inscrição para ${pessoa?.nome ?? pessoa?.name ?? 'pessoa cadastrada'}: dados preenchidos a partir do cadastro.`);
+      router.setParams({ pessoa: undefined });
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [params.pessoa]);
+
+  // Nova inscrição: ao informar o CPF, reaproveita o cadastro existente em vez de criar outro.
+  async function lookupCpf() {
+    if (!editing || editing.id || editing.customerId || String(editing.cpf ?? '').replace(/\D/g, '').length !== 11) return;
+    try {
+      const result = await findPersonByCpf(editing.cpf);
+      if (!result.success || !result.data?.id) return;
+      const pessoa = await getCustomer(String(result.data.id)).catch(() => result.data);
+      setEditing((current: any) => {
+        const dados = dadosDaPessoa(pessoa);
+        const preenchido = Object.fromEntries(Object.entries(dados).map(([key, value]) => [key, current?.[key] || value]));
+        return { ...current, ...preenchido, customerId: dados.customerId };
+      });
+      setPessoaHint(`CPF já cadastrado: ${result.data.nome ?? 'pessoa encontrada'}. Os dados foram preenchidos a partir do cadastro.`);
+    } catch {
+      // Sem a busca, a inscrição segue normal e a API associa pelo CPF.
+    }
+  }
   const participantCount = Math.max(1, 1 + (editing?.inscricaoMultipla ? Number(editing?.quantidadeAdicionais ?? 0) : 0));
   const expectedSponsors = participantCount * 2;
 
@@ -136,23 +207,28 @@ export default function Alunos() {
   }
 
   return <Screen variant="admin">
-    <Header title="Alunos" right={<FloatingActionButton onPress={() => setEditing(emptyAluno)} accessibilityLabel="Novo aluno" />} />
-    <SearchBar value={query} onChangeText={setQuery} placeholder="Pesquisar alunos" />
-    {loading ? <LoadingState label="Carregando alunos..." /> : null}
+    <Header title="Inscrições" subtitle="Alunos inscritos nos cursos, com par, padrinhos e situação. O cadastro da pessoa fica em Cadastros → Pessoas." right={<FloatingActionButton onPress={() => { setPessoaHint(''); setEditing(emptyAluno); }} accessibilityLabel="Nova inscrição" />} />
+    <FilterBar
+      search={{ value: query, onChange: setQuery, placeholder: 'Buscar por aluno, CPF ou curso' }}
+      filters={[
+        ...(cursos.length ? [{ key: 'curso', label: 'Curso', value: cursoFilter, allValue: 'TODOS', options: [{ value: 'TODOS', label: 'Todos' }, ...cursos.map((curso: any) => ({ value: String(curso.id), label: curso.nome }))], onChange: setCursoFilter }] : []),
+        { key: 'status', label: 'Status', value: statusFilter, allValue: 'TODOS', options: STATUS_OPTIONS, onChange: setStatusFilter }
+      ]}
+    />
+    {loading ? <LoadingState label="Carregando inscrições..." /> : null}
     {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error && <View style={styles.grid}>
-      {filtered.map((aluno: any) => <View key={aluno.id} style={[styles.row, { width: itemWidth }]}>
-        <View style={styles.rowCard}>
-          <ListCard title={aluno.nome ?? 'Aluno sem nome'} subtitle={`${aluno.cpf ?? ''}\nCurso/turma: ${aluno.cursoId ?? aluno.courseId ?? '-'}`} status={aluno.status} onPress={() => setSelected(aluno)} />
-        </View>
-        <ActionMenu actions={[
-          { label: 'Ver aluno', icon: 'account-eye-outline', onPress: () => setSelected(aluno) },
-          { label: 'Editar aluno', icon: 'pencil-outline', onPress: () => setEditing(aluno) },
-          { label: 'Cancelar inscricao', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...aluno, status: 'CANCELADO' }) }
-        ]} />
+      {filtered.map((aluno: any) => <View key={aluno.id} style={gridCell}>
+        <ListCard title={aluno.nome ?? 'Aluno sem nome'} subtitle={`${aluno.cpf ? maskCpf(aluno.cpf) : 'CPF não informado'}${aluno.telefone ? ` · ${aluno.telefone}` : ''}\n${aluno.courseId || 'Curso não informado'}`} status={aluno.status} onPress={() => setSelected(aluno)}
+            actions={<ActionMenu variant="ghost" actions={[
+          { label: 'Ver inscrição', icon: 'account-eye-outline', onPress: () => setSelected(aluno) },
+          { label: 'Editar inscrição', icon: 'pencil-outline', onPress: () => { setPessoaHint(''); setEditing(aluno); } },
+          { label: 'Cancelar inscrição', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...aluno, status: 'CANCELADO' }) }
+        ]} />}
+          />
       </View>)}
     </View>}
-    {!loading && !error && !filtered.length ? <EmptyState /> : null}
+    {!loading && !error && !filtered.length ? <EmptyState title="Nenhuma inscrição encontrada" icon="school-outline" /> : null}
 
     <AppModal
       visible={!!selected}
@@ -187,7 +263,7 @@ export default function Alunos() {
     <AppModal
       visible={!!editing}
       onClose={() => setEditing(null)}
-      title={editing?.id ? 'Editar aluno' : 'Novo aluno'}
+      title={editing?.id ? 'Editar inscrição' : 'Nova inscrição'}
       footer={<View style={styles.footer}>
         <View style={styles.footerItem}><Button title="Cancelar" tone="dark" onPress={() => setEditing(null)} /></View>
         <View style={styles.footerItem}><Button title={saving ? 'Salvando...' : 'Salvar'} tone="green" onPress={saving ? undefined : save} /></View>
@@ -195,56 +271,77 @@ export default function Alunos() {
     >
       {editing ? <>
         {errorForm ? <Text style={styles.formError}>{errorForm}</Text> : null}
-        <FormField label="Nome completo" value={editing.nome ?? ''} onChangeText={(value) => patch('nome', value)} />
-        {fieldErrors.nome ? <Text style={styles.fieldError}>{fieldErrors.nome}</Text> : null}
-        <FormField label="CPF" value={editing.cpf ?? ''} onChangeText={(value) => patch('cpf', value)} keyboardType="numeric" placeholder="000.000.000-00" />
-        {fieldErrors.cpf ? <Text style={styles.fieldError}>{fieldErrors.cpf}</Text> : null}
-        <FormField label="Telefone" value={editing.telefone ?? ''} onChangeText={(value) => patch('telefone', value)} keyboardType="phone-pad" />
-        <FormField label="E-mail" value={editing.email ?? ''} onChangeText={(value) => patch('email', value)} keyboardType="email-address" />
-        <View style={[styles.inline, compact && styles.stack]}>
-          <View style={styles.inlineItem}><FormField label="CEP" value={editing.cep ?? ''} onChangeText={patchCep} keyboardType="numeric" /></View>
-          <View style={styles.inlineItem}><FormField label="Estado" value={editing.estado ?? ''} onChangeText={(value) => patch('estado', value)} placeholder="RS" /></View>
-        </View>
-        <FormField label="Rua" value={editing.rua ?? ''} onChangeText={(value) => patch('rua', value)} />
-        <View style={[styles.inline, compact && styles.stack]}>
-          <View style={styles.inlineItem}><FormField label="Numero" value={editing.numero ?? ''} onChangeText={(value) => patch('numero', value)} /></View>
-          <View style={styles.inlineItem}><FormField label="Bairro" value={editing.bairro ?? ''} onChangeText={(value) => patch('bairro', value)} /></View>
-        </View>
-        <FormField label="Cidade" value={editing.cidade ?? ''} onChangeText={(value) => patch('cidade', value)} />
-        <FormField label="Complemento" value={editing.complemento ?? ''} onChangeText={(value) => patch('complemento', value)} />
-        <FormField label="Curso/turma vinculada" value={editing.cursoId ?? editing.courseId ?? ''} onChangeText={(value) => patch('cursoId', value)} />
-        {fieldErrors.cursoId ? <Text style={styles.fieldError}>{fieldErrors.cursoId}</Text> : null}
-        <ToggleRow label="Ja foi aluno?" value={!!editing.jaFoiAluno} onChange={(value) => setBoolean('jaFoiAluno', value)} />
-        {editing.jaFoiAluno ? <FormField label="Qual curso/cidade participou" value={editing.cursoCidadeAnterior ?? ''} onChangeText={(value) => patch('cursoCidadeAnterior', value)} /> : null}
-        <ToggleRow label="Não tem par" value={!!editing.semPar} onChange={(value) => setBoolean('semPar', value)} />
-        {!editing.semPar ? <FormField label="Nome do par" value={editing.nomePar ?? editing.par ?? ''} onChangeText={(value) => patch('nomePar', value)} /> : null}
-        <ToggleRow label="Inscrever mais de uma pessoa" value={!!editing.inscricaoMultipla} onChange={(value) => setBoolean('inscricaoMultipla', value)} />
-        {editing.inscricaoMultipla ? <>
-          <FormField label="Quantidade de pessoas adicionais" value={String(editing.quantidadeAdicionais ?? 0)} onChangeText={ensureAdditionalCount} keyboardType="numeric" />
-          {(editing.adicionais ?? []).map((adicional: any, index: number) => <View key={index} style={styles.additionalCard}>
-            <Text style={styles.section}>Pessoa adicional {index + 1}</Text>
-            <FormField label="Nome completo" value={adicional.nome ?? ''} onChangeText={(value) => patchAdditional(index, 'nome', value)} />
-            <FormField label="CPF" value={adicional.cpf ?? ''} onChangeText={(value) => patchAdditional(index, 'cpf', value)} keyboardType="numeric" />
-            <FormField label="Telefone" value={adicional.telefone ?? ''} onChangeText={(value) => patchAdditional(index, 'telefone', value)} keyboardType="phone-pad" />
-            <FormField label="Nome do par" value={adicional.nomePar ?? ''} onChangeText={(value) => patchAdditional(index, 'nomePar', value)} />
-          </View>)}
-        </> : null}
-        <View style={styles.sponsorHeader}>
-          <Text style={styles.section}>Padrinhos</Text>
-          <Text style={styles.sponsorHint}>{expectedSponsors} esperados para {participantCount} participante(s)</Text>
-        </View>
-        {Array.from({ length: expectedSponsors }, (_, index) => (
-          <FormField
-            key={`padrinho-${index}`}
-            label={`Padrinho ${index + 1}`}
-            value={editing.padrinhos?.[index]?.nome ?? ''}
-            onFocus={() => ensureSponsors(expectedSponsors)}
-            onChangeText={(value) => patchSponsor(index, value)}
-            placeholder="Nome opcional"
-          />
-        ))}
-        <StatusPicker value={editing.status ?? 'PENDENTE'} onChange={(value) => patch('status', value)} />
-        {Object.values(fieldErrors).length ? <Text style={styles.fieldError}>Revise os campos destacados antes de salvar.</Text> : null}
+        {pessoaHint ? <Text style={styles.pessoaHint}>{pessoaHint}</Text> : null}
+        <FormSection first title="Dados pessoais">
+          <FormField required label="Nome completo" value={editing.nome ?? ''} onChangeText={(value) => patch('nome', value)} placeholder="Nome e sobrenome" error={fieldErrors.nome} />
+          <FormRow>
+            <FormField required label="CPF" onBlur={lookupCpf} value={editing.cpf ?? ''} onChangeText={(value) => setEditing((current: any) => ({ ...current, cpf: value, customerId: current?.id ? current.customerId : undefined }))} keyboardType="numeric" placeholder="000.000.000-00" error={fieldErrors.cpf} />
+            <FormField label="Telefone" value={editing.telefone ?? ''} onChangeText={(value) => patch('telefone', value)} keyboardType="phone-pad" placeholder="(51) 99999-9999" />
+          </FormRow>
+          <FormField label="E-mail" value={editing.email ?? ''} onChangeText={(value) => patch('email', value)} keyboardType="email-address" placeholder="nome@email.com" autoCapitalize="none" />
+        </FormSection>
+
+        <FormSection title="Endereço" description="Ao informar o CEP, rua, bairro, cidade e estado são preenchidos automaticamente.">
+          <FormRow>
+            <FormField label="CEP" value={editing.cep ?? ''} onChangeText={patchCep} keyboardType="numeric" placeholder="00000-000" />
+            <FormField label="Estado" value={editing.estado ?? ''} onChangeText={(value) => patch('estado', value)} placeholder="RS" />
+          </FormRow>
+          <FormField label="Rua" value={editing.rua ?? ''} onChangeText={(value) => patch('rua', value)} />
+          <FormRow>
+            <FormField label="Número" value={editing.numero ?? ''} onChangeText={(value) => patch('numero', value)} />
+            <FormField label="Bairro" value={editing.bairro ?? ''} onChangeText={(value) => patch('bairro', value)} />
+          </FormRow>
+          <FormRow>
+            <FormField label="Cidade" value={editing.cidade ?? ''} onChangeText={(value) => patch('cidade', value)} />
+            <FormField label="Complemento" value={editing.complemento ?? ''} onChangeText={(value) => patch('complemento', value)} placeholder="Apto, bloco..." />
+          </FormRow>
+        </FormSection>
+
+        <FormSection title="Curso">
+          {cursos.length ? <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Curso / turma <Text style={styles.required}>*</Text></Text>
+            <ChoiceGroup options={cursos.map((curso: any) => ({ value: String(curso.id), label: curso.nome }))} value={String(editing.cursoId ?? '')} onChange={(value) => patch('cursoId', value)} />
+            {fieldErrors.cursoId ? <Text style={styles.formError}>Escolha o curso.</Text> : null}
+          </View> : <FormField required label="Curso/turma vinculada" value={editing.cursoId ?? editing.courseId ?? ''} onChangeText={(value) => patch('cursoId', value)} hint="Nenhum curso ativo encontrado: informe o código do curso." error={fieldErrors.cursoId} />}
+          <ToggleRow label="Já foi aluno?" value={!!editing.jaFoiAluno} onChange={(value) => setBoolean('jaFoiAluno', value)} />
+          {editing.jaFoiAluno ? <FormField label="Qual curso/cidade participou" value={editing.cursoCidadeAnterior ?? ''} onChangeText={(value) => patch('cursoCidadeAnterior', value)} /> : null}
+        </FormSection>
+
+        <FormSection title="Par e acompanhantes">
+          <ToggleRow label="Não tem par" value={!!editing.semPar} onChange={(value) => setBoolean('semPar', value)} />
+          {!editing.semPar ? <FormField label="Nome do par" value={editing.nomePar ?? editing.par ?? ''} onChangeText={(value) => patch('nomePar', value)} /> : null}
+          <ToggleRow label="Inscrever mais de uma pessoa" value={!!editing.inscricaoMultipla} onChange={(value) => setBoolean('inscricaoMultipla', value)} />
+          {editing.inscricaoMultipla ? <>
+            <FormField label="Quantidade de pessoas adicionais" value={String(editing.quantidadeAdicionais ?? 0)} onChangeText={ensureAdditionalCount} keyboardType="numeric" />
+            {(editing.adicionais ?? []).map((adicional: any, index: number) => <View key={index} style={styles.additionalCard}>
+              <Text style={styles.additionalTitle}>Pessoa adicional {index + 1}</Text>
+              <FormField label="Nome completo" value={adicional.nome ?? ''} onChangeText={(value) => patchAdditional(index, 'nome', value)} />
+              <FormRow>
+                <FormField label="CPF" value={adicional.cpf ?? ''} onChangeText={(value) => patchAdditional(index, 'cpf', value)} keyboardType="numeric" placeholder="000.000.000-00" />
+                <FormField label="Telefone" value={adicional.telefone ?? ''} onChangeText={(value) => patchAdditional(index, 'telefone', value)} keyboardType="phone-pad" />
+              </FormRow>
+              <FormField label="Nome do par" value={adicional.nomePar ?? ''} onChangeText={(value) => patchAdditional(index, 'nomePar', value)} />
+            </View>)}
+          </> : null}
+        </FormSection>
+
+        <FormSection title="Padrinhos" description={`${expectedSponsors} esperado(s) para ${participantCount} participante(s). Opcional.`}>
+          {Array.from({ length: expectedSponsors }, (_, index) => (
+            <FormField
+              key={`padrinho-${index}`}
+              label={`Padrinho ${index + 1}`}
+              value={editing.padrinhos?.[index]?.nome ?? ''}
+              onFocus={() => ensureSponsors(expectedSponsors)}
+              onChangeText={(value) => patchSponsor(index, value)}
+              placeholder="Nome do padrinho"
+            />
+          ))}
+        </FormSection>
+
+        <FormSection title="Status">
+          <StatusPicker value={editing.status ?? 'PENDENTE'} onChange={(value) => patch('status', value)} />
+        </FormSection>
+        {Object.values(fieldErrors).length ? <Text style={styles.formError}>Revise os campos destacados antes de salvar.</Text> : null}
       </> : null}
     </AppModal>
   </Screen>;
@@ -273,9 +370,9 @@ function DetailRow({ icon, label, value, last = false }: { icon: React.Component
 
 function StatusPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return <View style={styles.toggleRow}>
-    <Text style={styles.toggleLabel}>Status da inscricao</Text>
+    <Text style={styles.toggleLabel}>Status da inscrição</Text>
     <ChoiceGroup
-      options={['PENDENTE', 'CONFIRMADO', 'CANCELADO', 'ATIVO'].map((status) => ({ value: status, label: status }))}
+      options={[['PENDENTE', 'Pendente'], ['CONFIRMADO', 'Confirmado'], ['CANCELADO', 'Cancelado'], ['ATIVO', 'Ativo']].map(([status, label]) => ({ value: status, label }))}
       value={value}
       onChange={onChange}
     />
@@ -283,35 +380,28 @@ function StatusPicker({ value, onChange }: { value: string; onChange: (value: st
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  rowCard: { flex: 1 },
+  grid: gridContainer,
   profileHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 18 },
   avatar: { width: 52, height: 52, flexShrink: 0, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   profileCopy: { flex: 1, minWidth: 0 },
-  title: { color: '#fff', fontSize: 20, lineHeight: 25, fontWeight: '900' },
+  title: { color: '#fff', fontSize: 20, lineHeight: 25, fontFamily: theme.font.bold },
   profileHint: { color: colors.muted, fontSize: 12, marginTop: 3 },
   detailsCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, paddingHorizontal: 14 },
   detailRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   detailRowLast: { borderBottomWidth: 0 },
   detailIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A1717' },
   detailCopy: { flex: 1, minWidth: 0, paddingVertical: 10 },
-  detailLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
-  detailValue: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 3 },
+  detailLabel: { color: colors.muted, fontSize: 11, fontFamily: theme.font.semiBold, textTransform: 'uppercase' },
+  detailValue: { color: colors.text, fontSize: 15, fontFamily: theme.font.semiBold, marginTop: 3 },
   additionalSummary: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginTop: 12 },
-  additionalTitle: { color: colors.text, fontWeight: '900' },
+  additionalTitle: { color: colors.text, fontFamily: theme.font.bold },
   additionalText: { color: colors.muted, fontSize: 12, marginTop: 2 },
-  section: { color: colors.text, fontWeight: '900', marginTop: 12 },
-  inline: { flexDirection: 'row', gap: 10 },
-  stack: { flexDirection: 'column' },
-  inlineItem: { flex: 1 },
   footer: { flexDirection: 'row', gap: 10 },
   footerItem: { flex: 1 },
-  formError: { color: colors.red, fontWeight: '800', marginBottom: 8 },
-  fieldError: { color: colors.red, fontSize: 12, fontWeight: '700', marginTop: 5 },
+  formError: { color: colors.red, fontFamily: theme.font.semiBold, marginBottom: 8 },
   toggleRow: { marginTop: 14 },
-  toggleLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 8 },
+  required: { color: colors.red },
+  pessoaHint: { color: colors.text, fontSize: 13, lineHeight: 19, fontFamily: theme.font.regular, backgroundColor: colors.blueSoft, borderRadius: theme.radius.md, padding: 12, marginBottom: 6 },
+  toggleLabel: { color: colors.muted, fontSize: 12, fontFamily: theme.font.medium, marginBottom: 8 },
   additionalCard: { borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 12, marginTop: 12 },
-  sponsorHeader: { marginTop: 8 },
-  sponsorHint: { color: colors.muted, fontSize: 12, fontWeight: '700', marginTop: 4 }
 });

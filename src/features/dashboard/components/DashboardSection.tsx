@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { colors, theme } from '@/theme/theme';
 
 type Props = {
   title: string;
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 18,
-    fontWeight: '900',
+    fontFamily: theme.font.bold,
     letterSpacing: 0,
     ...webNoSelect
   }

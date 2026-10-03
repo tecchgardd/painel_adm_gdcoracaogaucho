@@ -298,12 +298,21 @@ export type PurchaseReceipt = DocumentFile & { saleId: string };
 export type Cortesia = {
   id: string;
   beneficiario?: string;
+  nome?: string;
+  cpf?: string;
   customerId?: string;
   eventoId?: string;
   eventId?: string;
+  evento?: { id?: string; nome?: string; data?: string };
   codigo?: string;
   code?: string;
+  quantidade?: number;
+  /** Justificativa obrigatória da gratuidade. */
+  motivo?: string;
+  /** Quem emitiu (preenchido pelo backend). */
+  responsavel?: { id?: string; nome?: string } | string;
   status?: EntityStatus | string;
+  createdAt?: string;
 };
 
 export type Colaborador = {
@@ -326,10 +335,16 @@ export type Colaborador = {
   role?: UserRole | string;
   tipoAcesso?: UserRole | string;
   status?: EntityStatus | string;
+  /** Nome de usuário para login (alternativa ao e-mail). */
+  username?: string;
+  /** URL HTTPS da foto do colaborador. */
+  fotoUrl?: string | null;
   userId?: string;
   user?: {
     id: string;
     email?: string;
+    username?: string;
+    image?: string | null;
     role?: UserRole | string;
     mustChangePassword?: boolean;
   };

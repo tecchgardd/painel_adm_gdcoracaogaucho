@@ -18,7 +18,7 @@ export function ScaledDocument({ width, children }: { width: number; children: R
 
   return (
     <View style={styles.outer} onLayout={onContainerLayout}>
-      <View style={{ width, height: contentHeight * scale }}>
+      <View style={{ width: width * scale, height: contentHeight * scale, overflow: 'hidden' }}>
         <View onLayout={onContentLayout} style={[styles.content, { width, transform: [{ scale }] }]}>
           {children}
         </View>

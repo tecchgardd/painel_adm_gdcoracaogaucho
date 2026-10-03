@@ -5,7 +5,7 @@ import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, Vi
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { AppModal, Button, Logo } from '@/shared/components/ui';
-import { authenticateWithBiometrics, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled } from '@/services/biometric.service';
+import { authenticateWithBiometrics, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled } from '@/features/auth/services/biometric.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 import { clearRememberedEmail, getRememberedEmail, setRememberedEmail } from '@/shared/utils/rememberedEmail';
@@ -38,7 +38,7 @@ export default function Login() {
 
   async function entrar() {
     if (!email.trim() || !password) {
-      setError('Informe o e-mail e a senha.');
+      setError('Informe o e-mail ou usuário e a senha.');
       return;
     }
     setLoading(true);
@@ -76,7 +76,7 @@ export default function Login() {
     } catch {
       await setBiometricEnabled(false);
       setBiometricReady(false);
-      setError('Sua sessão expirou. Entre novamente com e-mail e senha.');
+      setError('Sua sessão expirou. Entre novamente com seu e-mail ou usuário e a senha.');
     }
   }
 
@@ -94,18 +94,21 @@ export default function Login() {
     <View style={styles.card}>
       <Text style={styles.title}>Acessar plataforma</Text>
 
-      <Text style={styles.label}>E-mail</Text>
+      <Text style={styles.label}>E-mail ou usuário</Text>
       <View style={styles.inputWrap}>
-        <MaterialCommunityIcons name="email-outline" size={18} color={colors.muted} />
+        <MaterialCommunityIcons name="account-outline" size={18} color={colors.muted} />
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
-          placeholder="seu@email.com"
+          textContentType="username"
+          autoComplete="username"
+          placeholder="seu@email.com ou usuário"
           placeholderTextColor={colors.muted}
-          accessibilityLabel="E-mail"
+          accessibilityLabel="E-mail ou usuário"
         />
       </View>
 
@@ -154,7 +157,7 @@ export default function Login() {
 
     <Text style={styles.version}>{`Versão ${appVersion}`}</Text>
 
-    <AppModal visible={forgotVisible} onClose={() => setForgotVisible(false)} position="center" title="Esqueci minha senha">
+    <AppModal visible={forgotVisible} onClose={() => setForgotVisible(false)} position="center" size="sm" title="Esqueci minha senha">
       <Text style={styles.modalText}>
         Entre em contato com um administrador do Coração Gaúcho para redefinir sua senha de acesso.
       </Text>

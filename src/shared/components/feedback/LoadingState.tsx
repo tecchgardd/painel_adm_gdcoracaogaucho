@@ -1,6 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/theme/theme';
+import { colors, theme } from '@/theme/theme';
 
 export function LoadingState({ label = 'Carregando...' }: { label?: string }) {
   return <View style={styles.wrap} accessibilityRole="progressbar" accessibilityLabel={label}>
@@ -11,5 +11,5 @@ export function LoadingState({ label = 'Carregando...' }: { label?: string }) {
 
 const styles = StyleSheet.create({
   wrap: { minHeight: 120, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  label: { color: colors.muted, fontWeight: '800' }
+  label: { color: colors.muted, fontFamily: theme.font.semiBold }
 });

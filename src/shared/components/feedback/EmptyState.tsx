@@ -14,6 +14,6 @@ export function EmptyState({ title = 'Não há dados ainda', subtitle, icon = 'd
 
 const styles = StyleSheet.create({
   empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: theme.radius.lg, backgroundColor: colors.card, gap: 10, paddingHorizontal: 24 },
-  text: { color: colors.muted, fontWeight: '800', textAlign: 'center' },
+  text: { color: colors.muted, fontFamily: theme.font.semiBold, textAlign: 'center' },
   subtitle: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: -4, lineHeight: 17 }
 });

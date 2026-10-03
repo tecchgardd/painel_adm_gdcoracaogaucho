@@ -1,7 +1,9 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { router } from 'expo-router';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
+import { Panel } from '@/shared/components/ui';
 import { colors, theme } from '@/theme/theme';
 
 type QuickAction = {
@@ -11,39 +13,46 @@ type QuickAction = {
   path: string;
 };
 
-const quickActions: QuickAction[] = [
+export const quickActions: QuickAction[] = [
   { label: 'Nova venda', subtitle: 'Evento, baile ou curso', icon: 'cash-register', path: '/vendas' },
-  { label: 'Nova inscrição', subtitle: 'Venda de curso para um aluno', icon: 'account-school-outline', path: '/vendas?tipo=CURSO' },
-  { label: 'Gerar lote', subtitle: 'Aluno + evento ou baile', icon: 'ticket-confirmation-outline', path: '/vendas?tipo=LOTE' },
+  { label: 'Nova inscrição', subtitle: 'Curso para um aluno', icon: 'account-school-outline', path: '/vendas?tipo=CURSO' },
+  { label: 'Cortesias', subtitle: 'Gratuidades com motivo', icon: 'ticket-percent-outline', path: '/cortesias' },
   { label: 'Dar baixa', subtitle: 'Pagamentos pendentes', icon: 'cash-check', path: '/pagamentos' },
-  { label: 'Agente IA', subtitle: 'Regras, prompts e canais', icon: 'robot-outline', path: '/agente-ia' }
+  { label: 'Scanner', subtitle: 'Validar ingressos', icon: 'qrcode-scan', path: '/scanner' },
+  { label: 'Agente IA', subtitle: 'Regras e conhecimento', icon: 'robot-outline', path: '/agente-ia' }
 ];
 
-export function QuickActionsRow() {
-  return <View>
-    <Text style={styles.sectionTitle}>AÇÕES RÁPIDAS</Text>
-    <View style={styles.grid}>
-      {quickActions.map((item) => <TouchableOpacity
-        key={item.label}
-        activeOpacity={0.86}
-        style={styles.card}
-        onPress={() => router.push(item.path as any)}
-        accessibilityRole="button"
-        accessibilityLabel={item.label}
-      >
-        <View style={styles.iconBox}><MaterialCommunityIcons name={item.icon} color="#fff" size={22} /></View>
-        <Text style={styles.title}>{item.label}</Text>
-        <Text style={styles.subtitle}>{item.subtitle}</Text>
-      </TouchableOpacity>)}
+export function QuickActionsRow({ columns = 3 }: { columns?: number }) {
+  const cell = gridCellStyle(columns);
+  return <Panel title="Atalhos" icon="lightning-bolt-outline">
+    <View style={[gridContainer, styles.grid]}>
+      {quickActions.map((item) => <View key={item.label} style={cell}>
+        <Pressable
+          onPress={() => router.push(item.path as any)}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
+          style={(state) => [styles.action, (state as { hovered?: boolean }).hovered && styles.actionHover, state.pressed && styles.pressed]}
+        >
+          <View style={styles.iconBox}><MaterialCommunityIcons name={item.icon} color={colors.red} size={20} /></View>
+          <View style={styles.copy}>
+            <Text numberOfLines={1} style={styles.title}>{item.label}</Text>
+            <Text numberOfLines={1} style={styles.subtitle}>{item.subtitle}</Text>
+          </View>
+        </Pressable>
+      </View>)}
     </View>
-  </View>;
+  </Panel>;
 }
 
+const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null;
+
 const styles = StyleSheet.create({
-  sectionTitle: { color: colors.muted, fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: 10 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: { minWidth: 150, maxWidth: 270, flexGrow: 1, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: '#492020', backgroundColor: '#201313', padding: 14 },
-  iconBox: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.red, marginBottom: 10 },
-  title: { color: colors.text, fontSize: 13, fontWeight: '900' },
-  subtitle: { color: colors.muted, fontSize: 11, marginTop: 3 }
+  grid: { marginBottom: -12 },
+  action: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: theme.radius.md, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.card, padding: 12, ...webCursor },
+  actionHover: { borderColor: colors.redBorder, backgroundColor: colors.cardHover },
+  pressed: { opacity: 0.85 },
+  iconBox: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.redSoft },
+  copy: { flex: 1, minWidth: 0 },
+  title: { color: colors.text, fontSize: 13, fontFamily: theme.font.semiBold },
+  subtitle: { color: colors.subtle, fontSize: 11, fontFamily: theme.font.regular, marginTop: 1 }
 });

@@ -1,6 +1,7 @@
 import type { DashboardMetrics, DashboardSectionData } from '@/shared/types/entities';
 import { formatCurrencyBRL } from '@/shared/utils/format';
 import { api, unwrapData } from '@/core/api/client';
+import type { DashboardOverview, DashboardSummary } from '@/features/dashboard/types';
 
 export const dashboardZeroState: DashboardMetrics = [
   {
@@ -41,7 +42,7 @@ export const dashboardZeroState: DashboardMetrics = [
   }
 ];
 
-function normalizeDashboard(payload: unknown): DashboardMetrics {
+export function normalizeDashboard(payload: unknown): DashboardMetrics {
   const data = unwrapData<unknown>(payload);
   if (Array.isArray(data)) return data.length ? data as DashboardSectionData[] : dashboardZeroState;
   if (data && typeof data === 'object' && Array.isArray((data as { sections?: unknown[] }).sections)) {
@@ -103,7 +104,44 @@ function normalizeDashboard(payload: unknown): DashboardMetrics {
   return dashboardZeroState;
 }
 
-export async function getDashboard() {
+const toNumber = (value: unknown) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+/** Resumo tipado; `null` quando a API responde no formato legado (lista de seções). */
+export function parseDashboardSummary(payload: unknown): DashboardSummary | null {
+  const data = unwrapData<unknown>(payload);
+  if (!data || typeof data !== 'object' || Array.isArray(data) || Array.isArray((data as { sections?: unknown }).sections)) return null;
+  const raw = data as Record<string, any>;
+  const next = raw.proximoEvento && typeof raw.proximoEvento === 'object' ? raw.proximoEvento : null;
+  const last = raw.ultimoCheckin && typeof raw.ultimoCheckin === 'object' ? raw.ultimoCheckin : null;
+  return {
+    bailesAtivos: toNumber(raw.bailesAtivos),
+    cursosAtivos: toNumber(raw.cursosAtivos),
+    capacidadeAtiva: toNumber(raw.capacidadeAtiva),
+    receitaDia: toNumber(raw.receitaDia),
+    ingressosVendidosHoje: toNumber(raw.ingressosVendidosHoje),
+    ingressosValidadosHoje: toNumber(raw.ingressosValidadosHoje),
+    pagamentosPendentes: toNumber(raw.pagamentosPendentes),
+    pedidosPendentes: toNumber(raw.pedidosPendentes),
+    inscricoesPendentes: toNumber(raw.inscricoesPendentes),
+    cortesiasLiberadas: toNumber(raw.cortesiasLiberadas),
+    clientes: toNumber(raw.clientes),
+    eventosProximos: toNumber(raw.eventosProximos),
+    proximoEvento: next ? {
+      nome: next.nome ?? next.name,
+      data: next.data ?? next.date,
+      local: next.local,
+      cidade: next.cidade,
+      vendidos: next.vendidos != null ? toNumber(next.vendidos) : undefined,
+      capacidade: next.capacidade != null ? toNumber(next.capacidade) : undefined
+    } : null,
+    ultimoCheckin: last ? { cliente: last.cliente, horario: last.horario } : null
+  };
+}
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {
   const response = await api.get('/admin/dashboard');
-  return normalizeDashboard(response.data);
+  return { summary: parseDashboardSummary(response.data), sections: normalizeDashboard(response.data) };
 }

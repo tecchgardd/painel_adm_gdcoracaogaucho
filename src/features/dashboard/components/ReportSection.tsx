@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type React from 'react';
 
-import { colors } from '@/theme/colors';
+import { colors, theme } from '@/theme/theme';
 import type { ReportCategory } from '@/shared/types/entities';
 
 type Props = {
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: '900',
+    fontFamily: theme.font.bold,
     letterSpacing: 0,
     ...webNoSelect
   },
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   chartLabel: {
     color: colors.muted,
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: theme.font.semiBold,
     ...webNoSelect
   }
 });

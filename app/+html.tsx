@@ -8,7 +8,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#111111" />
+        <meta name="theme-color" content="#08090A" />
         <meta name="application-name" content="Coração Gaúcho Admin" />
         <meta name="description" content="Painel administrativo e scanner de ingressos do Coração Gaúcho." />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -41,9 +41,9 @@ export default function Root({ children }: PropsWithChildren) {
             min-height: 100%;
             overflow-x: hidden;
             overscroll-behavior-x: none;
-            background: #111111;
+            background: #08090A;
           }
-          html { background: #111111; }
+          html { background: #08090A; }
           body {
             box-sizing: border-box;
             margin: 0;
@@ -51,9 +51,19 @@ export default function Root({ children }: PropsWithChildren) {
             padding-right: 0;
             padding-bottom: 0;
             padding-left: 0;
-            background: #111111;
+            background: #08090A;
           }
           #root { min-width: 0; }
+          /* Barras de rolagem no tema escuro (a nativa clara com setas destoava dos modais). */
+          * { scrollbar-width: thin; scrollbar-color: #2B2C31 transparent; }
+          ::-webkit-scrollbar { width: 10px; height: 10px; }
+          ::-webkit-scrollbar-track { background: transparent; }
+          ::-webkit-scrollbar-thumb { background-color: #2B2C31; border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+          ::-webkit-scrollbar-thumb:hover { background-color: #3A3B42; }
+          ::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+          /* Foco: sem o contorno branco do navegador ao clicar; anel da marca só na navegação por teclado. */
+          :focus { outline: none; }
+          :focus-visible { outline: 2px solid rgba(216, 50, 47, 0.45); outline-offset: 1px; }
           @supports (height: 100dvh) {
             html, body, #root { height: 100dvh; min-height: 100dvh; }
           }

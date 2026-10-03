@@ -4,8 +4,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Button, Header, Screen } from '@/shared/components/ui';
-import { uploadFotos, UploadablePhoto } from '@/services/fotos.service';
-import { colors } from '@/theme/theme';
+import { uploadFotos, UploadablePhoto } from '@/features/fotos/services/fotos.service';
+import { colors, theme } from '@/theme/theme';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 
 type SelectedPhoto = {
@@ -215,18 +215,18 @@ const styles = StyleSheet.create({
   actionsMobile: { alignItems: 'stretch', flexDirection: 'column' },
   fullWidth: { minWidth: 0, width: '100%', justifyContent: 'center' },
   primaryAction: { minHeight: 46, borderRadius: 12, backgroundColor: colors.red, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  primaryActionText: { color: '#fff', fontWeight: '900' },
+  primaryActionText: { color: '#fff', fontFamily: theme.font.bold },
   sendButton: { minWidth: 180 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   infoCard: { minHeight: 86, width: '100%', maxWidth: 230, flexGrow: 1, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, padding: 12, justifyContent: 'space-between' },
   infoCardMobile: { maxWidth: '100%' },
-  infoLabel: { color: colors.muted, fontSize: 12, fontWeight: '800' },
-  infoValue: { color: colors.text, fontSize: 16, fontWeight: '900' },
+  infoLabel: { color: colors.muted, fontSize: 12, fontFamily: theme.font.semiBold },
+  infoValue: { color: colors.text, fontSize: 16, fontFamily: theme.font.bold },
   progressTrack: { height: 12, borderRadius: 999, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.green },
-  status: { color: colors.muted, fontSize: 13, fontWeight: '800' },
+  status: { color: colors.muted, fontSize: 13, fontFamily: theme.font.semiBold },
   invalidBox: { borderRadius: 12, backgroundColor: '#2A1515', borderWidth: 1, borderColor: '#4A2020', padding: 10, gap: 4 },
-  invalidText: { color: colors.red, fontSize: 12, fontWeight: '700' },
-  success: { color: colors.green, fontSize: 14, fontWeight: '900' },
-  empty: { color: colors.muted, fontWeight: '800' }
+  invalidText: { color: colors.red, fontSize: 12, fontFamily: theme.font.semiBold },
+  success: { color: colors.green, fontSize: 14, fontFamily: theme.font.bold },
+  empty: { color: colors.muted, fontFamily: theme.font.semiBold }
 });

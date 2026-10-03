@@ -14,7 +14,7 @@ export function DocumentQRCode({ value, size = 90 }: { value: string; size?: num
       return;
     }
     let active = true;
-    QRCode.toDataURL(value, { errorCorrectionLevel: 'M', margin: 1, width: 240 }).then((dataUrl) => {
+    QRCode.toDataURL(value, { errorCorrectionLevel: 'M', margin: 1, width: 512 }).then((dataUrl) => {
       qrCache.set(value, dataUrl);
       if (active) setUri(dataUrl);
     });
