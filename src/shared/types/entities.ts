@@ -31,6 +31,27 @@ export type SessionUser = {
   role?: UserRole;
   tipoAcesso?: UserRole;
   accessType?: UserRole;
+  /** Perfil de acesso (módulo Perfis). Ausente enquanto o backend não implementa perfis. */
+  perfil?: PerfilResumo | null;
+  /** Permissões efetivas (`modulo.acao`); quando ausente, valem as do perfil padrão do `role`. */
+  permissoes?: string[];
+};
+
+export type PerfilResumo = { id: string; nome: string; permissoes?: string[] };
+
+export type PerfilAcesso = {
+  id: string;
+  nome: string;
+  descricao?: string;
+  permissoes: string[];
+  /** Perfil travado (Administrador): não pode ser editado nem excluído. */
+  sistema?: boolean;
+  /** Tipo de acesso antigo equivalente, mantido enquanto o backend ainda confere `role`. */
+  role?: UserRole;
+  /** Quantos colaboradores usam o perfil. */
+  usuarios?: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type AuthSession = {
@@ -303,7 +324,7 @@ export type Cortesia = {
   customerId?: string;
   eventoId?: string;
   eventId?: string;
-  evento?: { id?: string; nome?: string; data?: string };
+  evento?: { id?: string; nome?: string; data?: string; dataInicio?: string };
   codigo?: string;
   code?: string;
   quantidade?: number;
@@ -313,6 +334,7 @@ export type Cortesia = {
   responsavel?: { id?: string; nome?: string } | string;
   status?: EntityStatus | string;
   createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Colaborador = {
@@ -334,6 +356,8 @@ export type Colaborador = {
   cargo?: string;
   role?: UserRole | string;
   tipoAcesso?: UserRole | string;
+  perfilId?: string | null;
+  perfil?: PerfilResumo | null;
   status?: EntityStatus | string;
   /** Nome de usuário para login (alternativa ao e-mail). */
   username?: string;

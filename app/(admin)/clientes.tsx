@@ -15,6 +15,7 @@ import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import type { Customer } from '@/shared/types/entities';
 import { maskCpf } from '@/shared/utils/format';
+import { usePode } from '@/stores/auth.store';
 
 const TIPOS = [
   { value: 'TODOS', label: 'Todos' },
@@ -48,6 +49,7 @@ function combina(pessoa: PessoaView, tipo: string, situacao: string, busca: stri
  * a inscrição em si fica em Comercial → Inscrições, aberta a partir da ficha ("Inscrever em curso").
  */
 export default function Pessoas() {
+  const podeCriar = usePode('pessoas.criar');
   const [busca, setBusca] = useState('');
   const [buscaApi, setBuscaApi] = useState('');
   const params = useLocalSearchParams<{ tipo?: string }>();
@@ -76,7 +78,7 @@ export default function Pessoas() {
     <Header
       title="Pessoas"
       subtitle="Clientes e alunos num cadastro só. Abra a ficha para ver o histórico, inscrever em curso ou vender."
-      right={<FloatingActionButton onPress={() => setForm({ open: true, pessoa: null })} accessibilityLabel="Nova pessoa" />}
+      right={podeCriar ? <FloatingActionButton onPress={() => setForm({ open: true, pessoa: null })} accessibilityLabel="Nova pessoa" /> : undefined}
     />
     <FilterBar
       search={{ value: busca, onChange: setBusca, placeholder: 'Buscar por nome, CPF, telefone ou e-mail' }}

@@ -3,7 +3,7 @@ import { router, usePathname } from 'expo-router';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { filterNavigationByRole, mobileTabs } from '@/shared/components/navigation/navigation.config';
+import { filterNavigation, mobileTabs } from '@/shared/components/navigation/navigation.config';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 
@@ -22,8 +22,8 @@ function isActive(pathname: string, path?: string) {
 export function BottomTabs() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  const role = useAuthStore((state) => state.role);
-  const visibleTabs = filterNavigationByRole(mobileTabs, role);
+  const permissoes = useAuthStore((state) => state.permissoes);
+  const visibleTabs = filterNavigation(mobileTabs, permissoes);
   const safeBottom = Platform.OS === 'web' ? 0 : insets.bottom;
 
   return (

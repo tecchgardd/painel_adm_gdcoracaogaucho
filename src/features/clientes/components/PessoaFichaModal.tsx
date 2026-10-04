@@ -10,6 +10,7 @@ import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import type { Customer } from '@/shared/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf } from '@/shared/utils/format';
 import { colors, theme } from '@/theme/theme';
+import { usePode } from '@/stores/auth.store';
 
 const HISTORICO_ICON: Record<HistoricoTipo, React.ComponentProps<typeof MaterialCommunityIcons>['name']> = {
   VENDA: 'cart-outline', INGRESSO: 'ticket-outline', INSCRICAO: 'school-outline', CORTESIA: 'ticket-percent-outline', PAGAMENTO: 'cash-check', OUTRO: 'history'
@@ -19,6 +20,10 @@ type Confirm = 'excluir' | 'inativar' | null;
 
 /** Ficha da pessoa: dados, histórico (compras, ingressos, inscrições, cortesias) e ações. */
 export function PessoaFichaModal({ pessoaId, onClose, onEdit, onChanged }: { pessoaId: string | null; onClose: () => void; onEdit: (customer: Customer) => void; onChanged: () => void }) {
+  const podeInscrever = usePode('inscricoes.criar');
+  const podeVender = usePode('vendas.criar');
+  const podeEditar = usePode('pessoas.editar');
+  const podeExcluir = usePode('pessoas.excluir');
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -85,9 +90,9 @@ export function PessoaFichaModal({ pessoaId, onClose, onEdit, onChanged }: { pes
       </View>
 
       <View style={styles.actions}>
-        <View style={styles.action}><Button title="Inscrever em curso" tone="green" onPress={() => go(`/alunos?pessoa=${pessoaId}`)} /></View>
-        <View style={styles.action}><Button title="Nova venda" tone="soft" onPress={() => go(`/vendas?cpf=${(pessoa.cpf ?? '').replace(/\D/g, '')}`)} /></View>
-        <View style={styles.action}><Button title="Editar" tone="dark" onPress={() => customer && onEdit(customer)} /></View>
+        {podeInscrever ? <View style={styles.action}><Button title="Inscrever em curso" tone="green" onPress={() => go(`/alunos?pessoa=${pessoaId}`)} /></View> : null}
+        {podeVender ? <View style={styles.action}><Button title="Nova venda" tone="soft" onPress={() => go(`/vendas?cpf=${(pessoa.cpf ?? '').replace(/\D/g, '')}`)} /></View> : null}
+        {podeEditar ? <View style={styles.action}><Button title="Editar" tone="dark" onPress={() => customer && onEdit(customer)} /></View> : null}
       </View>
 
       <InfoList>
@@ -110,11 +115,11 @@ export function PessoaFichaModal({ pessoaId, onClose, onEdit, onChanged }: { pes
         </View>)}
       </View> : <Text style={styles.muted}>Nenhuma compra, ingresso ou inscrição ainda.</Text>}
 
-      <View style={styles.dangerZone}>
-        <View style={styles.action}><Button title={pessoa.ativo ? 'Inativar cadastro' : 'Reativar cadastro'} tone="dark" onPress={() => setConfirm('inativar')} /></View>
-        {podeExcluirPessoa(itens) && !loadingHistorico ? <View style={styles.action}><Button title="Excluir cadastro" tone="dark" onPress={() => setConfirm('excluir')} /></View> : null}
-      </View>
-      {!podeExcluirPessoa(itens) ? <Text style={styles.hint}>Quem já tem compras ou inscrições não pode ser excluído; inative o cadastro para preservar o histórico.</Text> : null}
+      {podeEditar || podeExcluir ? <View style={styles.dangerZone}>
+        {podeEditar ? <View style={styles.action}><Button title={pessoa.ativo ? 'Inativar cadastro' : 'Reativar cadastro'} tone="dark" onPress={() => setConfirm('inativar')} /></View> : null}
+        {podeExcluir && podeExcluirPessoa(itens) && !loadingHistorico ? <View style={styles.action}><Button title="Excluir cadastro" tone="dark" onPress={() => setConfirm('excluir')} /></View> : null}
+      </View> : null}
+      {podeExcluir && !podeExcluirPessoa(itens) ? <Text style={styles.hint}>Quem já tem compras ou inscrições não pode ser excluído; inative o cadastro para preservar o histórico.</Text> : null}
     </> : null}
   </AppModal>;
 }

@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
+import { perfilPadraoDoRole } from '@/core/permissions/catalogo';
+import { normalizarPermissoes } from '@/core/permissions/permissoes';
+import type { UserRole } from '@/shared/types/entities';
+
 import {
-  filterNavigationByRole,
+  filterNavigation,
   flattenNavigation,
   isNavItemActive,
+  mobileTabs,
   navigationItems,
   searchNavigation,
   sectionHeadingAt
 } from './navigation.config';
+
+const filterNavigationByRole = (items: typeof navigationItems, role: UserRole) => filterNavigation(items, normalizarPermissoes(perfilPadraoDoRole(role)!.permissoes));
 
 describe('navigation.config', () => {
   it('aponta cada destino para uma rota própria (sem filhos duplicando o pai)', () => {
@@ -76,5 +83,24 @@ describe('Pessoas', () => {
     const flat = flattenNavigation(navigationItems);
     expect(searchNavigation(flat, 'aluno').map((item) => item.path)).toContain('/clientes');
     expect(searchNavigation(flat, 'cliente').map((item) => item.path)).toContain('/clientes');
+  });
+});
+
+describe('permissões', () => {
+  it('ADMIN vê Perfis de acesso e o registro numa seção Administração', () => {
+    const admin = filterNavigationByRole(navigationItems, 'ADMIN');
+    expect(flattenNavigation(admin).map((item) => item.path)).toEqual(expect.arrayContaining(['/perfis', '/registros']));
+    expect(admin.map((_, index) => sectionHeadingAt(admin, index)).filter(Boolean)).toEqual(['Principal', 'Operação', 'Análise', 'Administração']);
+  });
+
+  it('um perfil só com Pagamentos vê só Comercial → Pagamentos', () => {
+    const itens = filterNavigation(navigationItems, normalizarPermissoes(['pagamentos.editar']));
+    expect(itens.map((item) => item.label)).toEqual(['Comercial']);
+    expect(itens[0].children?.map((item) => item.path)).toEqual(['/pagamentos']);
+  });
+
+  it('a aba Gestão aparece quando o perfil tem algum módulo de gestão', () => {
+    expect(filterNavigation(mobileTabs, ['checkin.ver']).map((item) => item.path)).toEqual(['/scanner', '/menu']);
+    expect(filterNavigation(mobileTabs, ['empresas.ver']).map((item) => item.path)).toEqual(['/gestao', '/menu']);
   });
 });

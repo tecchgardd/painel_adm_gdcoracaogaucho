@@ -7,6 +7,7 @@ import { Button, Header, Screen } from '@/shared/components/ui';
 import { uploadFotos, UploadablePhoto } from '@/features/fotos/services/fotos.service';
 import { colors, theme } from '@/theme/theme';
 import { useResponsive } from '@/shared/hooks/useResponsive';
+import { usePode } from '@/stores/auth.store';
 
 type SelectedPhoto = {
   file: UploadablePhoto;
@@ -38,6 +39,7 @@ function slugFolder(value: string) {
 }
 
 export default function Fotos() {
+  const podeEnviar = usePode('fotos.criar');
   const { isMobile } = useResponsive();
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const [folderName, setFolderName] = useState('');
@@ -169,7 +171,7 @@ export default function Fotos() {
     ) : null}
 
     <View style={styles.panel}>
-      <View style={[styles.actions, isMobile && styles.actionsMobile]}>
+      {podeEnviar ? <View style={[styles.actions, isMobile && styles.actionsMobile]}>
         <TouchableOpacity style={[styles.primaryAction, isMobile && styles.fullWidth]} onPress={openFolderPicker}>
           <MaterialCommunityIcons name="folder-image" color="#fff" size={20} />
           <Text style={styles.primaryActionText}>{Platform.OS === 'web' ? 'Selecionar pasta' : 'Selecionar fotos'}</Text>
@@ -177,7 +179,7 @@ export default function Fotos() {
         <View style={[styles.sendButton, isMobile && styles.fullWidth]}>
           <Button title={uploading ? 'Enviando...' : 'Enviar Fotos'} tone="green" onPress={uploading ? undefined : startUpload} />
         </View>
-      </View>
+      </View> : <Text style={styles.semPermissao}>Seu perfil pode ver as fotos, mas não enviar novas.</Text>}
 
       <View style={styles.summaryGrid}>
         <Info mobile={isMobile} label="Pasta" value={folderName || '-'} icon="folder-outline" />
@@ -210,6 +212,7 @@ function Info({ label, value, icon, mobile }: { label: string; value: string; ic
 }
 
 const styles = StyleSheet.create({
+  semPermissao: { color: colors.muted, fontSize: 13, fontFamily: theme.font.regular, marginBottom: 12 },
   panel: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, padding: 14, gap: 14 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
   actionsMobile: { alignItems: 'stretch', flexDirection: 'column' },

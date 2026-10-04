@@ -12,6 +12,7 @@ import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { exportReport, getReports } from '@/features/relatorios/services/relatorios.service';
 import { colors, theme } from '@/theme/theme';
+import { usePode } from '@/stores/auth.store';
 
 const periods = ['Hoje', 'Semana', 'Mês', 'Ano', 'Personalizado'] as const;
 type Period = typeof periods[number];
@@ -23,6 +24,7 @@ const exports = [
 ] as const;
 
 export default function Relatorios() {
+  const podeExportar = usePode('relatorios.exportar');
   const [period, setPeriod] = useState<Period>('Mês');
   const responsive = useResponsive();
   const columns = responsive.isDesktop ? 3 : responsive.isTablet ? 2 : 2;
@@ -45,12 +47,12 @@ export default function Relatorios() {
           </View>
 
           <View style={[styles.exportRow, responsive.isMobile && styles.exportRowMobile]}>
-            {exports.map((item) => (
+            {podeExportar ? exports.map((item) => (
               <TouchableOpacity key={item.label} activeOpacity={0.85} style={styles.exportButton} onPress={() => exportReport(item.label.toLowerCase() as 'pdf' | 'csv' | 'xlsx')}>
                 <MaterialCommunityIcons name={item.icon} color={colors.muted} size={17} />
                 <Text style={styles.exportText}>{item.label}</Text>
               </TouchableOpacity>
-            ))}
+            )) : null}
           </View>
         </View>
 

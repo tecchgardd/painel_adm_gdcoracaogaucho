@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { PERFIS_LOCAIS } from '@/features/perfis/utils/perfilForm';
+
 import {
   buildColaboradorPayload,
   emptyColaboradorForm,
   normalizeUsername,
+  perfilIdDoColaborador,
   suggestUsername,
   toColaboradorForm,
   validateColaborador
@@ -52,5 +55,21 @@ describe('toColaboradorForm', () => {
     const form = toColaboradorForm({ id: '7', nome: 'Ana', user: { id: 'u', username: 'ana.s', image: 'https://img/a.jpg' } });
     expect(form.username).toBe('ana.s');
     expect(form.fotoUrl).toBe('https://img/a.jpg');
+  });
+});
+
+describe('perfil do colaborador', () => {
+  it('sem perfil no backend, deduz o perfil padrão do role e manda o role equivalente', () => {
+    expect(perfilIdDoColaborador({ id: '1', role: 'ADMIN' } as never)).toBe('administrador');
+    expect(perfilIdDoColaborador({ id: '1', perfilId: '42', role: 'STAFF' } as never)).toBe('42');
+    const portaria = PERFIS_LOCAIS.find((perfil) => perfil.id === 'portaria')!;
+    const payload = buildColaboradorPayload({ ...valid, perfilId: 'portaria' }, portaria, false);
+    expect(payload.role).toBe('CHECKIN');
+    expect(payload.perfilId).toBeUndefined();
+  });
+
+  it('com perfis no backend, manda o perfilId e o role compatível com as permissões', () => {
+    const financeiro = { id: '42', nome: 'Financeiro', permissoes: ['pagamentos.ver', 'pagamentos.editar'] };
+    expect(buildColaboradorPayload({ ...valid, perfilId: '42' }, financeiro, true)).toMatchObject({ perfilId: '42', role: 'STAFF' });
   });
 });

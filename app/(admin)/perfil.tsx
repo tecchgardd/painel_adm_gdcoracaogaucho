@@ -1,14 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Header, Screen } from '@/shared/components/ui';
+import { nomeDoPerfil } from '@/core/permissions/permissoes';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
-
-const roleLabels: Record<string, string> = {
-  ADMIN: 'Administrador',
-  STAFF: 'Atendimento',
-  CHECKIN: 'Check-in'
-};
 
 export default function Perfil() {
   const user = useAuthStore((state) => state.user);
@@ -21,7 +16,7 @@ export default function Perfil() {
       <View style={styles.card}>
         <Field label="Nome" value={displayName} />
         <Field label="E-mail" value={user?.email ?? '-'} />
-        <Field label="Cargo" value={role ? (roleLabels[role] ?? role) : '-'} />
+        <Field label="Perfil de acesso" value={nomeDoPerfil(user, role) ?? '-'} />
       </View>
     </Screen>
   );

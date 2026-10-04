@@ -13,6 +13,7 @@ import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { colors, theme } from '@/theme/theme';
+import { usePode } from '@/stores/auth.store';
 
 const TIPO_OPTIONS = (Object.keys(TIPO_LABELS) as EmpresaTipo[]).map((value) => ({ value, label: TIPO_LABELS[value] }));
 const SITUACAO_OPTIONS = [
@@ -25,6 +26,9 @@ const SITUACAO_OPTIONS = [
 
 /** Patrocinadores, apoiadores e parceiros exibidos na landing page. */
 export default function Empresas() {
+  const podeCriar = usePode('empresas.criar');
+  const podeEditar = usePode('empresas.editar');
+  const podeExcluir = usePode('empresas.excluir');
   const [editing, setEditing] = useState<Empresa | null | undefined>(undefined);
   const [form, setForm] = useState<EmpresaFormState>(toEmpresaForm());
   const [imagem, setImagem] = useState<{ arquivo: EmpresaImagem; preview: string } | null>(null);
@@ -113,7 +117,7 @@ export default function Empresas() {
   const preview = imagem?.preview ?? editing?.imagemUrl;
 
   return <Screen variant="admin">
-    <Header title="Empresas" subtitle="Patrocinadores, apoiadores e parceiros exibidos no site, na ordem definida aqui." right={<FloatingActionButton onPress={() => open()} accessibilityLabel="Nova empresa" />} />
+    <Header title="Empresas" subtitle="Patrocinadores, apoiadores e parceiros exibidos no site, na ordem definida aqui." right={podeCriar ? <FloatingActionButton onPress={() => open()} accessibilityLabel="Nova empresa" /> : undefined} />
     <FilterBar
       search={{ value: busca, onChange: setBusca, placeholder: 'Buscar empresa' }}
       filters={[
@@ -129,7 +133,7 @@ export default function Empresas() {
         const situacao = situacaoNoSite(item);
         return <View key={item.id} style={gridCell}>
           <View style={styles.card}>
-            <Pressable onPress={() => open(item)} accessibilityRole="button" accessibilityLabel={`Editar ${item.nome}`} style={styles.cardMain}>
+            <Pressable onPress={podeEditar ? () => open(item) : undefined} disabled={!podeEditar} accessibilityRole="button" accessibilityLabel={`Editar ${item.nome}`} style={styles.cardMain}>
               <View style={styles.logoTile}><Image source={{ uri: item.imagemUrl }} resizeMode="contain" style={styles.logo} /></View>
               <View style={styles.cardCopy}>
                 <Text numberOfLines={1} style={styles.name}>{item.nome}</Text>
@@ -137,13 +141,15 @@ export default function Empresas() {
                 <View style={styles.badge}><StatusBadge status={situacao} /></View>
               </View>
             </Pressable>
-            <ActionMenu variant="ghost" actions={[
-              { label: 'Editar', icon: 'pencil-outline', onPress: () => open(item) },
-              item.publicado && item.ativo
-                ? { label: 'Ocultar do site', icon: 'eye-off-outline', onPress: () => togglePublicado(item) }
-                : { label: 'Publicar no site', icon: 'eye-outline', onPress: () => togglePublicado(item) },
-              { label: 'Excluir', icon: 'trash-can-outline', tone: 'danger', onPress: () => setDeleting(item) }
-            ]} />
+            {podeEditar || podeExcluir ? <ActionMenu variant="ghost" actions={[
+              ...(podeEditar ? [
+                { label: 'Editar', icon: 'pencil-outline' as const, onPress: () => open(item) },
+                item.publicado && item.ativo
+                  ? { label: 'Ocultar do site', icon: 'eye-off-outline' as const, onPress: () => togglePublicado(item) }
+                  : { label: 'Publicar no site', icon: 'eye-outline' as const, onPress: () => togglePublicado(item) }
+              ] : []),
+              ...(podeExcluir ? [{ label: 'Excluir', icon: 'trash-can-outline' as const, tone: 'danger' as const, onPress: () => setDeleting(item) }] : [])
+            ]} /> : null}
           </View>
         </View>;
       })}

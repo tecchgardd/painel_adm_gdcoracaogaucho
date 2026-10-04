@@ -1,4 +1,4 @@
-import type { Colaborador } from '@/shared/types/entities';
+import type { Colaborador, UserRole } from '@/shared/types/entities';
 import { api, unwrapData } from '@/core/api/client';
 
 export type ColaboradorPayload = {
@@ -8,7 +8,9 @@ export type ColaboradorPayload = {
   username?: string;
   /** null remove a foto; undefined mantém a atual. */
   fotoUrl?: string | null;
-  role?: 'ADMIN' | 'STAFF';
+  /** Tipo de acesso antigo equivalente ao perfil (compatibilidade). */
+  role?: UserRole;
+  perfilId?: string;
   status?: 'ATIVO' | 'INATIVO';
   password?: string;
   generateTemporaryPassword?: boolean;

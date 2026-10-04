@@ -7,7 +7,7 @@ import { ActionMenu, AppModal, Button, ChoiceGroup, FilterBar, FloatingActionBut
 import { getCustomer } from '@/features/clientes/services/customers.service';
 import { listEventos } from '@/features/eventos/services/eventos.service';
 import { findPersonByCpf } from '@/features/pessoas/services/people.service';
-import { maskCpf } from '@/shared/utils/format';
+import { formatDateTime, maskCpf } from '@/shared/utils/format';
 import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { EmptyState } from '@/shared/components/feedback/EmptyState';
 import { ErrorState } from '@/shared/components/feedback/ErrorState';
@@ -17,7 +17,13 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { buscarEnderecoPorCep } from '@/shared/services/cep.service';
 import { createInscricao, listInscricoes, updateInscricao } from '@/features/alunos/services/inscricoes.service';
 import { alunoSchema } from '@/validation/schemas';
+import { ExportButton, ExportModal } from '@/shared/components/ui/ExportModal';
+import { usePeriodoFiltro } from '@/shared/components/ui/PeriodoFiltro';
+import { INSCRICAO_COLUMNS } from '@/features/alunos/utils/inscricaoExport';
+import { dentroDoIntervalo, ordenar, ORDENACAO_OPTIONS, type Ordenacao } from '@/shared/utils/listaAvancada';
+import { matchSituacao } from '@/shared/utils/situacao';
 import { colors, theme } from '@/theme/theme';
+import { usePode } from '@/stores/auth.store';
 
 const emptyAluno = {
   status: 'PENDENTE',
@@ -65,6 +71,9 @@ export default function Alunos() {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
+  const podeCriar = usePode('inscricoes.criar');
+  const podeEditar = usePode('inscricoes.editar');
+  const podeExportar = usePode('inscricoes.exportar');
   const [saving, setSaving] = useState(false);
   const [errorForm, setErrorForm] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -73,15 +82,38 @@ export default function Alunos() {
   const queryAlunos = useCallback(() => listInscricoes(), []);
   const { data, loading, error, refetch } = useApiQuery(queryAlunos, { fallbackData: [] });
   const alunos = useMemo(() => data ?? [], [data]);
-  const filtered = useMemo(() => alunos.filter((aluno: any) =>
-    (statusFilter === 'TODOS' || String(aluno.status).toUpperCase() === statusFilter)
-    && (cursoFilter === 'TODOS' || String(aluno.cursoId) === cursoFilter)
-    && `${aluno.nome} ${aluno.cpf} ${aluno.telefone} ${aluno.courseId ?? ''}`.toLowerCase().includes(query.toLowerCase())
-  ), [alunos, cursoFilter, query, statusFilter]);
+  const [ordenacao, setOrdenacao] = useState<Ordenacao>('RECENTES');
+  const [exportando, setExportando] = useState(false);
+  const periodo = usePeriodoFiltro('Inscrição');
+  const intervalo = periodo.intervalo;
+  // Turmas: cursos ativos + cursos que aparecem nas inscrições (turmas já encerradas continuam filtráveis).
+  const turmas = useMemo(() => {
+    const mapa = new Map<string, string>();
+    cursos.forEach((curso: any) => mapa.set(String(curso.id), curso.nome));
+    alunos.forEach((aluno: any) => { if (aluno.cursoId && !mapa.has(String(aluno.cursoId))) mapa.set(String(aluno.cursoId), aluno.courseId || `Curso ${aluno.cursoId}`); });
+    return [...mapa].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+  }, [alunos, cursos]);
+  const filtered = useMemo(() => {
+    const termo = query.trim().toLowerCase();
+    const visiveis = alunos.filter((aluno: any) =>
+      matchSituacao(aluno.status, statusFilter)
+      && (cursoFilter === 'TODOS' || String(aluno.cursoId) === cursoFilter)
+      && dentroDoIntervalo(aluno.createdAt, intervalo)
+      && (!termo || `${aluno.nome} ${aluno.cpf} ${aluno.telefone} ${aluno.email ?? ''} ${aluno.courseId ?? ''} ${aluno.nomePar ?? ''} ${(aluno.padrinhos ?? []).map((padrinho: any) => padrinho?.nome ?? '').join(' ')}`.toLowerCase().includes(termo))
+    );
+    return ordenar(visiveis, ordenacao, { criado: (aluno: any) => aluno.createdAt, modificado: (aluno: any) => aluno.updatedAt, nome: (aluno: any) => aluno.nome ?? '' });
+  }, [alunos, cursoFilter, intervalo, ordenacao, query, statusFilter]);
+  const descricaoFiltros = [
+    cursoFilter !== 'TODOS' ? `Turma: ${turmas.find((turma) => turma.value === cursoFilter)?.label ?? cursoFilter}` : '',
+    statusFilter !== 'TODOS' ? `Status: ${STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label}` : '',
+    periodo.descricao ? `Inscrição: ${periodo.descricao}` : '',
+    query.trim() ? `Busca: "${query.trim()}"` : '',
+    `Ordem: ${ORDENACAO_OPTIONS.find((option) => option.value === ordenacao)?.label}`
+  ].filter(Boolean).join(' · ');
 
   // Veio da ficha da pessoa ("Inscrever em curso"): abre a inscrição já preenchida com o cadastro dela.
   useEffect(() => {
-    if (!params.pessoa) return;
+    if (!params.pessoa || !podeCriar) return;
     let active = true;
     getCustomer(String(params.pessoa)).then((pessoa) => {
       if (!active) return;
@@ -90,7 +122,7 @@ export default function Alunos() {
       router.setParams({ pessoa: undefined });
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [params.pessoa]);
+  }, [params.pessoa, podeCriar]);
 
   // Nova inscrição: ao informar o CPF, reaproveita o cadastro existente em vez de criar outro.
   async function lookupCpf() {
@@ -207,28 +239,34 @@ export default function Alunos() {
   }
 
   return <Screen variant="admin">
-    <Header title="Inscrições" subtitle="Alunos inscritos nos cursos, com par, padrinhos e situação. O cadastro da pessoa fica em Cadastros → Pessoas." right={<FloatingActionButton onPress={() => { setPessoaHint(''); setEditing(emptyAluno); }} accessibilityLabel="Nova inscrição" />} />
+    <Header title="Inscrições" subtitle="Alunos inscritos nos cursos, com par, padrinhos e situação. O cadastro da pessoa fica em Cadastros → Pessoas." right={podeCriar ? <FloatingActionButton onPress={() => { setPessoaHint(''); setEditing(emptyAluno); }} accessibilityLabel="Nova inscrição" /> : undefined} />
     <FilterBar
-      search={{ value: query, onChange: setQuery, placeholder: 'Buscar por aluno, CPF ou curso' }}
+      search={{ value: query, onChange: setQuery, placeholder: 'Buscar por aluno, CPF, par, padrinho ou curso' }}
       filters={[
-        ...(cursos.length ? [{ key: 'curso', label: 'Curso', value: cursoFilter, allValue: 'TODOS', options: [{ value: 'TODOS', label: 'Todos' }, ...cursos.map((curso: any) => ({ value: String(curso.id), label: curso.nome }))], onChange: setCursoFilter }] : []),
-        { key: 'status', label: 'Status', value: statusFilter, allValue: 'TODOS', options: STATUS_OPTIONS, onChange: setStatusFilter }
+        ...(turmas.length ? [{ key: 'curso', label: 'Turma', value: cursoFilter, allValue: 'TODOS', options: [{ value: 'TODOS', label: 'Todas' }, ...turmas], onChange: setCursoFilter }] : []),
+        { key: 'status', label: 'Status', value: statusFilter, allValue: 'TODOS', options: STATUS_OPTIONS, onChange: setStatusFilter },
+        periodo.filter,
+        { key: 'ordem', label: 'Ordenar', value: ordenacao, allValue: 'RECENTES', options: ORDENACAO_OPTIONS, onChange: (value) => setOrdenacao(value as Ordenacao) }
       ]}
+      right={podeExportar ? <ExportButton onPress={() => setExportando(true)} /> : undefined}
     />
+    {!loading && !error && alunos.length ? <Text style={styles.resultCount}>{filtered.length === alunos.length ? `${alunos.length} inscrição(ões)` : `${filtered.length} de ${alunos.length} inscrição(ões)`}</Text> : null}
     {loading ? <LoadingState label="Carregando inscrições..." /> : null}
     {error ? <ErrorState message={error} onRetry={refetch} /> : null}
     {!error && <View style={styles.grid}>
       {filtered.map((aluno: any) => <View key={aluno.id} style={gridCell}>
-        <ListCard title={aluno.nome ?? 'Aluno sem nome'} subtitle={`${aluno.cpf ? maskCpf(aluno.cpf) : 'CPF não informado'}${aluno.telefone ? ` · ${aluno.telefone}` : ''}\n${aluno.courseId || 'Curso não informado'}`} status={aluno.status} onPress={() => setSelected(aluno)}
+        <ListCard title={aluno.nome ?? 'Aluno sem nome'} subtitle={`${aluno.cpf ? maskCpf(aluno.cpf) : 'CPF não informado'}${aluno.telefone ? ` · ${aluno.telefone}` : ''}\n${aluno.courseId || 'Curso não informado'}${aluno.createdAt ? ` · inscrita em ${formatDateTime(aluno.createdAt)}` : ''}`} status={aluno.status} onPress={() => setSelected(aluno)}
             actions={<ActionMenu variant="ghost" actions={[
           { label: 'Ver inscrição', icon: 'account-eye-outline', onPress: () => setSelected(aluno) },
-          { label: 'Editar inscrição', icon: 'pencil-outline', onPress: () => { setPessoaHint(''); setEditing(aluno); } },
+          ...(podeEditar ? [{ label: 'Editar inscrição', icon: 'pencil-outline' as const, onPress: () => { setPessoaHint(''); setEditing(aluno); } }] : []),
           { label: 'Cancelar inscrição', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...aluno, status: 'CANCELADO' }) }
         ]} />}
           />
       </View>)}
     </View>}
     {!loading && !error && !filtered.length ? <EmptyState title="Nenhuma inscrição encontrada" icon="school-outline" /> : null}
+    {periodo.modal}
+    <ExportModal visible={exportando} onClose={() => setExportando(false)} titulo="Inscrições" subtitulo={descricaoFiltros} columns={INSCRICAO_COLUMNS} rows={filtered} />
 
     <AppModal
       visible={!!selected}
@@ -251,7 +289,10 @@ export default function Alunos() {
           <DetailRow icon="email-outline" label="E-mail" value={selected.email} />
           <DetailRow icon="school-outline" label="Curso / turma" value={selected.cursoId ?? selected.courseId} />
           <DetailRow icon="account-heart-outline" label="Par" value={selected.nomePar ?? selected.par} />
-          <DetailRow icon="map-marker-outline" label="Cidade" value={selected.cidade} last />
+          <DetailRow icon="map-marker-outline" label="Cidade" value={selected.cidade} />
+          <DetailRow icon="account-group-outline" label="Padrinhos" value={(selected.padrinhos ?? []).map((padrinho: any) => padrinho?.nome).filter(Boolean).join(', ')} />
+          <DetailRow icon="calendar-plus" label="Inscrição feita em" value={selected.createdAt ? formatDateTime(selected.createdAt) : undefined} />
+          <DetailRow icon="calendar-edit" label="Última modificação" value={selected.updatedAt ? formatDateTime(selected.updatedAt) : undefined} last />
         </View>
         {selected.adicionais?.length ? <View style={styles.additionalSummary}>
           <MaterialCommunityIcons name="account-multiple-plus-outline" color={colors.red} size={21} />
@@ -381,6 +422,7 @@ function StatusPicker({ value, onChange }: { value: string; onChange: (value: st
 
 const styles = StyleSheet.create({
   grid: gridContainer,
+  resultCount: { color: colors.muted, fontSize: 12, fontFamily: theme.font.medium, marginTop: -6, marginBottom: 12 },
   profileHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 18 },
   avatar: { width: 52, height: 52, flexShrink: 0, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   profileCopy: { flex: 1, minWidth: 0 },

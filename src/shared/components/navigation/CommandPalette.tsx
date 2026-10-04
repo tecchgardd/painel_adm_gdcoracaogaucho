@@ -3,7 +3,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { filterNavigationByRole, flattenNavigation, navigationItems, searchNavigation, type FlatNavItem } from '@/shared/components/navigation/navigation.config';
+import { filterNavigation, flattenNavigation, navigationItems, searchNavigation, type FlatNavItem } from '@/shared/components/navigation/navigation.config';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import { colors, theme } from '@/theme/theme';
@@ -29,10 +29,10 @@ export function useCommandPaletteShortcut() {
 export function CommandPalette() {
   const open = useUiStore((state) => state.commandPaletteOpen);
   const setOpen = useUiStore((state) => state.setCommandPaletteOpen);
-  const role = useAuthStore((state) => state.role);
+  const permissoes = useAuthStore((state) => state.permissoes);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
-  const items = useMemo(() => flattenNavigation(filterNavigationByRole(navigationItems, role)), [role]);
+  const items = useMemo(() => flattenNavigation(filterNavigation(navigationItems, permissoes)), [permissoes]);
   const results = useMemo(() => searchNavigation(items, query), [items, query]);
 
   useEffect(() => {

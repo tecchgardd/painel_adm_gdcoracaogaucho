@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Header, Screen } from '@/shared/components/ui';
+import { pode, rotaPermitida } from '@/core/permissions/permissoes';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 
@@ -11,13 +12,14 @@ type ManagementItem = {
   subtitle: string;
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
   path: string;
-  adminOnly?: boolean;
+  /** Permissão exigida além de poder abrir a rota (ex.: `vendas.criar` para "Nova venda"). */
+  permissao?: string;
 };
 
 const quickActions: ManagementItem[] = [
-  { label: 'Nova venda', subtitle: 'Evento, baile ou curso', icon: 'cash-register', path: '/vendas' },
-  { label: 'Nova inscrição', subtitle: 'Venda de curso para um aluno', icon: 'account-school-outline', path: '/vendas?tipo=CURSO' },
-  { label: 'Dar baixa', subtitle: 'Pagamentos pendentes', icon: 'cash-check', path: '/pagamentos' }
+  { label: 'Nova venda', subtitle: 'Evento, baile ou curso', icon: 'cash-register', path: '/vendas', permissao: 'vendas.criar' },
+  { label: 'Nova inscrição', subtitle: 'Venda de curso para um aluno', icon: 'account-school-outline', path: '/vendas?tipo=CURSO', permissao: 'vendas.criar' },
+  { label: 'Dar baixa', subtitle: 'Pagamentos pendentes', icon: 'cash-check', path: '/pagamentos', permissao: 'pagamentos.editar' }
 ];
 
 const sections: { title: string; items: ManagementItem[] }[] = [
@@ -38,32 +40,34 @@ const sections: { title: string; items: ManagementItem[] }[] = [
       { label: 'Eventos e bailes', subtitle: 'Agenda e capacidade', icon: 'calendar-star', path: '/eventos' },
       { label: 'Cursos e turmas', subtitle: 'Cursos e inscrições', icon: 'school-outline', path: '/cursos' },
       { label: 'Empresas', subtitle: 'Parceiros e apoiadores', icon: 'office-building-outline', path: '/empresas' },
-      { label: 'Colaboradores', subtitle: 'Equipe operacional', icon: 'badge-account-outline', path: '/colaboradores', adminOnly: true },
+      { label: 'Colaboradores', subtitle: 'Equipe operacional', icon: 'badge-account-outline', path: '/colaboradores' },
       { label: 'Fotos de formaturas', subtitle: 'Envie pastas com até 1.000 fotos', icon: 'folder-multiple-image', path: '/fotos' }
     ]
   },
   {
     title: 'SISTEMA',
     items: [
-      { label: 'Usuários e permissões', subtitle: 'Acessos administrativos', icon: 'account-key-outline', path: '/colaboradores', adminOnly: true },
+      { label: 'Perfis de acesso', subtitle: 'O que cada perfil pode ver e fazer', icon: 'shield-account-outline', path: '/perfis' },
       { label: 'Agente IA', subtitle: 'Regras, prompts e conhecimento da IA', icon: 'robot-outline', path: '/agente-ia' },
-      { label: 'Registro de atividades', subtitle: 'Quem fez o quê e quando', icon: 'clipboard-text-clock-outline', path: '/registros', adminOnly: true },
+      { label: 'Registro de atividades', subtitle: 'Quem fez o quê e quando', icon: 'clipboard-text-clock-outline', path: '/registros' },
       { label: 'Histórico de validações', subtitle: 'Check-ins realizados', icon: 'history', path: '/historico-validacoes' },
-      { label: 'Relatórios', subtitle: 'Indicadores operacionais', icon: 'chart-box-outline', path: '/relatorios', adminOnly: true }
+      { label: 'Relatórios', subtitle: 'Indicadores operacionais', icon: 'chart-box-outline', path: '/relatorios' }
     ]
   }
 ];
 
 export default function Gestao() {
-  const role = useAuthStore((state) => state.role);
-  const allowed = (item: ManagementItem) => !item.adminOnly || role === 'ADMIN';
+  const permissoes = useAuthStore((state) => state.permissoes);
+  const allowed = (item: ManagementItem) => rotaPermitida(permissoes, item.path) && (!item.permissao || pode(permissoes, item.permissao));
   return <Screen variant="admin">
     <Header title="Gestão" subtitle="Central operacional de vendas, inscrições, lotes e pagamentos." />
-    <Text style={styles.sectionTitle}>AÇÕES RÁPIDAS</Text>
-    <View style={styles.quickGrid}>{quickActions.filter(allowed).map((item) => <ManagementCard key={item.label} item={item} quick />)}</View>
-    {sections.map((section) => <View key={section.title} style={styles.section}>
+    {quickActions.some(allowed) ? <>
+      <Text style={styles.sectionTitle}>AÇÕES RÁPIDAS</Text>
+      <View style={styles.quickGrid}>{quickActions.filter(allowed).map((item) => <ManagementCard key={item.label} item={item} quick />)}</View>
+    </> : null}
+    {sections.map((section) => ({ ...section, items: section.items.filter(allowed) })).filter((section) => section.items.length).map((section) => <View key={section.title} style={styles.section}>
       <Text style={styles.sectionTitle}>{section.title}</Text>
-      <View style={styles.grid}>{section.items.filter(allowed).map((item) => <ManagementCard key={item.label} item={item} />)}</View>
+      <View style={styles.grid}>{section.items.map((item) => <ManagementCard key={item.label} item={item} />)}</View>
     </View>)}
   </Screen>;
 }

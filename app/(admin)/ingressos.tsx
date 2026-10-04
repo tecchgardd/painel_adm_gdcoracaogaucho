@@ -12,7 +12,7 @@ import { gridCellStyle, gridContainer } from '@/shared/components/ui/grid';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { formatDateTime } from '@/shared/utils/format';
-import { useAuthStore } from '@/stores/auth.store';
+import { usePode } from '@/stores/auth.store';
 
 const SITUACOES: { value: 'TODAS' | IngressoSituacao; label: string }[] = [
   { value: 'TODAS', label: 'Todas' },
@@ -31,7 +31,8 @@ export default function Ingressos() {
   const [situacao, setSituacao] = useState<'TODAS' | IngressoSituacao>('TODAS');
   const [eventoId, setEventoId] = useState('TODOS');
   const [selected, setSelected] = useState<IngressoView | null>(null);
-  const role = useAuthStore((state) => state.role);
+  const podeTrocar = usePode('ingressos.editar');
+  const podeCancelar = usePode('ingressos.cancelar');
   const { numColumns } = useResponsive();
   const gridCell = gridCellStyle(numColumns);
   const query = useCallback(() => listIngressosParaConsulta(), []);
@@ -83,7 +84,7 @@ export default function Ingressos() {
       </View>)}
     </View> : null}
 
-    <IngressoDetalheModal ingresso={selected} isAdmin={role === 'ADMIN'} onClose={() => setSelected(null)} onChanged={refetch} />
+    <IngressoDetalheModal ingresso={selected} podeTrocar={podeTrocar} podeCancelar={podeCancelar} onClose={() => setSelected(null)} onChanged={refetch} />
   </Screen>;
 }
 

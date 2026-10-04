@@ -43,8 +43,9 @@ export type ExtraAction = {
 
 type CrudApi = {
   list: () => Promise<any[]>;
-  create: (data: any) => Promise<any>;
-  update: (id: string, data: any) => Promise<any>;
+  /** Sem `create`/`update` (perfil sem permissão), o botão + e o "Editar" não aparecem. */
+  create?: (data: any) => Promise<any>;
+  update?: (id: string, data: any) => Promise<any>;
   remove?: (id: string) => Promise<any>;
 };
 
@@ -146,8 +147,8 @@ export function ApiRecordScreen({
     }
     try {
       const payload = buildPayload(validation.data);
-      if (editing.id) await api.update(String(editing.id), payload);
-      else await api.create(payload);
+      if (editing.id) await api.update?.(String(editing.id), payload);
+      else await api.create?.(payload);
       setEditing(null);
       refetch();
     } catch (saveError) {
@@ -180,7 +181,7 @@ export function ApiRecordScreen({
 
   const body = (
     <>
-      <Header title={title} right={<FloatingActionButton onPress={openNew} accessibilityLabel={`Novo ${singular}`} />} />
+      <Header title={title} right={api.create ? <FloatingActionButton onPress={openNew} accessibilityLabel={`Novo ${singular}`} /> : undefined} />
       <FilterBar
         search={{ value: query, onChange: setQuery, placeholder: `Buscar ${title.toLowerCase()}` }}
         filters={statusField?.options ? [{
@@ -202,8 +203,8 @@ export function ApiRecordScreen({
             <ListCard title={normalized.title} subtitle={normalized.subtitle} status={record.status} onPress={() => setSelected(record)}
             actions={<ActionMenu variant="ghost" actions={[
               { label: `Ver ${singular}`, icon: 'eye-outline', onPress: () => setSelected(record) },
-              { label: `Editar ${singular}`, icon: 'pencil-outline', onPress: () => setEditing(record) },
-              ...(extraActions ? extraActions(record).map((action) => ({ ...action, onPress: () => runExtraAction(action) })) : []),
+              ...(api.update ? [{ label: `Editar ${singular}`, icon: 'pencil-outline' as const, onPress: () => setEditing(record) }] : []),
+              ...(extraActions && api.update ? extraActions(record).map((action) => ({ ...action, onPress: () => runExtraAction(action) })) : []),
               ...(api.remove ? [{ label: `Remover ${singular}`, icon: 'delete-outline' as const, tone: 'danger' as const, onPress: () => setDeleting(record) }] : [])
             ]} />}
           />
@@ -220,7 +221,7 @@ export function ApiRecordScreen({
               <InfoRow key={field.key} label={field.label} value={field.options ? optionLabel(field, String(selected[field.key])) : String(selected[field.key])} />
             ))}
           </InfoList>
-          <View style={styles.detailAction}><Button title={`Editar ${singular}`} tone="green" onPress={() => { setEditing(selected); setSelected(null); }} /></View>
+          {api.update ? <View style={styles.detailAction}><Button title={`Editar ${singular}`} tone="green" onPress={() => { setEditing(selected); setSelected(null); }} /></View> : null}
         </> : null}
       </AppModal>
 

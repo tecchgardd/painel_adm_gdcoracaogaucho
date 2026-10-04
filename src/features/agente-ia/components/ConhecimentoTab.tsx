@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
 import { createAgentKnowledge, deleteAgentKnowledge, listAgentKnowledge, updateAgentKnowledge, updateAgentKnowledgeStatus } from '@/features/agente-ia/services/agent.service';
-import { useAuthStore } from '@/stores/auth.store';
+import { usePode } from '@/stores/auth.store';
 import { agentKnowledgeSchema } from '@/validation/schemas';
 
 const fields: ApiField[] = [
@@ -16,13 +16,15 @@ const fields: ApiField[] = [
 ];
 
 export function ConhecimentoTab() {
-  const role = useAuthStore((state) => state.role);
+  const podeCriar = usePode('agente-ia.criar');
+  const podeEditar = usePode('agente-ia.editar');
+  const podeExcluir = usePode('agente-ia.excluir');
   const api = useMemo(() => ({
     list: () => listAgentKnowledge(),
-    create: createAgentKnowledge,
-    update: updateAgentKnowledge,
-    remove: role === 'ADMIN' ? deleteAgentKnowledge : undefined
-  }), [role]);
+    create: podeCriar ? createAgentKnowledge : undefined,
+    update: podeEditar ? updateAgentKnowledge : undefined,
+    remove: podeExcluir ? deleteAgentKnowledge : undefined
+  }), [podeCriar, podeEditar, podeExcluir]);
 
   return <View>
     <ApiRecordScreen

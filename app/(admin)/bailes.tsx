@@ -13,8 +13,11 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listEventos } from '@/features/eventos/services/eventos.service';
 import { colors, theme } from '@/theme/theme';
 import { formatCurrencyBRL, formatDateTime } from '@/shared/utils/format';
+import { usePode } from '@/stores/auth.store';
 
 export default function Eventos() {
+  const podeCriar = usePode('eventos.criar');
+  const podeEditar = usePode('eventos.editar');
   const [selected, setSelected] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [creating, setCreating] = useState(false);
@@ -36,7 +39,7 @@ export default function Eventos() {
 
   return (
     <Screen>
-      <Header title="Bailes" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel="Novo baile" />} />
+      <Header title="Bailes" right={podeCriar ? <FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel="Novo baile" /> : undefined} />
       <FilterBar
         search={{ value: query, onChange: setQuery, placeholder: 'Buscar bailes por nome, local ou data' }}
         filters={[{ key: 'situacao', label: 'Situação', value: situacao, allValue: 'TODAS', options: EVENTO_SITUACOES, onChange: setSituacao }]}
@@ -54,7 +57,7 @@ export default function Eventos() {
                 onPress={() => setSelected(evento)}
             actions={<ActionMenu variant="ghost" actions={[
               { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => setSelected(evento) },
-              { label: 'Editar', icon: 'pencil-outline', onPress: () => setEditing(evento) },
+              ...(podeEditar ? [{ label: 'Editar', icon: 'pencil-outline' as const, onPress: () => setEditing(evento) }] : []),
               { label: 'Cancelar evento', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...evento, status: 'CANCELADO' }) }
             ]} />}
           />
@@ -73,7 +76,7 @@ export default function Eventos() {
             <Card style={styles.mini}><Text style={styles.miniLabel}>Capacidade</Text><Text style={styles.miniValue}>{selected.capacidade ?? 0}</Text></Card>
             <Card style={styles.mini}><Text style={styles.miniLabel}>Receita</Text><Text style={styles.miniValue}>{formatCurrencyBRL(selected.receita ?? selected.preco ?? 0)}</Text></Card>
           </View>
-          <Button title="Editar baile" tone="green" onPress={() => { setEditing(selected); setSelected(null); }} />
+          {podeEditar ? <Button title="Editar baile" tone="green" onPress={() => { setEditing(selected); setSelected(null); }} /> : null}
         </> : null}
       </AppModal>
 

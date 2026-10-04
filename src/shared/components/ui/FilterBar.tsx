@@ -48,7 +48,8 @@ export function FilterBar({ search, filters = [], right }: {
 
 function SearchInput({ value, onChange, placeholder = 'Pesquisar' }: { value: string; onChange: (value: string) => void; placeholder?: string }) {
   const [focused, setFocused] = React.useState(false);
-  return <View style={[styles.search, focused && styles.searchFocused]}>
+  const { isMobile } = useResponsive();
+  return <View style={[styles.search, isMobile && styles.searchMobile, focused && styles.searchFocused]}>
     <MaterialCommunityIcons name="magnify" size={19} color={colors.muted} />
     <TextInput
       value={value}
@@ -131,12 +132,14 @@ function FilterSelect({ filter }: { filter: FilterConfig }) {
 const webCursor = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null;
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-  barMobile: { flexDirection: 'column', alignItems: 'stretch' },
-  search: { flex: 1, minWidth: 0, height: 42, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: theme.radius.md, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.dark, paddingHorizontal: 12 },
+  // Muitos filtros: a busca mantém 360px e os filtros descem para a linha de baixo em vez de estourar.
+  bar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 16 },
+  barMobile: { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'stretch' },
+  searchMobile: { minWidth: 0 },
+  search: { flex: 1, minWidth: 360, height: 42, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: theme.radius.md, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.dark, paddingHorizontal: 12 },
   searchFocused: { borderColor: colors.redBorder },
   searchInput: { flex: 1, height: 40, color: colors.text, fontSize: 14, fontFamily: theme.font.regular, outlineStyle: 'none' as any },
-  filters: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, flexShrink: 1, maxWidth: '100%' },
   filtersMobile: { flexWrap: 'wrap', flexShrink: 1 },
   select: { height: 42, maxWidth: 260, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: theme.radius.md, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.dark, paddingHorizontal: 12, ...webCursor },
   selectHover: { backgroundColor: colors.cardAlt },

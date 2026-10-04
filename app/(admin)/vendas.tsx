@@ -19,6 +19,7 @@ import { createSale, generateSalePaymentLink, getSale, listSales } from '@/featu
 import type { Pagamento, Sale } from '@/shared/types/entities';
 import { colors, theme } from '@/theme/theme';
 import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyInput } from '@/shared/utils/format';
+import { usePode } from '@/stores/auth.store';
 
 type SaleType = 'EVENTO' | 'BAILE' | 'CURSO';
 // Vender N ingressos de baile é 'BAILE' + quantidade N (o antigo tipo 'LOTE' saiu).
@@ -67,6 +68,8 @@ function paymentLabel(value?: string) {
 
 export default function Vendas() {
   const params = useLocalSearchParams<{ tipo?: string; cpf?: string }>();
+  const podeVender = usePode('vendas.criar');
+  const podePagamento = usePode('vendas.pagamento');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -115,18 +118,18 @@ export default function Vendas() {
   const selectedOptions = form.tipo === 'CURSO' ? cursos : eventos.filter((item: any) => item.tipo === form.tipo);
 
   useEffect(() => {
-    if (params.tipo && ['EVENTO', 'BAILE', 'CURSO'].includes(params.tipo)) {
+    if (podeVender && params.tipo && ['EVENTO', 'BAILE', 'CURSO'].includes(params.tipo)) {
       setForm({ ...emptyForm, tipo: params.tipo as OperationType });
       setPerson(null);
       setMessage('');
       setModalOpen(true);
     }
-  }, [params.tipo]);
+  }, [params.tipo, podeVender]);
 
   // Veio da ficha da pessoa ("Nova venda"): abre a venda com o comprador já buscado pelo CPF.
   useEffect(() => {
     const cpf = String(params.cpf ?? '').replace(/\D/g, '');
-    if (cpf.length !== 11) return;
+    if (cpf.length !== 11 || !podeVender) return;
     let active = true;
     setForm({ ...emptyForm, cpf });
     setPerson(null);
@@ -139,7 +142,7 @@ export default function Vendas() {
     }).catch(() => undefined);
     router.setParams({ cpf: undefined });
     return () => { active = false; };
-  }, [params.cpf]);
+  }, [params.cpf, podeVender]);
 
   function openNew() {
     const requested = ['EVENTO', 'BAILE', 'CURSO'].includes(String(params.tipo)) ? params.tipo as OperationType : 'EVENTO';
@@ -276,7 +279,7 @@ export default function Vendas() {
 
   return (
     <Screen variant="admin">
-      <Header title="Vendas" subtitle="Gerencie todas as vendas, inscrições e ingressos." right={<TouchableOpacity onPress={openNew} style={[styles.plus, isDesktop && styles.newSaleButton]} accessibilityRole="button" accessibilityLabel="Nova venda"><MaterialCommunityIcons name="plus" color="#fff" size={20} />{isDesktop ? <Text style={styles.newSaleText}>Nova venda</Text> : null}</TouchableOpacity>} />
+      <Header title="Vendas" subtitle="Gerencie todas as vendas, inscrições e ingressos." right={podeVender ? <TouchableOpacity onPress={openNew} style={[styles.plus, isDesktop && styles.newSaleButton]} accessibilityRole="button" accessibilityLabel="Nova venda"><MaterialCommunityIcons name="plus" color="#fff" size={20} />{isDesktop ? <Text style={styles.newSaleText}>Nova venda</Text> : null}</TouchableOpacity> : undefined} />
       
       <View style={styles.stats}>
         <StatCard title="Total vendido" value={formatCurrencyBRL(summary.totalVendido ?? 0)} tone="green" onPress={() => { setStatusFilter('TODOS'); setPage(1); }} />
@@ -315,9 +318,9 @@ export default function Vendas() {
           </Pressable>
           <View style={styles.tableActions}><ActionMenu variant="ghost" actions={[
             { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(sale) },
-            ...(sale.pagamentoId ? [{ label: 'Alterar pagamento', icon: 'credit-card-edit-outline' as const, onPress: () => openPaymentAction('edit', sale.pagamentoId!) }] : []),
-            ...(sale.pagamentoId && !['PAGO', 'CORTESIA', 'ESTORNADO'].includes(sale.status) ? [{ label: 'Substituir por pagamento externo', icon: 'swap-horizontal' as const, onPress: () => openPaymentAction('external', sale.pagamentoId!) }] : []),
-            ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
+            ...(podePagamento && sale.pagamentoId ? [{ label: 'Alterar pagamento', icon: 'credit-card-edit-outline' as const, onPress: () => openPaymentAction('edit', sale.pagamentoId!) }] : []),
+            ...(podePagamento && sale.pagamentoId && !['PAGO', 'CORTESIA', 'ESTORNADO'].includes(sale.status) ? [{ label: 'Substituir por pagamento externo', icon: 'swap-horizontal' as const, onPress: () => openPaymentAction('external', sale.pagamentoId!) }] : []),
+            ...(podePagamento && !(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
           ]} /></View>
         </View>)}
       </View> : null) : <View style={styles.grid}>
@@ -333,7 +336,7 @@ export default function Vendas() {
           <ActionMenu variant="ghost" actions={[
             { label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(sale) },
             ...(sale.pagamentoId ? [{ label: 'Pagamento', icon: 'credit-card-outline' as const, onPress: () => openDetails(sale) }] : []),
-            ...(!(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
+            ...(podePagamento && !(sale.status === 'PAGO' || sale.status === 'CORTESIA' || sale.pagamentoId) ? [{ label: 'Gerar link Stripe', icon: 'link-variant' as const, onPress: () => sendPaymentLink(sale) }] : [])
           ]} />
           </View>
         </View>)}

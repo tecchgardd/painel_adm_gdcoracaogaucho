@@ -14,6 +14,7 @@ import { listEventos } from '@/features/eventos/services/eventos.service';
 import { colors, theme } from '@/theme/theme';
 import { formatCurrencyBRL, formatDateTime } from '@/shared/utils/format';
 import type { EventType } from '@/shared/types/entities';
+import { usePode } from '@/stores/auth.store';
 
 const tabs: { type: EventType; label: string; plural: string }[] = [
   { type: 'BAILE', label: 'Baile', plural: 'bailes' },
@@ -22,6 +23,8 @@ const tabs: { type: EventType; label: string; plural: string }[] = [
 ];
 
 export default function Eventos() {
+  const podeCriar = usePode('eventos.criar');
+  const podeEditar = usePode('eventos.editar');
   const [activeType, setActiveType] = useState<EventType>('BAILE');
   const [selected, setSelected] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
@@ -58,7 +61,7 @@ export default function Eventos() {
 
   return (
     <Screen variant="admin">
-      <Header title="Eventos" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel={`Novo ${activeTab.label.toLowerCase()}`} />} />
+      <Header title="Eventos" right={podeCriar ? <FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel={`Novo ${activeTab.label.toLowerCase()}`} /> : undefined} />
       <FilterBar
         search={{ value: query, onChange: setQuery, placeholder: `Buscar ${activeTab.plural} por nome, local ou data` }}
         filters={[
@@ -101,7 +104,7 @@ export default function Eventos() {
             <Card style={styles.mini}><Text style={styles.miniLabel}>{activeType === 'CURSO' ? 'Inscritos' : 'Vendidos'}</Text><Text style={styles.miniValue}>{selected.inscritos ?? selected.vendidos ?? selected._count?.ingresso ?? 0}</Text></Card>
             <Card style={styles.mini}><Text style={styles.miniLabel}>{activeType === 'BAILE' ? 'Ingresso' : 'Inscrição'}</Text><Text style={styles.miniValue}>{formatCurrencyBRL(selected.preco ?? selected.valor ?? 0)}</Text></Card>
           </View>
-          <Button title={`Editar ${activeTab.label.toLowerCase()}`} tone="green" onPress={() => { setEditing(selected); setSelected(null); }} />
+          {podeEditar ? <Button title={`Editar ${activeTab.label.toLowerCase()}`} tone="green" onPress={() => { setEditing(selected); setSelected(null); }} /> : null}
         </> : null}
       </AppModal>
 

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
 import { createAgentPrompt, deleteAgentPrompt, listAgentPrompts, updateAgentPrompt, updateAgentPromptStatus } from '@/features/agente-ia/services/agent.service';
-import { useAuthStore } from '@/stores/auth.store';
+import { usePode } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 import { agentPromptSchema } from '@/validation/schemas';
 
@@ -18,13 +18,15 @@ const fields: ApiField[] = [
 ];
 
 export function PromptsTab() {
-  const role = useAuthStore((state) => state.role);
+  const podeCriar = usePode('agente-ia.criar');
+  const podeEditar = usePode('agente-ia.editar');
+  const podeExcluir = usePode('agente-ia.excluir');
   const api = useMemo(() => ({
     list: () => listAgentPrompts(),
-    create: createAgentPrompt,
-    update: updateAgentPrompt,
-    remove: role === 'ADMIN' ? deleteAgentPrompt : undefined
-  }), [role]);
+    create: podeCriar ? createAgentPrompt : undefined,
+    update: podeEditar ? updateAgentPrompt : undefined,
+    remove: podeExcluir ? deleteAgentPrompt : undefined
+  }), [podeCriar, podeEditar, podeExcluir]);
 
   return <View>
     <View style={styles.help}>

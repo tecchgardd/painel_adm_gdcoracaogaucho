@@ -9,7 +9,7 @@ import { LoadingState } from '@/shared/components/feedback/LoadingState';
 import { PaymentOperationModal } from '@/features/pagamentos/components/PaymentOperationModal';
 import { useApiQuery } from '@/shared/hooks/useApiQuery';
 import { cancelarPagamento, getPagamento, listPagamentos, PagamentoStatus, reembolsarPagamento, StripeRefundReason } from '@/features/pagamentos/services/pagamentos.service';
-import { useAuthStore } from '@/stores/auth.store';
+import { usePode } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 import type { Pagamento } from '@/shared/types/entities';
 import { formatCurrencyBRL, formatDateTime, maskCpf, parseCurrencyToCents } from '@/shared/utils/format';
@@ -36,7 +36,8 @@ const paymentStatusLabels: Record<string, string> = {
 
 export default function Pagamentos() {
   const params = useLocalSearchParams<{ pagamentoId?: string; acao?: string }>();
-  const role = useAuthStore((state) => state.role);
+  const podeEditar = usePode('pagamentos.editar');
+  const podeReembolsar = usePode('pagamentos.reembolsar');
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<PagamentoStatus | undefined>();
   const [searchInput, setSearchInput] = useState('');
@@ -129,10 +130,10 @@ export default function Pagamentos() {
     <View style={styles.list}>{payments.map((payment) => {
       const person = customer(payment);
       const actions: { label: string; icon: any; onPress: () => void }[] = [{ label: 'Ver detalhes', icon: 'eye-outline', onPress: () => openDetails(payment) }];
-      if (role !== 'CHECKIN' && !noCancel.has(String(payment.status))) actions.push({ label: 'Cancelar', icon: 'close-circle-outline' as const, onPress: async () => { await openDetails(payment); setOperation('cancel'); } });
-      if (role !== 'CHECKIN' && payment.allowedActions?.edit) actions.push({ label: 'Editar pagamento', icon: 'pencil-outline' as const, onPress: () => openForm(payment, 'edit') });
-      if (role !== 'CHECKIN' && (payment.allowedActions?.manualSettlement || payment.allowedActions?.replaceWithExternal || !noCancel.has(String(payment.status)))) actions.unshift({ label: payment.provider === 'STRIPE' ? 'Substituir por pagamento externo' : 'Dar baixa manual', icon: 'cash-check' as const, onPress: () => openForm(payment, 'external') });
-      if (role === 'ADMIN' && canRefund.has(String(payment.status))) actions.push({ label: 'Reembolsar', icon: 'cash-refund' as const, onPress: async () => { await openDetails(payment); setOperation('refund'); } });
+      if (podeEditar && !noCancel.has(String(payment.status))) actions.push({ label: 'Cancelar', icon: 'close-circle-outline' as const, onPress: async () => { await openDetails(payment); setOperation('cancel'); } });
+      if (podeEditar && payment.allowedActions?.edit) actions.push({ label: 'Editar pagamento', icon: 'pencil-outline' as const, onPress: () => openForm(payment, 'edit') });
+      if (podeEditar && (payment.allowedActions?.manualSettlement || payment.allowedActions?.replaceWithExternal || !noCancel.has(String(payment.status)))) actions.unshift({ label: payment.provider === 'STRIPE' ? 'Substituir por pagamento externo' : 'Dar baixa manual', icon: 'cash-check' as const, onPress: () => openForm(payment, 'external') });
+      if (podeReembolsar && canRefund.has(String(payment.status))) actions.push({ label: 'Reembolsar', icon: 'cash-refund' as const, onPress: async () => { await openDetails(payment); setOperation('refund'); } });
       return <View key={payment.id} style={styles.row}>
         <TouchableOpacity style={styles.cardBody} onPress={() => openDetails(payment)} accessibilityRole="button">
           <View style={styles.cardHeader}><Text style={styles.title}>{person?.nome ?? person?.name ?? `Pagamento ${payment.id}`}</Text><StatusBadge status={String(payment.status ?? 'PENDENTE')} /></View>
@@ -151,10 +152,10 @@ export default function Pagamentos() {
     <AppModal visible={!!selected && !operation} onClose={() => setSelected(null)} position="center" title="Detalhes do pagamento">
       {selected ? <Details payment={selected} balance={balance} /> : null}
       <View style={styles.footer}>
-        {role !== 'CHECKIN' && selected?.allowedActions?.edit ? <Button title="Editar pagamento" tone="dark" onPress={() => openForm(selected, 'edit')} /> : null}
-        {role !== 'CHECKIN' && (selected?.allowedActions?.manualSettlement || selected?.allowedActions?.replaceWithExternal) ? <Button title={selected.provider === 'STRIPE' ? 'Substituir por pagamento externo' : 'Dar baixa manual'} tone="green" onPress={() => openForm(selected, 'external')} /> : null}
-        {role !== 'CHECKIN' && !noCancel.has(String(selected?.status)) ? <Button title="Cancelar pagamento" tone="red" onPress={() => begin('cancel')} /> : null}
-        {role === 'ADMIN' && canRefund.has(String(selected?.status)) ? <Button title="Solicitar reembolso" tone="green" onPress={() => begin('refund')} /> : null}
+        {podeEditar && selected?.allowedActions?.edit ? <Button title="Editar pagamento" tone="dark" onPress={() => openForm(selected, 'edit')} /> : null}
+        {podeEditar && (selected?.allowedActions?.manualSettlement || selected?.allowedActions?.replaceWithExternal) ? <Button title={selected.provider === 'STRIPE' ? 'Substituir por pagamento externo' : 'Dar baixa manual'} tone="green" onPress={() => openForm(selected, 'external')} /> : null}
+        {podeEditar && !noCancel.has(String(selected?.status)) ? <Button title="Cancelar pagamento" tone="red" onPress={() => begin('cancel')} /> : null}
+        {podeReembolsar && canRefund.has(String(selected?.status)) ? <Button title="Solicitar reembolso" tone="green" onPress={() => begin('refund')} /> : null}
       </View>
     </AppModal>
     <PaymentOperationModal payment={formPayment} mode={formMode} onClose={() => { setFormPayment(null); setFormMode(null); }} onSuccess={async (updated) => {

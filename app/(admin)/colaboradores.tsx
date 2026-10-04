@@ -17,12 +17,19 @@ import {
   updateColaborador
 } from '@/features/colaboradores/services/colaboradores.service';
 import { ColaboradorPhotoField } from '@/features/colaboradores/components/ColaboradorPhotoField';
+import { PreviaMenu } from '@/features/perfis/components/PerfilFormModal';
+import { listPerfis } from '@/features/perfis/services/perfis.service';
+import { PERFIS_LOCAIS } from '@/features/perfis/utils/perfilForm';
+import { normalizarPermissoes } from '@/core/permissions/permissoes';
+import { usePode } from '@/stores/auth.store';
 import {
   buildColaboradorPayload,
   colaboradorPhoto,
   colaboradorUsername,
   emptyColaboradorForm,
+  nomePerfilDoColaborador,
   normalizeUsername,
+  perfilIdDoColaborador,
   suggestUsername,
   toColaboradorForm,
   validateColaborador,
@@ -33,8 +40,6 @@ import { colors, theme } from '@/theme/theme';
 import type { Colaborador } from '@/shared/types/entities';
 
 const optionLabels: Record<string, string> = {
-  STAFF: 'Atendimento',
-  ADMIN: 'Administrador',
   ATIVO: 'Ativo',
   INATIVO: 'Inativo',
   TEMPORARIA: 'Gerar senha temporária',
@@ -77,8 +82,17 @@ export default function Colaboradores() {
   const queryColaboradores = useCallback(() => listColaboradores(), []);
   const { data, loading, error, refetch } = useApiQuery(queryColaboradores, { fallbackData: [] });
   const colaboradores = useMemo(() => data ?? [], [data]);
+  const podeCriar = usePode('colaboradores.criar');
+  const podeEditar = usePode('colaboradores.editar');
+  const podeExcluir = usePode('colaboradores.excluir');
+  const queryPerfis = useCallback(() => listPerfis(), []);
+  const { data: perfisApi } = useApiQuery(queryPerfis, { fallbackData: [] });
+  // Sem `/admin/perfis` no backend, os perfis padrão (equivalentes ao `role`) continuam valendo.
+  const perfisDoBackend = !!perfisApi?.length;
+  const perfis = useMemo(() => (perfisApi?.length ? perfisApi : PERFIS_LOCAIS), [perfisApi]);
+  const perfilSelecionado = perfis.find((perfil) => perfil.id === editing?.perfilId) ?? null;
   const filtered = useMemo(() => colaboradores.filter((colaborador: Colaborador) =>
-    (roleFilter === 'TODOS' || String(colaborador.role ?? '').toUpperCase() === roleFilter)
+    (roleFilter === 'TODOS' || perfilIdDoColaborador(colaborador) === roleFilter)
     && (statusFilter === 'TODOS' || String(colaborador.status ?? 'ATIVO').toUpperCase() === statusFilter)
     && `${colaborador.nome ?? ''} ${colaborador.cpf ?? ''} ${colaborador.email ?? ''} ${colaboradorUsername(colaborador) ?? ''}`
       .toLowerCase()
@@ -112,9 +126,9 @@ export default function Colaboradores() {
     setSaving(true);
     try {
       if (editing.id) {
-        await updateColaborador(editing.id, buildColaboradorPayload(editing));
+        await updateColaborador(editing.id, buildColaboradorPayload(editing, perfilSelecionado, perfisDoBackend));
       } else {
-        const response = await createColaborador(buildColaboradorPayload(editing));
+        const response = await createColaborador(buildColaboradorPayload(editing, perfilSelecionado, perfisDoBackend));
         if (response.temporaryPassword) setTemporaryPassword(response.temporaryPassword);
       }
       setEditing(null);
@@ -177,11 +191,11 @@ export default function Colaboradores() {
   }
 
   return <Screen variant="admin">
-    <Header title="Colaboradores" subtitle="Equipe com acesso ao painel. Desative quem saiu: o histórico do que a pessoa fez é preservado." right={<FloatingActionButton onPress={openNew} accessibilityLabel="Novo colaborador" />} />
+    <Header title="Colaboradores" subtitle="Equipe com acesso ao painel. Desative quem saiu: o histórico do que a pessoa fez é preservado." right={podeCriar ? <FloatingActionButton onPress={openNew} accessibilityLabel="Novo colaborador" /> : undefined} />
     <FilterBar
       search={{ value: query, onChange: setQuery, placeholder: 'Buscar por nome, usuário, e-mail ou CPF' }}
       filters={[
-        { key: 'role', label: 'Acesso', value: roleFilter, allValue: 'TODOS', options: [{ value: 'TODOS', label: 'Todos' }, { value: 'ADMIN', label: 'Administrador' }, { value: 'STAFF', label: 'Atendimento' }], onChange: setRoleFilter },
+        { key: 'perfil', label: 'Perfil', value: roleFilter, allValue: 'TODOS', options: [{ value: 'TODOS', label: 'Todos' }, ...perfis.map((perfil) => ({ value: perfil.id, label: perfil.nome }))], onChange: setRoleFilter },
         { key: 'status', label: 'Situação', value: statusFilter, allValue: 'ATIVO', options: [{ value: 'ATIVO', label: 'Ativos' }, { value: 'INATIVO', label: 'Desativados' }, { value: 'TODOS', label: 'Todos' }], onChange: setStatusFilter }
       ]}
     />
@@ -193,17 +207,19 @@ export default function Colaboradores() {
         const title = colaborador.nome ?? colaborador.name ?? 'Colaborador sem nome';
         const username = colaboradorUsername(colaborador);
         const photo = colaboradorPhoto(colaborador);
-        const subtitle = `${username ? `@${username} · ` : ''}${colaborador.email ?? colaborador.user?.email ?? '-'}\n${colaborador.role ? optionLabels[colaborador.role] ?? colaborador.role : '-'}`;
+        const subtitle = `${username ? `@${username} · ` : ''}${colaborador.email ?? colaborador.user?.email ?? '-'}\n${nomePerfilDoColaborador(colaborador, perfis) ?? '-'}`;
         return <View key={String(colaborador.id)} style={gridCell}>
           <ListCard title={title} subtitle={subtitle} status={colaborador.status} image={photo ? { uri: photo } : undefined} onPress={() => setSelected(colaborador)}
             actions={<ActionMenu variant="ghost" actions={[
             { label: 'Ver colaborador', icon: 'account-eye-outline', onPress: () => setSelected(colaborador) },
-            { label: 'Editar acesso', icon: 'pencil-outline', onPress: () => openEdit(colaborador) },
-            { label: resettingId === String(colaborador.id) ? 'Resetando...' : 'Resetar senha', icon: 'lock-reset', onPress: () => resetPassword(colaborador) },
-            String(colaborador.status ?? 'ATIVO').toUpperCase() === 'INATIVO'
-              ? { label: 'Reativar acesso', icon: 'account-check-outline', onPress: () => setToggling(colaborador) }
-              : { label: 'Desativar acesso', icon: 'account-cancel-outline', tone: 'danger', onPress: () => setToggling(colaborador) },
-            { label: 'Excluir definitivamente', icon: 'delete-outline', tone: 'danger', onPress: () => setDeleting(colaborador) }
+            ...(podeEditar ? [
+              { label: 'Editar acesso', icon: 'pencil-outline' as const, onPress: () => openEdit(colaborador) },
+              { label: resettingId === String(colaborador.id) ? 'Resetando...' : 'Resetar senha', icon: 'lock-reset' as const, onPress: () => resetPassword(colaborador) },
+              String(colaborador.status ?? 'ATIVO').toUpperCase() === 'INATIVO'
+                ? { label: 'Reativar acesso', icon: 'account-check-outline' as const, onPress: () => setToggling(colaborador) }
+                : { label: 'Desativar acesso', icon: 'account-cancel-outline' as const, tone: 'danger' as const, onPress: () => setToggling(colaborador) }
+            ] : []),
+            ...(podeExcluir ? [{ label: 'Excluir definitivamente', icon: 'delete-outline' as const, tone: 'danger' as const, onPress: () => setDeleting(colaborador) }] : [])
           ]} />}
           />
         </View>;
@@ -238,11 +254,14 @@ export default function Colaboradores() {
           <InfoRow label="CPF" value={selected.cpf} />
           <InfoRow label="Usuário de login" value={colaboradorUsername(selected)} />
           <InfoRow label="E-mail de login" value={selected.email ?? selected.user?.email} />
-          <InfoRow label="Tipo de acesso" value={selected.role ? optionLabels[selected.role] ?? selected.role : undefined} />
+          <InfoRow label="Perfil de acesso" value={nomePerfilDoColaborador(selected, perfis)} />
           <InfoRow label="Usuário vinculado" value={selected.userId ?? selected.user?.id} />
           {(selected as any).ultimoAcesso ? <InfoRow label="Último acesso" value={formatDateTime((selected as any).ultimoAcesso)} /> : null}
         </InfoList>
-        <View style={styles.detailAction}><Button title="Editar acesso" tone="green" onPress={() => openEdit(selected)} /></View>
+        <FormSection title="O que vê no painel" description="Menu de quem tem este perfil.">
+          <PreviaMenu permissoes={normalizarPermissoes(perfis.find((perfil) => perfil.id === perfilIdDoColaborador(selected))?.permissoes ?? [])} />
+        </FormSection>
+        {podeEditar ? <View style={styles.detailAction}><Button title="Editar acesso" tone="green" onPress={() => openEdit(selected)} /></View> : null}
       </> : null}
     </AppModal>
 
@@ -293,8 +312,12 @@ export default function Colaboradores() {
             />
             <FormField required label="E-mail de login" value={editing.email} onChangeText={(value) => patch('email', value)} keyboardType="email-address" autoCapitalize="none" placeholder="nome@email.com" error={fieldErrors.email} />
           </FormRow>
-          <OptionGroup label="Tipo de acesso" value={editing.role} options={['STAFF', 'ADMIN']} onChange={(value) => patch('role', value)} />
-          {fieldErrors.role ? <Text style={styles.fieldError}>{fieldErrors.role}</Text> : null}
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>Perfil de acesso</Text>
+            <ChoiceGroup options={perfis.map((perfil) => ({ value: perfil.id, label: perfil.nome }))} value={editing.perfilId} onChange={(value) => patch('perfilId', value)} />
+            {perfilSelecionado?.descricao ? <Text style={styles.perfilHint}>{perfilSelecionado.descricao} As permissões de cada perfil ficam em Perfis de acesso.</Text> : null}
+          </View>
+          {fieldErrors.perfilId ? <Text style={styles.fieldError}>{fieldErrors.perfilId}</Text> : null}
           <OptionGroup label="Status" value={editing.status} options={['ATIVO', 'INATIVO']} onChange={(value) => patch('status', value)} />
 
           {!editing.id ? <>
@@ -343,6 +366,7 @@ export default function Colaboradores() {
 }
 
 const styles = StyleSheet.create({
+  perfilHint: { color: colors.muted, fontSize: 12, lineHeight: 17, fontFamily: theme.font.regular, marginTop: 6 },
   grid: gridContainer,
   state: { color: colors.muted, textAlign: 'center', marginVertical: 16 },
   formError: { color: colors.red, fontFamily: theme.font.semiBold, marginBottom: 10 },

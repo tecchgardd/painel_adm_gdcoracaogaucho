@@ -1,5 +1,6 @@
 import type MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
+import { pode } from '@/core/permissions/permissoes';
 import type { UserRole } from '@/shared/types/entities';
 
 export type NavItem = {
@@ -7,7 +8,11 @@ export type NavItem = {
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
   path?: string;
   children?: NavItem[];
-  roles?: UserRole[];
+  /**
+   * Permissão exigida (`modulo.ver`, ver `src/core/permissions/catalogo.ts`); com uma lista, basta uma delas.
+   * Grupos sem permissão própria aparecem quando algum filho aparece.
+   */
+  permissao?: string | string[];
   /** Título do bloco na sidebar; aplicado ao primeiro item de cada bloco. */
   section?: string;
   /** Rotas extras (sem entrada própria no menu) em que este item aparece como ativo. */
@@ -18,59 +23,54 @@ export type NavItem = {
 
 export type FlatNavItem = NavItem & { path: string; parent?: string };
 
-const ALL: UserRole[] = ['ADMIN', 'STAFF', 'CHECKIN'];
-const TEAM: UserRole[] = ['ADMIN', 'STAFF'];
-
 export const navigationItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'view-dashboard-outline', path: '/dashboard', roles: TEAM, section: 'Principal' },
+  { label: 'Dashboard', icon: 'view-dashboard-outline', path: '/dashboard', permissao: 'dashboard.ver', section: 'Principal' },
   {
     label: 'Eventos',
     icon: 'calendar-month-outline',
-    roles: TEAM,
     activeOn: ['/eventos'],
     children: [
-      { label: 'Bailes', icon: 'music-circle-outline', path: '/bailes', roles: TEAM },
-      { label: 'Cursos', icon: 'school-outline', path: '/cursos', roles: TEAM }
+      { label: 'Bailes', icon: 'music-circle-outline', path: '/bailes', permissao: 'eventos.ver' },
+      { label: 'Cursos', icon: 'school-outline', path: '/cursos', permissao: 'eventos.ver' }
     ]
   },
   // Link direto para o scanner; o histórico é aberto pelo botão "Histórico" da própria tela.
-  { label: 'Check-in', icon: 'qrcode-scan', path: '/scanner', roles: ALL, activeOn: ['/historico-validacoes'] },
+  { label: 'Check-in', icon: 'qrcode-scan', path: '/scanner', permissao: 'checkin.ver', activeOn: ['/historico-validacoes'] },
   {
     label: 'Comercial',
     icon: 'cart-outline',
-    roles: TEAM,
     section: 'Operação',
     // Só ingressos (eventos/bailes) e inscrições (cursos); venda de produtos (Pedidos) está fora do escopo.
     children: [
-      { label: 'Vendas', icon: 'cash-register', path: '/vendas', roles: TEAM },
-      { label: 'Ingressos', icon: 'ticket-outline', path: '/ingressos', roles: TEAM },
-      { label: 'Inscrições', icon: 'school-outline', path: '/alunos', roles: TEAM },
-      { label: 'Pagamentos', icon: 'cash-multiple', path: '/pagamentos', roles: TEAM },
-      { label: 'Cortesias', icon: 'ticket-percent-outline', path: '/cortesias', roles: TEAM }
+      { label: 'Vendas', icon: 'cash-register', path: '/vendas', permissao: 'vendas.ver' },
+      { label: 'Ingressos', icon: 'ticket-outline', path: '/ingressos', permissao: 'ingressos.ver' },
+      { label: 'Inscrições', icon: 'school-outline', path: '/alunos', permissao: 'inscricoes.ver' },
+      { label: 'Pagamentos', icon: 'cash-multiple', path: '/pagamentos', permissao: 'pagamentos.ver' },
+      { label: 'Cortesias', icon: 'ticket-percent-outline', path: '/cortesias', permissao: 'cortesias.ver' }
     ]
   },
   {
     label: 'Cadastros',
     icon: 'account-group-outline',
-    roles: TEAM,
     children: [
-      { label: 'Pessoas', icon: 'account-outline', path: '/clientes', roles: TEAM, keywords: ['clientes', 'alunos', 'compradores', 'cpf'] },
-      { label: 'Empresas', icon: 'office-building-outline', path: '/empresas', roles: TEAM },
-      { label: 'Colaboradores', icon: 'account-multiple-outline', path: '/colaboradores', roles: ['ADMIN'] }
+      { label: 'Pessoas', icon: 'account-outline', path: '/clientes', permissao: 'pessoas.ver', keywords: ['clientes', 'alunos', 'compradores', 'cpf'] },
+      { label: 'Empresas', icon: 'office-building-outline', path: '/empresas', permissao: 'empresas.ver' },
+      { label: 'Colaboradores', icon: 'account-multiple-outline', path: '/colaboradores', permissao: 'colaboradores.ver' }
     ]
   },
-  { label: 'Relatórios', icon: 'chart-box-outline', path: '/relatorios', roles: ['ADMIN'], section: 'Análise' },
-  { label: 'Registro de atividades', icon: 'clipboard-text-clock-outline', path: '/registros', roles: ['ADMIN'] },
-  { label: 'Fotos', icon: 'image-multiple-outline', path: '/fotos', roles: TEAM },
-  { label: 'Agente IA', icon: 'robot-outline', path: '/agente-ia', roles: TEAM }
+  { label: 'Relatórios', icon: 'chart-box-outline', path: '/relatorios', permissao: 'relatorios.ver', section: 'Análise' },
+  { label: 'Fotos', icon: 'image-multiple-outline', path: '/fotos', permissao: 'fotos.ver' },
+  { label: 'Agente IA', icon: 'robot-outline', path: '/agente-ia', permissao: 'agente-ia.ver' },
+  { label: 'Perfis de acesso', icon: 'shield-account-outline', path: '/perfis', permissao: 'perfis.ver', section: 'Administração', keywords: ['permissões', 'acessos', 'usuários', 'papéis', 'glpi'] },
+  { label: 'Registro de atividades', icon: 'clipboard-text-clock-outline', path: '/registros', permissao: 'registros.ver' }
 ];
 
 export const mobileTabs: NavItem[] = [
-  { label: 'Dashboard', icon: 'view-dashboard-outline', path: '/dashboard', roles: TEAM },
-  { label: 'Scanner', icon: 'qrcode-scan', path: '/scanner', roles: ALL },
-  { label: 'Eventos', icon: 'calendar-month-outline', path: '/eventos', roles: TEAM },
-  { label: 'Gestão', icon: 'view-grid-plus-outline', path: '/gestao', roles: TEAM },
-  { label: 'Menu', icon: 'menu', path: '/menu', roles: ALL }
+  { label: 'Dashboard', icon: 'view-dashboard-outline', path: '/dashboard', permissao: 'dashboard.ver' },
+  { label: 'Scanner', icon: 'qrcode-scan', path: '/scanner', permissao: 'checkin.ver' },
+  { label: 'Eventos', icon: 'calendar-month-outline', path: '/eventos', permissao: 'eventos.ver' },
+  { label: 'Gestão', icon: 'view-grid-plus-outline', path: '/gestao', permissao: ['vendas.ver', 'ingressos.ver', 'inscricoes.ver', 'pagamentos.ver', 'cortesias.ver', 'pessoas.ver', 'empresas.ver', 'colaboradores.ver'] },
+  { label: 'Menu', icon: 'menu', path: '/menu' }
 ];
 
 export function normalizePathname(pathname: string) {
@@ -88,19 +88,18 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
   return item.children?.some((child) => isNavItemActive(child, pathname)) ?? false;
 }
 
-export function canAccessNavItem(item: NavItem, role?: UserRole | null) {
-  if (!item.roles?.length) return true;
-  if (!role) return false;
-  const normalizedRole = String(role).toUpperCase() as UserRole;
-  return item.roles.includes(normalizedRole);
+export function canAccessNavItem(item: NavItem, permissoes: readonly string[]) {
+  if (!item.permissao) return true;
+  return (Array.isArray(item.permissao) ? item.permissao : [item.permissao]).some((chave) => pode(permissoes, chave));
 }
 
-export function filterNavigationByRole(items: NavItem[], role?: UserRole | null): NavItem[] {
+/** Itens que o perfil enxerga; grupos sem nenhum filho visível somem. */
+export function filterNavigation(items: NavItem[], permissoes: readonly string[]): NavItem[] {
   return items
-    .filter((item) => canAccessNavItem(item, role))
+    .filter((item) => canAccessNavItem(item, permissoes))
     .map((item) => ({
       ...item,
-      children: item.children ? filterNavigationByRole(item.children, role) : undefined
+      children: item.children ? filterNavigation(item.children, permissoes) : undefined
     }))
     .filter((item) => item.path || item.children?.length);
 }
@@ -130,7 +129,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 // Seção de cada item de topo, propagada a partir do primeiro item do bloco; assim o título da
-// seção continua aparecendo mesmo quando o filtro por role remove justamente esse primeiro item.
+// seção continua aparecendo mesmo quando o filtro por permissão remove justamente esse primeiro item.
 const sectionByLabel = new Map<string, string | undefined>();
 navigationItems.reduce<string | undefined>((current, item) => {
   const section = item.section ?? current;

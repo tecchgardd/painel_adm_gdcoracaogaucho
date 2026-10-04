@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiRecordScreen, type ApiField } from '@/shared/components/crud/ApiRecordScreen';
 import { createAgentRule, deleteAgentRule, listAgentRules, updateAgentRule, updateAgentRuleStatus } from '@/features/agente-ia/services/agent.service';
-import { useAuthStore } from '@/stores/auth.store';
+import { usePode } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
 import { agentRuleSchema } from '@/validation/schemas';
 
@@ -17,13 +17,15 @@ const fields: ApiField[] = [
 ];
 
 export function RegrasTab() {
-  const role = useAuthStore((state) => state.role);
+  const podeCriar = usePode('agente-ia.criar');
+  const podeEditar = usePode('agente-ia.editar');
+  const podeExcluir = usePode('agente-ia.excluir');
   const api = useMemo(() => ({
     list: () => listAgentRules(),
-    create: createAgentRule,
-    update: updateAgentRule,
-    remove: role === 'ADMIN' ? deleteAgentRule : undefined
-  }), [role]);
+    create: podeCriar ? createAgentRule : undefined,
+    update: podeEditar ? updateAgentRule : undefined,
+    remove: podeExcluir ? deleteAgentRule : undefined
+  }), [podeCriar, podeEditar, podeExcluir]);
 
   return <View>
     <View style={styles.help}>

@@ -13,8 +13,11 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { listCursos } from '@/features/cursos/services/cursos.service';
 import { colors, theme } from '@/theme/theme';
 import { formatDateTime } from '@/shared/utils/format';
+import { usePode } from '@/stores/auth.store';
 
 export default function Cursos() {
+  const podeCriar = usePode('eventos.criar');
+  const podeEditar = usePode('eventos.editar');
   const [selected, setSelected] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [creating, setCreating] = useState(false);
@@ -36,7 +39,7 @@ export default function Cursos() {
 
   return (
     <Screen>
-      <Header title="Cursos" right={<FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel="Novo curso" />} />
+      <Header title="Cursos" right={podeCriar ? <FloatingActionButton onPress={() => setCreating(true)} accessibilityLabel="Novo curso" /> : undefined} />
       <FilterBar
         search={{ value: query, onChange: setQuery, placeholder: 'Buscar cursos por nome, local ou data' }}
         filters={[{ key: 'situacao', label: 'Situação', value: situacao, allValue: 'TODAS', options: EVENTO_SITUACOES, onChange: setSituacao }]}
@@ -54,7 +57,7 @@ export default function Cursos() {
                 onPress={() => setSelected(curso)}
             actions={<ActionMenu variant="ghost" actions={[
               { label: 'Ver inscritos', icon: 'account-group-outline', onPress: () => setSelected(curso) },
-              { label: 'Editar curso', icon: 'pencil-outline', onPress: () => setEditing(curso) },
+              ...(podeEditar ? [{ label: 'Editar curso', icon: 'pencil-outline' as const, onPress: () => setEditing(curso) }] : []),
               { label: 'Encerrar curso', icon: 'close-circle-outline', tone: 'danger', onPress: () => setEditing({ ...curso, status: 'ENCERRADO' }) }
             ]} />}
           />
@@ -70,7 +73,7 @@ export default function Cursos() {
           <Text style={styles.sub}>Professor: {selected.professor || 'Não informado'}</Text>
           <Text style={styles.section}>Inscritos</Text>
           <Text style={styles.hint}>Inscrições serão exibidas quando a API retornar participantes do curso.</Text>
-          <Button title="Editar curso" tone="green" onPress={() => { setEditing(selected); setSelected(null); }} />
+          {podeEditar ? <Button title="Editar curso" tone="green" onPress={() => { setEditing(selected); setSelected(null); }} /> : null}
         </> : null}
       </AppModal>
 

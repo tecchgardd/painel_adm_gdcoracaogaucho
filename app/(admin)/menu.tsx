@@ -5,9 +5,9 @@ import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { AppModal, Avatar, Button, Screen } from '@/shared/components/ui';
+import { nomeDoPerfil, rotaPermitida } from '@/core/permissions/permissoes';
 import { useAuthStore } from '@/stores/auth.store';
 import { colors, theme } from '@/theme/theme';
-import type { UserRole } from '@/shared/types/entities';
 
 type MenuItem = {
   title: string;
@@ -15,24 +15,17 @@ type MenuItem = {
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
   path?: string;
   danger?: boolean;
-  adminOnly?: boolean;
-  roles?: UserRole[];
-};
-
-const roleLabels: Record<string, string> = {
-  ADMIN: 'Administrador',
-  STAFF: 'Atendimento',
-  CHECKIN: 'Check-in'
 };
 
 const menuItems: MenuItem[] = [
   { title: 'Meu perfil', subtitle: 'Seus dados de acesso', icon: 'account-outline', path: '/perfil' },
-  { title: 'Colaboradores', subtitle: 'Gerenciar colaboradores e acessos', icon: 'account-multiple-outline', path: '/colaboradores', adminOnly: true },
-  { title: 'Configurações', subtitle: 'Preferências do painel', icon: 'cog-outline', path: '/configuracoes', roles: ['ADMIN', 'STAFF'] },
-  { title: 'Empresas', subtitle: 'Cadastro de patrocinadores e apoiadores', icon: 'office-building-outline', path: '/empresas', roles: ['ADMIN', 'STAFF'] },
-  { title: 'Relatórios', subtitle: 'Indicadores completos e exportações', icon: 'chart-bar', path: '/relatorios', roles: ['ADMIN'] },
-  { title: 'Registro de atividades', subtitle: 'Quem fez o quê e quando na plataforma', icon: 'clipboard-text-clock-outline', path: '/registros', roles: ['ADMIN'] },
-  { title: 'Fotos', subtitle: 'Uploads em lote e galeria Cloudinary', icon: 'image-multiple-outline', path: '/fotos', roles: ['ADMIN', 'STAFF'] },
+  { title: 'Colaboradores', subtitle: 'Gerenciar colaboradores e acessos', icon: 'account-multiple-outline', path: '/colaboradores' },
+  { title: 'Perfis de acesso', subtitle: 'O que cada perfil pode ver e fazer', icon: 'shield-account-outline', path: '/perfis' },
+  { title: 'Configurações', subtitle: 'Preferências do painel', icon: 'cog-outline', path: '/configuracoes' },
+  { title: 'Empresas', subtitle: 'Cadastro de patrocinadores e apoiadores', icon: 'office-building-outline', path: '/empresas' },
+  { title: 'Relatórios', subtitle: 'Indicadores completos e exportações', icon: 'chart-bar', path: '/relatorios' },
+  { title: 'Registro de atividades', subtitle: 'Quem fez o quê e quando na plataforma', icon: 'clipboard-text-clock-outline', path: '/registros' },
+  { title: 'Fotos', subtitle: 'Uploads em lote e galeria Cloudinary', icon: 'image-multiple-outline', path: '/fotos' },
   { title: 'Ajuda', subtitle: 'Suporte e dúvidas sobre o painel', icon: 'help-circle-outline', path: '/ajuda' },
   { title: 'Sobre o app', subtitle: 'Versão e créditos', icon: 'information-outline', path: '/sobre' },
   { title: 'Sair da conta', subtitle: 'Encerrar sessão administrativa', icon: 'logout', danger: true }
@@ -42,6 +35,7 @@ export default function Menu() {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const user = useAuthStore((state) => state.user);
   const role = useAuthStore((state) => state.role);
+  const permissoes = useAuthStore((state) => state.permissoes);
   const logout = useAuthStore((state) => state.logout);
   const displayName = user?.nome ?? user?.name ?? 'Usuário';
 
@@ -59,11 +53,8 @@ export default function Menu() {
     router.replace('/login');
   }
 
-  const visibleItems = menuItems.filter((item) => {
-    if (item.adminOnly && role !== 'ADMIN') return false;
-    if (item.roles && (!role || !item.roles.includes(role))) return false;
-    return true;
-  });
+  const visibleItems = menuItems.filter((item) => !item.path || rotaPermitida(permissoes, item.path));
+  const perfilNome = nomeDoPerfil(user, role);
 
   return (
     <Screen variant="admin">
@@ -72,7 +63,7 @@ export default function Menu() {
         <View style={styles.headerCopy}>
           <Text style={styles.headerName}>{displayName}</Text>
           {user?.email ? <Text style={styles.headerEmail}>{user.email}</Text> : null}
-          {role ? <Text style={styles.headerRole}>{roleLabels[role] ?? role}</Text> : null}
+          {perfilNome ? <Text style={styles.headerRole}>{perfilNome}</Text> : null}
         </View>
       </View>
 

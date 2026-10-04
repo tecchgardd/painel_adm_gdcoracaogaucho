@@ -13,7 +13,7 @@ import { colors, theme } from '@/theme/theme';
 
 type Mode = 'detalhe' | 'portador' | 'cancelar';
 
-export function IngressoDetalheModal({ ingresso, isAdmin, onClose, onChanged }: { ingresso: IngressoView | null; isAdmin: boolean; onClose: () => void; onChanged: () => void }) {
+export function IngressoDetalheModal({ ingresso, podeTrocar, podeCancelar, onClose, onChanged }: { ingresso: IngressoView | null; podeTrocar: boolean; podeCancelar: boolean; onClose: () => void; onChanged: () => void }) {
   const [mode, setMode] = useState<Mode>('detalhe');
   const [portadorNome, setPortadorNome] = useState('');
   const [portadorCpf, setPortadorCpf] = useState('');
@@ -103,8 +103,8 @@ export function IngressoDetalheModal({ ingresso, isAdmin, onClose, onChanged }: 
         </InfoList>
         <View style={styles.actions}>
           {current.vendaId ? <View style={styles.action}><Button title={busy ? 'Abrindo...' : 'Ver / reenviar ingresso'} tone="soft" disabled={busy} onPress={abrirDocumento} /></View> : null}
-          {podeTrocarPortador(current) ? <View style={styles.action}><Button title="Trocar portador" tone="dark" onPress={() => setMode('portador')} /></View> : null}
-          {isAdmin && !current.sintetico && current.situacao !== 'CANCELADO' && current.situacao !== 'UTILIZADO' ? <View style={styles.action}><Button title="Cancelar ingresso" tone="dark" onPress={() => setMode('cancelar')} /></View> : null}
+          {podeTrocar && podeTrocarPortador(current) ? <View style={styles.action}><Button title="Trocar portador" tone="dark" onPress={() => setMode('portador')} /></View> : null}
+          {podeCancelar && !current.sintetico && current.situacao !== 'CANCELADO' && current.situacao !== 'UTILIZADO' ? <View style={styles.action}><Button title="Cancelar ingresso" tone="dark" onPress={() => setMode('cancelar')} /></View> : null}
         </View>
         {current.sintetico ? <Text style={styles.note}>Este ingresso foi montado a partir da venda, porque a API ainda não devolve os ingressos individuais. Troca de portador e cancelamento ficam disponíveis quando o backend expuser cada ingresso.</Text> : null}
       </> : null}

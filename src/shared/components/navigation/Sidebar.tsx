@@ -4,9 +4,10 @@ import { router, usePathname } from 'expo-router';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CommandPalette, commandShortcutLabel, useCommandPaletteShortcut } from '@/shared/components/navigation/CommandPalette';
-import { filterNavigationByRole, isNavItemActive, navigationItems, ROLE_LABELS, sectionHeadingAt } from '@/shared/components/navigation/navigation.config';
+import { filterNavigation, isNavItemActive, navigationItems, sectionHeadingAt } from '@/shared/components/navigation/navigation.config';
 import { SidebarItem } from '@/shared/components/navigation/SidebarItem';
 import { AppModal, Avatar, Button, Logo } from '@/shared/components/ui';
+import { nomeDoPerfil } from '@/core/permissions/permissoes';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import { colors, theme } from '@/theme/theme';
@@ -18,6 +19,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const role = useAuthStore((state) => state.role);
   const user = useAuthStore((state) => state.user);
+  const permissoes = useAuthStore((state) => state.permissoes);
   const logout = useAuthStore((state) => state.logout);
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
@@ -27,7 +29,7 @@ export function Sidebar() {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
   const [width] = useState(() => new Animated.Value(collapsed ? sidebarCollapsed : sidebarExpanded));
-  const visibleItems = filterNavigationByRole(navigationItems, role);
+  const visibleItems = filterNavigation(navigationItems, permissoes);
   const displayName = user?.nome ?? user?.name ?? 'Usuário';
 
   useCommandPaletteShortcut();
@@ -122,7 +124,7 @@ export function Sidebar() {
         <Avatar name={displayName} size={collapsed ? 32 : 36} />
         {!collapsed ? <View style={styles.profileCopy}>
           <Text numberOfLines={1} style={styles.profileName}>{displayName}</Text>
-          <Text numberOfLines={1} style={styles.profileRole}>{role ? ROLE_LABELS[role] ?? role : user?.email ?? ''}</Text>
+          <Text numberOfLines={1} style={styles.profileRole}>{nomeDoPerfil(user, role) ?? user?.email ?? ''}</Text>
         </View> : null}
       </Pressable>
       <Pressable
